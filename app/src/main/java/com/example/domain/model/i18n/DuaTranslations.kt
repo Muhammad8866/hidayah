@@ -27,6 +27,13 @@ object DuaTranslations {
         "ar" to { DuaAr1.MAP },
         "fr" to { DuaFr1.MAP },
         "es" to { DuaEs1.MAP },
+        "tr" to { DuaTr1.MAP },
+        "id" to { DuaId1.MAP },
+        "ru" to { DuaRu1.MAP },
+        "de" to { DuaDe1.MAP },
+        "pt" to { DuaPt1.MAP },
+        "zh" to { DuaZh1.MAP },
+        "sw" to { DuaSw1.MAP },
     )
 
     private val loaded = java.util.concurrent.ConcurrentHashMap<String, Map<String, DuaText>>()
