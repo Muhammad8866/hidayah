@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <files-path name="quran_pdfs" path="quran_pdfs/" />
+    <cache-path name="quran_pdfs_cache" path="quran_pdfs/" />
+    <files-path name="hadith_pdfs" path="hadith_pdfs/" />
+    <cache-path name="hadith_pdfs_cache" path="hadith_pdfs/" />
+</paths>

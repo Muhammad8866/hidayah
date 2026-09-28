@@ -1,0 +1,326 @@
+rules_version = '2';
+
+// Security rules for the Community Masjid and City challenge features.
+// Community Masjid: cm_mosques/{osmId | user_<id>}, .../cm_mosque_votes/{uid}, .../cm_timing_votes/{uid},
+// .../cm_history/{id}, cm_users/{uid}.
+// City challenge: cc_cities/{cityId}/cc_weeks/{weekId}/cc_members/{uid}. No other app feature uses Firestore.
+//
+// Everything is instant and moderated by votes (constants mirror CmTimingRules.kt):
+//  - A masjid or a timing is visible as soon as it is added.
+//  - A masjid is hidden once it has >= 3 down votes AND more down than up votes.
+//  - The current timing is reverted to the previous one under the same condition.
+//  - Every vote is one per user, needs the voter within 200 m, and can be changed later.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+
+    function mosquePath(m) { return /databases/$(database)/documents/cm_mosques/$(m); }
+    function historyPath(m, h) { return /databases/$(database)/documents/cm_mosques/$(m)/cm_history/$(h); }
+    function mosqueVotePath(m, u) { return /databases/$(database)/documents/cm_mosques/$(m)/cm_mosque_votes/$(u); }
+    function timingVotePath(m, u) { return /databases/$(database)/documents/cm_mosques/$(m)/cm_timing_votes/$(u); }
+    function userPath(u) { return /databases/$(database)/documents/cm_users/$(u); }
+    function isUserMosque(m) { return m.matches('^user_[A-Za-z0-9]{20}$'); }
+
+    function isHm(t) { return t is string && t.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$'); }
+    function mins(t) { return int(t.split(':')[0]) * 60 + int(t.split(':')[1]); }
+
+    // Jamaat can never be before Azan, and must be within 90 minutes of it.
+    function validPrayer(p) {
+      return p is map
+        && p.keys().hasAll(['azan', 'jamaat']) && p.keys().hasOnly(['azan', 'jamaat'])
+        && isHm(p.azan) && isHm(p.jamaat)
+        && mins(p.jamaat) >= mins(p.azan)
+        && mins(p.jamaat) - mins(p.azan) <= 90;
+    }
+
+    // Five daily prayers are required; Jumu'ah, both Eids and Taraweeh are optional.
+    // Eid and Taraweeh have no Azan: the app stores their Jamaat time in both fields.
+    function validTimings(t) {
+      return t is map
+        && t.keys().hasAll(['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'])
+        && t.keys().hasOnly(['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jumuah', 'eid_fitr', 'eid_adha', 'taraweeh'])
+        && validPrayer(t.fajr) && validPrayer(t.dhuhr) && validPrayer(t.asr)
+        && validPrayer(t.maghrib) && validPrayer(t.isha)
+        && (!('jumuah' in t) || validPrayer(t.jumuah))
+        && (!('eid_fitr' in t) || validPrayer(t.eid_fitr))
+        && (!('eid_adha' in t) || validPrayer(t.eid_adha))
+        && (!('taraweeh' in t) || validPrayer(t.taraweeh));
+    }
+
+    // Client-reported presence (see README note: pair with App Check for stronger guarantees).
+    function nearby(d) {
+      return d.distanceM is int && d.distanceM >= 0 && d.distanceM <= 200
+        && d.accuracyM is int && d.accuracyM >= 0 && d.accuracyM <= 100;
+    }
+
+    // Every community write must also advance the caller's rate-limit document in the same commit.
+    function rateTouched() {
+      return getAfter(userPath(me())).data.lastActionAt == request.time;
+    }
+
+    // ---------- masjid state helpers ----------
+    // Fields that change after creation. A missing masjid document behaves like defaults().
+    function mutableKeys() {
+      return ['current', 'currentVersion', 'updatedAt', 'updatedBy', 'historyId',
+              'timingUp', 'timingDown', 'upVotes', 'downVotes'];
+    }
+    function defaults() {
+      return {'current': null, 'currentVersion': 0, 'updatedAt': null, 'updatedBy': null, 'historyId': null,
+              'timingUp': 0, 'timingDown': 0, 'upVotes': 0, 'downVotes': 0};
+    }
+    function mosqueBefore(m) { return exists(mosquePath(m)) ? get(mosquePath(m)).data : defaults(); }
+    function same(o, d, k, dflt) { return d.get(k, dflt) == o.get(k, dflt); }
+    // Documents written by the earlier confirmation system keyed history by acceptedSuggestionId.
+    function curHistoryId(o) { return o.get('historyId', o.get('acceptedSuggestionId', null)); }
+    function hidden(o) {
+      return o.get('downVotes', 0) >= 3 && o.get('downVotes', 0) > o.get('upVotes', 0);
+    }
+
+    // ---------- masjid ----------
+    match /cm_mosques/{mosqueId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn() && (osmCreateValid(mosqueId) || userCreateValid(mosqueId));
+
+      // Exactly one action per write: set a timing, vote on the timing, or vote on the masjid.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(mutableKeys())
+        && (timingSetValid(mosqueId, resource.data, request.resource.data)
+            || timingVoteValid(mosqueId, resource.data, request.resource.data)
+            || mosqueVoteValid(mosqueId, resource.data, request.resource.data));
+
+      allow delete: if false;
+
+      // An OSM masjid document appears with its first timing or first vote. Identity fields are immutable.
+      function osmCreateValid(m) {
+        let d = request.resource.data;
+        return m.matches('^(node|way|relation)_[0-9]{1,15}$')
+          && d.keys().hasOnly(['osmId', 'name', 'lat', 'lon', 'createdAt'].concat(mutableKeys()))
+          && d.osmId == m
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 120
+          && d.lat is number && math.abs(d.lat) <= 90
+          && d.lon is number && math.abs(d.lon) <= 180
+          && d.createdAt == request.time
+          && (timingSetValid(m, defaults(), d) || mosqueVoteValid(m, defaults(), d));
+      }
+
+      // A masjid missing from OSM, added by a user standing at it. Visible immediately.
+      function userCreateValid(m) {
+        let d = request.resource.data;
+        return isUserMosque(m)
+          && d.keys().hasOnly(['source', 'name', 'address', 'lat', 'lon', 'geo5', 'addedBy', 'accuracyM',
+               'createdAt'].concat(mutableKeys()))
+          && d.source == 'user'
+          && d.name is string && d.name.size() >= 3 && d.name.size() <= 120
+          && d.address is string && d.address.size() <= 200
+          && d.lat is number && math.abs(d.lat) <= 90
+          && d.lon is number && math.abs(d.lon) <= 180
+          && d.geo5 is string && d.geo5.matches('^[0-9b-hjkmnp-z]{5}$')
+          && d.addedBy == me()
+          && d.accuracyM is int && d.accuracyM >= 0 && d.accuracyM <= 100
+          && d.createdAt == request.time
+          && d.current == null && d.currentVersion == 0 && d.updatedAt == null && d.updatedBy == null
+          && d.historyId == null && d.timingUp == 0 && d.timingDown == 0
+          && d.upVotes == 0 && d.downVotes == 0
+          && rateTouched();
+      }
+
+      // New timing becomes current at once; its history entry is written in the same commit.
+      function timingSetValid(m, o, d) {
+        let hid = d.get('historyId', null);
+        return validTimings(d.get('current', null))
+          && d.current != o.get('current', null)
+          && d.currentVersion == o.get('currentVersion', 0) + 1
+          && d.updatedAt == request.time
+          && d.updatedBy == me()
+          && hid is string
+          && getAfter(historyPath(m, hid)).data.kind == 'set'
+          && d.timingUp == 0 && d.timingDown == 0
+          && same(o, d, 'upVotes', 0) && same(o, d, 'downVotes', 0)
+          && !hidden(o)
+          && rateTouched();
+      }
+
+      // One vote per user on the current timing version; reaching the threshold reverts it.
+      function timingVoteValid(m, o, d) {
+        let vp = timingVotePath(m, me());
+        let ver = o.get('currentVersion', 0);
+        let before = exists(vp) && get(vp).data.version == ver ? get(vp).data.vote : 0;
+        let after = getAfter(vp).data;
+        let up = o.get('timingUp', 0) + (after.vote == 1 ? 1 : 0) - (before == 1 ? 1 : 0);
+        let down = o.get('timingDown', 0) + (after.vote == -1 ? 1 : 0) - (before == -1 ? 1 : 0);
+        return o.get('current', null) != null
+          && after.version == ver
+          && after.vote != before
+          && same(o, d, 'upVotes', 0) && same(o, d, 'downVotes', 0)
+          && rateTouched()
+          && (down >= 3 && down > up
+              ? revertValid(m, o, d)
+              : (d.get('timingUp', 0) == up && d.get('timingDown', 0) == down
+                 && same(o, d, 'current', null) && same(o, d, 'currentVersion', 0)
+                 && same(o, d, 'updatedAt', null) && same(o, d, 'updatedBy', null)
+                 && same(o, d, 'historyId', null)));
+      }
+
+      function revertValid(m, o, d) {
+        let e = get(historyPath(m, curHistoryId(o))).data;
+        let hid = d.get('historyId', null);
+        return d.get('current', null) == e.get('previous', null)
+          && d.currentVersion == o.get('currentVersion', 0) + 1
+          && d.updatedAt == request.time
+          && d.updatedBy == me()
+          && hid is string
+          && getAfter(historyPath(m, hid)).data.kind == 'revert'
+          && d.timingUp == 0 && d.timingDown == 0;
+      }
+
+      // One vote per user on the masjid itself; the adder cannot vote on their own masjid.
+      function mosqueVoteValid(m, o, d) {
+        let vp = mosqueVotePath(m, me());
+        let before = exists(vp) ? get(vp).data.vote : 0;
+        let after = getAfter(vp).data.vote;
+        return after != before
+          && d.get('upVotes', 0) == o.get('upVotes', 0) + (after == 1 ? 1 : 0) - (before == 1 ? 1 : 0)
+          && d.get('downVotes', 0) == o.get('downVotes', 0) + (after == -1 ? 1 : 0) - (before == -1 ? 1 : 0)
+          && o.get('addedBy', '') != me()
+          && same(o, d, 'current', null) && same(o, d, 'currentVersion', 0)
+          && same(o, d, 'updatedAt', null) && same(o, d, 'updatedBy', null)
+          && same(o, d, 'historyId', null)
+          && same(o, d, 'timingUp', 0) && same(o, d, 'timingDown', 0)
+          && rateTouched();
+      }
+
+      // ---------- masjid votes: doc ID == uid => 1 user = 1 vote (changeable) ----------
+      match /cm_mosque_votes/{uid} {
+        allow read: if signedIn() && uid == me();
+        allow create, update: if signedIn() && uid == me() && mosqueVoteDocValid(mosqueId);
+        allow delete: if false;
+      }
+
+      function mosqueVoteDocValid(m) {
+        let d = request.resource.data;
+        let o = mosqueBefore(m);
+        let a = getAfter(mosquePath(m)).data;
+        return d.keys().hasOnly(['uid', 'vote', 'reason', 'at', 'distanceM', 'accuracyM'])
+          && d.uid == me()
+          && d.at == request.time
+          && nearby(d)
+          && ((d.vote == 1 && d.reason == '')
+              || (d.vote == -1 && d.reason in ['not_here', 'duplicate', 'wrong_place']))
+          && (a.get('upVotes', 0) != o.get('upVotes', 0) || a.get('downVotes', 0) != o.get('downVotes', 0));
+      }
+
+      // ---------- timing votes: doc ID == uid, re-used for each new timing version ----------
+      match /cm_timing_votes/{uid} {
+        allow read: if signedIn() && uid == me();
+        allow create, update: if signedIn() && uid == me() && timingVoteDocValid(mosqueId);
+        allow delete: if false;
+      }
+
+      function timingVoteDocValid(m) {
+        let d = request.resource.data;
+        let o = get(mosquePath(m)).data;
+        let a = getAfter(mosquePath(m)).data;
+        return d.keys().hasOnly(['uid', 'version', 'vote', 'at', 'distanceM', 'accuracyM'])
+          && d.uid == me()
+          && d.at == request.time
+          && nearby(d)
+          && (d.vote == 1 || d.vote == -1)
+          && d.version == o.get('currentVersion', 0)
+          && o.get('updatedBy', null) != me()
+          && (a.get('currentVersion', 0) != o.get('currentVersion', 0)
+              || a.get('timingUp', 0) != o.get('timingUp', 0)
+              || a.get('timingDown', 0) != o.get('timingDown', 0));
+      }
+
+      // ---------- immutable history: one entry per timing change or revert ----------
+      match /cm_history/{hid} {
+        allow read: if signedIn();
+        allow create: if signedIn() && historyCreateValid(mosqueId, hid);
+        allow update, delete: if false;
+      }
+
+      function historyCreateValid(m, h) {
+        let d = request.resource.data;
+        let o = mosqueBefore(m);
+        let a = getAfter(mosquePath(m)).data;
+        return d.keys().hasOnly(['timings', 'previous', 'parentId', 'version', 'kind', 'by', 'at',
+               'distanceM', 'accuracyM'])
+          && a.get('historyId', null) == h
+          && d.version == a.currentVersion
+          && d.timings == a.get('current', null)
+          && d.by == me()
+          && d.at == request.time
+          && (d.kind == 'set'
+              ? (nearby(d) && d.previous == o.get('current', null) && d.parentId == curHistoryId(o))
+              : (d.kind == 'revert' && revertHistoryValid(m, o, d)));
+      }
+
+      // A revert restores the reverted entry's `previous`, so it inherits that entry's parent's links.
+      function revertHistoryValid(m, o, d) {
+        let e = get(historyPath(m, curHistoryId(o))).data;
+        let pid = e.get('parentId', null);
+        return pid == null
+          ? (d.previous == null && d.parentId == null)
+          : (d.previous == get(historyPath(m, pid)).data.get('previous', null)
+             && d.parentId == get(historyPath(m, pid)).data.get('parentId', null));
+      }
+    }
+
+    // ---------- City challenge: one weekly board per city, one document per user ----------
+    // Caps and the point formula mirror CcGoal / CcScores in CityChallenge.kt.
+    match /cc_cities/{cityId}/cc_weeks/{weekId}/cc_members/{uid} {
+      allow read: if signedIn()
+        && cityId.matches('^[a-z]{2}-[a-z0-9-]{2,40}$') && weekId.matches('^[0-9]{4}-w[0-9]{2}$');
+      allow create: if signedIn() && uid == me() && ccMemberValid(cityId, weekId);
+      // At most one update every 30 s per user.
+      allow update: if signedIn() && uid == me() && ccMemberValid(cityId, weekId)
+        && request.time > resource.data.updatedAt + duration.value(30, 's');
+      allow delete: if signedIn() && uid == me();
+    }
+
+    function ccCount(v, cap) { return v is int && v >= 0 && v <= cap; }
+
+    function ccMemberValid(cityId, weekId) {
+      let d = request.resource.data;
+      return cityId.matches('^[a-z]{2}-[a-z0-9-]{2,40}$')
+        && weekId.matches('^[0-9]{4}-w[0-9]{2}$')
+        && d.keys().hasAll(['name', 'area', 'areaKey', 'salah', 'quran', 'dhikr', 'hifz', 'points', 'updatedAt'])
+        && d.keys().hasOnly(['name', 'area', 'areaKey', 'salah', 'quran', 'dhikr', 'hifz', 'points', 'updatedAt'])
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 24
+        && d.area is string && d.area.size() >= 1 && d.area.size() <= 40
+        && d.areaKey is string && d.areaKey.matches('^[a-z0-9-]{2,40}$')
+        && ccCount(d.salah, 35) && ccCount(d.quran, 140) && ccCount(d.dhikr, 7000) && ccCount(d.hifz, 70)
+        && d.points == d.salah * 10 + d.quran * 5 + d.hifz * 4 + int(d.dhikr / 10)
+        && d.updatedAt == request.time;
+    }
+
+    // ---------- per-user throttle: >= 15 s between writes, <= 25 writes per 24 h ----------
+    match /cm_users/{userId} {
+      allow read: if signedIn() && userId == me();
+      allow create: if signedIn() && userId == me()
+        && request.resource.data.keys().hasOnly(['lastActionAt', 'windowStart', 'windowCount'])
+        && request.resource.data.lastActionAt == request.time
+        && request.resource.data.windowStart == request.time
+        && request.resource.data.windowCount == 1;
+      allow update: if signedIn() && userId == me()
+        && request.resource.data.keys().hasOnly(['lastActionAt', 'windowStart', 'windowCount'])
+        && request.resource.data.lastActionAt == request.time
+        && request.time > resource.data.lastActionAt + duration.value(15, 's')
+        && (
+          (request.time < resource.data.windowStart + duration.value(24, 'h')
+            && request.resource.data.windowStart == resource.data.windowStart
+            && request.resource.data.windowCount == resource.data.windowCount + 1
+            && request.resource.data.windowCount <= 25)
+          ||
+          (request.time >= resource.data.windowStart + duration.value(24, 'h')
+            && request.resource.data.windowStart == request.time
+            && request.resource.data.windowCount == 1)
+        );
+      allow delete: if false;
+    }
+  }
+}

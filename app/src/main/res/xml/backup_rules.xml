@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Preserve preferences, bookmarks, Hifz progress and notes through backup/restore. -->
+    <include domain="sharedpref" path="." />
+    <include domain="database" path="." />
+</full-backup-content>
