@@ -25,7 +25,7 @@ object DuaTranslations {
         "pa" to { DuaPa1.MAP + DuaPa2.MAP + DuaPa3.MAP },
         "ta" to { DuaTa1.MAP },
         "ar" to { DuaAr1.MAP + DuaAr2.MAP + DuaAr3.MAP },
-        "fr" to { DuaFr1.MAP },
+        "fr" to { DuaFr1.MAP + DuaFr2.MAP + DuaFr3.MAP },
         "es" to { DuaEs1.MAP },
         "tr" to { DuaTr1.MAP },
         "id" to { DuaId1.MAP },
