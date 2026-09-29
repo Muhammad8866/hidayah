@@ -142,7 +142,7 @@ class AppLocalizationTest {
 
     @Test
     fun `dua screen phrase keys do not rewrite unrelated text`() {
-        val unrelated = "Share homemade food or fruit occasionally."
+        val unrelated = "Zzyxqwerty lorem ipsum dolor sit amet consectetur."
         AppLanguage.supported.filterNot { it.code == "en" }.forEach { language ->
             assertEquals(language.code, unrelated, localizeUiText(unrelated, language.code))
         }
