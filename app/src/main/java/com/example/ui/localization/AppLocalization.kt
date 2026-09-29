@@ -848,9 +848,47 @@ private val languagePacks: Map<String, UiLanguagePack> = mapOf(
     "si" to regionalPack("si", sinhalaPack)
 )
 
-/** The Hindi pack is the reference: every other language must translate the same UI copy. */
+/**
+ * The frozen set of core UI copy keys every supported language must translate. This is a fixed
+ * snapshot, not `hindiPhrases.keys` directly: Hindi (and other languages) may carry additional
+ * long-form content (Lessons, Festival guidance, Assistant responses) beyond this core set, and
+ * that extra content must not become a universal parity requirement for every other language.
+ */
+private val coreUiReferenceKeys: Set<String> = setOf(
+    "Settings & Privacy", "App Language", "Choose language", "Choose app language", "Close",
+    "Home", "Ramzan", "Quran", "Masjid", "Community Masjid",
+    "Duas", "Festivals", "Settings",
+    "Prayer Calculation Settings",
+    "Calculation Authority", "Asr Juristic Calculation",
+    "Hijri Moon Sighting Adjustment",
+    "Prayer Notifications Service", "Enable Prayer Alerts",
+    "Privacy & Offline Architecture",
+    "Content Governance & Sources",
+    "Today's Prayer Schedule", "Calculated Salah Start",
+    "Explore The Noble Quran", "Daily Adhkar",
+    "Morning & Evening", "Qibla Direction",
+    "Major Cities", "Custom Lat / Long",
+    "Lessons", "AI Assistant", "Read", "Audio",
+    "Surah wise", "Para wise",
+    "Morning", "Evening", "Done",
+    "Gentle Digital Tasbeeh", "Goal",
+    "Verified Timetables", "Congregational Iqamah Timings",
+    "Friday Jummah Sessions", "Suggest Edit",
+    "Why This Time?", "Distance to Kaaba",
+    "Magnetic Sensor Calibration", "Ramzan Timetable",
+    "Sehri", "Iftar", "Online dates",
+    "Prayer Times Alerts",
+    "Peaceful notifications when each prayer time enters",
+    "Time for", "Salah has commenced for",
+    "Salah time has commenced at",
+    "Indeed, prayer has been decreed upon the believers a decree of specified times.",
+    "The selected language applies across the app.",
+    "Retry"
+)
+
+/** The Hindi pack is the reference: every other language must translate the same core UI copy. */
 internal val referenceUiPhraseKeys: Set<String> =
-    hindiPhrases.keys + duaFeaturePhrases.getValue("hi").keys + duaScreenPhrases.getValue("hi").keys
+    coreUiReferenceKeys + duaFeaturePhrases.getValue("hi").keys + duaScreenPhrases.getValue("hi").keys
 
 internal fun uiLanguagePack(language: String): UiLanguagePack? = languagePacks[language]
 
