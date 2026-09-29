@@ -525,6 +525,53 @@ internal val frenchPack = UiLanguagePack(
         "Take a deep breath and consciously let go of worldly tasks before saying 'Allahu Akbar'." to "Prenez une profonde inspiration et abandonnez consciemment les tâches mondaines avant de dire 'Allahu Akbar'.",
         "Rights of Neighbors in Islam" to "Les droits des voisins en Islam",
         "How neighbors have rights over each other in Islam and the harm of keeping ties of kinship." to "Comment les voisins ont des droits les uns sur les autres en Islam et le tort de rompre les liens de parenté.",
+        """
+                Wudu is the spiritual and physical purification required before standing in prayer.
+
+                The Quran establishes four obligatory pillars (Fara'id) in Surah Al-Ma'idah (5:6):
+                1. Washing the face from forehead to chin and ear to ear.
+                2. Washing both arms including the elbows.
+                3. Wiping at least a quarter of the head with wet hands (Hanafi; Sunnat is wiping the whole head).
+                4. Washing both feet up to and including the ankles.
+
+                Prophetic Sunnahs (Recommended Practices):
+                - Starting with Bismillah and intention (Niyyah) in the heart.
+                - Washing the hands thrice up to wrists.
+                - Rinsing the mouth (Madmadah) and cleaning the nose (Istinshaq) thrice.
+                - Running wet fingers through the beard and between fingers and toes (Takhlil).
+                - Maintaining sequential order (Tartib) without prolonged interruption (Muwalat).
+            """.trimIndent() to
+            "Le Wudu est la purification spirituelle et physique requise avant de se tenir en prière.\n\nLe Coran établit quatre piliers obligatoires (Fara'id) dans la sourate Al-Ma'idah (5:6) :\n1. Laver le visage du front au menton et d'une oreille à l'autre.\n2. Laver les deux bras y compris les coudes.\n3. Essuyer au moins un quart de la tête avec des mains mouillées (Hanafite ; la Sunnah est d'essuyer toute la tête).\n4. Laver les deux pieds jusqu'aux chevilles incluses.\n\nSunnahs prophétiques (pratiques recommandées) :\n- Commencer par le Bismillah et l'intention (Niyyah) dans le cœur.\n- Se laver les mains trois fois jusqu'aux poignets.\n- Se rincer la bouche (Madmadah) et se nettoyer le nez (Istinshaq) trois fois.\n- Passer des doigts mouillés dans la barbe et entre les doigts et orteils (Takhlil).\n- Maintenir l'ordre séquentiel (Tartib) sans interruption prolongée (Muwalat).",
+        """
+                Khushu' is inner humility, stillness of the limbs, and attentive contemplation of what one is reciting.
+
+                Practical Anchors for Khushu':
+                - Prepare before the Takbir: Perform wudu mindfully, arrive before iqamah, and eliminate immediate physical distractions.
+                - Contemplate the Words: Recite slowly (Tartil). When saying 'Al-Hamdu lillahi Rabbil-Alameen', remember Allah responds directly: 'My servant has praised Me' (Sahih Muslim 395).
+                - Fix the Gaze: Direct your gaze respectfully at the place of prostration (Sujud), rather than looking around.
+                - Remember the Final Prayer: The Prophet (peace be upon him) advised: 'Pray as if it were your farewell prayer' (Sunan Ibn Majah 4171).
+            """.trimIndent() to
+            "Le Khushu' est l'humilité intérieure, l'immobilité des membres et la contemplation attentive de ce qui est récité.\n\nAncrages pratiques pour le Khushu' :\n- Se préparer avant le Takbir : accomplir le Wudu avec attention, arriver avant l'iqamah, et éliminer les distractions physiques immédiates.\n- Contempler les paroles : réciter lentement (Tartil). En disant 'Al-Hamdu lillahi Rabbil-Alameen', se souvenir qu'Allah répond directement : 'Mon serviteur M'a loué' (Sahih Muslim 395).\n- Fixer le regard : diriger son regard respectueusement vers le lieu de prosternation (Sujud), plutôt que de regarder autour de soi.\n- Se souvenir de la dernière prière : le Prophète (paix sur lui) a conseillé : 'Priez comme si c'était votre prière d'adieu' (Sunan Ibn Majah 4171).",
+        """
+                The Prophet Muhammad (peace be upon him) said: 'Jibril kept enjoining good treatment of the neighbor upon me until I thought he would assign him a share of inheritance.' (Sahih al-Bukhari 6014).
+
+                Islamic teachings identify three classes of neighbors:
+                1. A neighbor who is a relative and Muslim: has three rights (kinship, Islam, neighborhood).
+                2. A neighbor who is Muslim: has two rights (Islam and neighborhood).
+                3. A neighbor of different faith: has the sacred right of good neighborhood and kindness.
+
+                Harm to neighbors is strictly condemned: 'By Allah he does not believe... whose neighbor is not safe from his harm.' (Sahih al-Bukhari 6016).
+            """.trimIndent() to
+            "Le Prophète Muhammad (paix sur lui) a dit : 'Jibril n'a cessé de me recommander la bienveillance envers le voisin, au point que j'ai cru qu'il lui attribuerait une part d'héritage.' (Sahih al-Bukhari 6014).\n\nLes enseignements islamiques distinguent trois classes de voisins :\n1. Un voisin apparenté et musulman : a trois droits (parenté, Islam, voisinage).\n2. Un voisin musulman : a deux droits (Islam et voisinage).\n3. Un voisin d'une autre confession : a le droit sacré au bon voisinage et à la bienveillance.\n\nLe tort fait aux voisins est strictement condamné : 'Par Allah, il ne croit pas... celui dont le voisin n'est pas à l'abri de son mal.' (Sahih al-Bukhari 6016).",
+        "The Noble Quran, Surah Al-Ma'idah (5:6)" to "Le Noble Coran, sourate Al-Ma'idah (5:6)",
+        "Sahih al-Bukhari 159 (Hadith of Uthman describing Prophet's wudu)" to "Sahih al-Bukhari 159 (Hadith de Uthman décrivant le Wudu du Prophète)",
+        "Al-Hidaya, Kitab al-Taharah (Imam Marghinani, Hanafi)" to "Al-Hidaya, Kitab al-Taharah (Imam Marghinani, Hanafite)",
+        "Surah Al-Mu'minun (23:1-2): 'Successful indeed are the believers who are humble in their prayers.'" to "Sourate Al-Mu'minun (23:1-2) : « Bienheureux sont certes les croyants, ceux qui sont humbles dans leurs prières. »",
+        "Ihya Ulum al-Din, Kitab Asrar al-Salah (Imam Ghazali)" to "Ihya Ulum al-Din, Kitab Asrar al-Salah (Imam Ghazali)",
+        "Sahih Muslim 395 (Hadith Qudsi on Surat al-Fatihah)" to "Sahih Muslim 395 (Hadith Qudsi sur la sourate Al-Fatihah)",
+        "Sahih al-Bukhari 6014, 6016" to "Sahih al-Bukhari 6014, 6016",
+        "Sahih Muslim 2625 (Abu Dharr on adding water to broth to share with neighbors)" to "Sahih Muslim 2625 (Abu Dharr sur l'ajout d'eau au bouillon pour le partager avec les voisins)",
+        "Adab al-Mufrad (Imam al-Bukhari)" to "Adab al-Mufrad (Imam al-Bukhari)",
         "Dua on seeing the new moon" to "Invocation en voyant la nouvelle lune",
         "Fasting in Muharram" to "Jeûne en Muharram",
         "After Ramadan, the best fasts are those of Muharram, the month of Allah — keep more voluntary fasts this month." to "Après le Ramadan, les meilleurs jeûnes sont ceux de Muharram, le mois d'Allah — observez plus de jeûnes volontaires ce mois-ci.",
@@ -564,7 +611,124 @@ internal val frenchPack = UiLanguagePack(
         "Night of 15th Sha'ban, a night of forgiveness and worship." to "Nuit du 15 Sha'ban, une nuit de pardon et de culte.",
         "You have submitted perfectly to Allah's guidance and the established Islamic practices." to "Vous vous êtes soumis parfaitement aux directives d'Allah et aux pratiques islamiques établies.",
         "Reflect on your intentions and correct any insincerity before Allah." to "Réfléchissez à vos intentions et corrigez toute inauthenticité avant Allah.",
-        "The key to spiritual growth is consistency, not perfection." to "La clé de la croissance spirituelle est la cohérence, non la perfection."
+        "The key to spiritual growth is consistency, not perfection." to "La clé de la croissance spirituelle est la cohérence, non la perfection.",
+        "Charity and feeding people" to "Charité et nourrir les gens",
+        "Feed the poor as an expression of joy; avoid extravagance and anything against the Shariah." to "Nourrissez les pauvres en signe de joie; évitez le gaspillage et tout ce qui contredit la Charia.",
+        "Esaal-e-Sawab" to "Esaal-e-Sawab",
+        "Recite the Quran (Fatiha, Surah Ikhlas 3 times, Ayat-ul-Kursi) and send the reward to Huzoor Ghaus-e-Azam Shaykh Abdul Qadir Jilani (RA)." to "Récitez le Coran (Fatiha, sourate Ikhlas 3 fois, Ayat-ul-Kursi) et envoyez la récompense à Huzoor Ghaus-e-Azam Shaykh Abdul Qadir Jilani (RA).",
+        "Niyaz / feeding people" to "Niyaz / nourrir les gens",
+        "Cook food for the sake of Allah, feed the poor and others, and send the reward to the saint." to "Cuisinez pour l'amour d'Allah, nourrissez les pauvres et les autres, et envoyez la récompense au saint.",
+        "Studying the life of Ghaus-e-Azam" to "Étudier la vie de Ghaus-e-Azam",
+        "Read the advice in his books 'Futuh al-Ghaib' / 'Ghunyat-ut-Talibeen' and act upon it." to "Lisez les conseils dans ses livres 'Futuh al-Ghaib' / 'Ghunyat-ut-Talibeen' et mettez-les en pratique.",
+        "Dua for Rajab" to "Invocation pour Rajab",
+        "اللّٰهُمَّ بَارِكْ لَنَا فِي رَجَبٍ وَشَعْبَانَ وَبَلِّغْنَا رَمَضَانَ — O Allah! Bless us in Rajab and Sha'ban, and let us reach Ramadan." to "اللّٰهُمَّ بَارِكْ لَنَا فِي رَجَبٍ وَشَعْبَانَ وَبَلِّغْنَا رَمَضَانَ — Ô Allah ! Bénis-nous en Rajab et Sha'ban, et fais-nous atteindre le Ramadan.",
+        "Voluntary fasts" to "Jeûnes volontaires",
+        "Rajab is a sacred month — keep voluntary fasts in it (especially Monday/Thursday and the Ayyam-e-Beez, the 13th, 14th and 15th)." to "Rajab est un mois sacré — observez-y des jeûnes volontaires (surtout le lundi/jeudi et les Ayyam-e-Beez, les 13, 14 et 15).",
+        "Repentance and preparing for Ramadan" to "Repentance et préparation au Ramadan",
+        "Start making up missed prayers/fasts and seek forgiveness abundantly." to "Commencez à rattraper les prières/jeûnes manqués et demandez pardon abondamment.",
+        "Regularity in prayer" to "Assiduité dans la prière",
+        "The five daily prayers were made obligatory on this night — make a firm pledge from tonight to pray regularly." to "Les cinq prières quotidiennes furent rendues obligatoires cette nuit-là — engagez-vous fermement dès ce soir à prier régulièrement.",
+        "Remembering the Mi'raj" to "Se souvenir du Mi'raj",
+        "Recite the first ayah of Surah Bani Israel (Al-Isra) and Surah An-Najm (ayahs 1-18), and listen to or narrate the event of the Mi'raj." to "Récitez le premier verset de la sourate Bani Israel (Al-Isra) et la sourate An-Najm (versets 1-18), et écoutez ou racontez l'événement du Mi'raj.",
+        "Voluntary worship and durood" to "Adoration volontaire et durood",
+        "After Isha, spend time in nafl prayer, recitation, durood and dua." to "Après l'Isha, passez du temps en prière nafl, récitation, durood et invocation.",
+        "Fast of 27 Rajab" to "Jeûne du 27 Rajab",
+        "Some pious elders keep a voluntary fast on this day; make the intention of an ordinary nafl fast." to "Certains pieux anciens observent un jeûne volontaire ce jour-là; formulez l'intention d'un simple jeûne nafl.",
+        "Repentance and dua for forgiveness" to "Repentance et invocation de pardon",
+        "On this night Allah turns to His creation and forgives everyone except the one who associates partners with Him and the one who harbours enmity — purify your heart and repent." to "Cette nuit-là, Allah se tourne vers Sa création et pardonne à tous, sauf à celui qui Lui associe des partenaires et à celui qui nourrit de l'inimitié — purifiez votre cœur et repentez-vous.",
+        "Voluntary worship at night" to "Adoration volontaire nocturne",
+        "Spend the night in nafl prayer, recitation (Surah Yaseen, Surah Mulk, Surah Dukhan) and zikr. Some pious elders pray 6 rak'ahs of nafl after Maghrib and Salat-ut-Tasbeeh." to "Passez la nuit en prière nafl, récitation (sourate Yaseen, sourate Mulk, sourate Dukhan) et dhikr. Certains pieux anciens prient 6 rak'ahs de nafl après le Maghrib et la Salat-ut-Tasbeeh.",
+        "Visiting the graveyard" to "Visiter le cimetière",
+        "The Prophet ﷺ went to Jannat-ul-Baqee on this night and made dua for the people of the graves — make dua and recite Fatiha for the deceased." to "Le Prophète ﷺ se rendit à Jannat-ul-Baqee cette nuit-là et invoqua pour les gens des tombes — invoquez et récitez la Fatiha pour les défunts.",
+        "Fast of 15 Sha'ban" to "Jeûne du 15 Sha'ban",
+        "Fast the following day (15 Sha'ban)." to "Jeûnez le lendemain (15 Sha'ban).",
+        "Avoiding fireworks and wasteful customs" to "Éviter les feux d'artifice et coutumes gaspilleuses",
+        "Treating firecrackers, illuminations and halwa as necessary is not established in the Shariah — spend the time in worship." to "Considérer les pétards, illuminations et halwa comme nécessaires n'est pas établi dans la Charia — consacrez ce temps à l'adoration.",
+        "Fasting and Sehri" to "Jeûne et Sehri",
+        "Always eat Sehri, for there is blessing in it. Intention for the fast: وَبِصَوْمِ غَدٍ نَوَيْتُ مِنْ شَهْرِ رَمَضَانَ" to "Prenez toujours le Sehri, car il y a une bénédiction en cela. Intention du jeûne : وَبِصَوْمِ غَدٍ نَوَيْتُ مِنْ شَهْرِ رَمَضَانَ",
+        "Dua for Iftar" to "Invocation pour l'Iftar",
+        "ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الْأَجْرُ إِنْ شَاءَ اللّٰهُ — Break the fast with dates or water." to "ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الْأَجْرُ إِنْ شَاءَ اللّٰهُ — Rompez le jeûne avec des dattes ou de l'eau.",
+        "Taraweeh" to "Taraweeh",
+        "After Isha, pray 20 rak'ahs of Taraweeh (Sunnat-e-Mu'akkadah) in congregation." to "Après l'Isha, priez 20 rak'ahs de Taraweeh (Sunnat-e-Mu'akkadah) en congrégation.",
+        "Reciting the Quran" to "Récitation du Coran",
+        "Ramadan is the month of the Quran — try to complete at least one full recitation." to "Le Ramadan est le mois du Coran — essayez d'en achever au moins une récitation complète.",
+        "Charity and giving iftar" to "Charité et offrir l'iftar",
+        "Whoever gives a fasting person iftar receives a reward like theirs." to "Quiconque offre l'iftar à un jeûneur reçoit une récompense semblable à la sienne.",
+        "Dua for Laylat al-Qadr" to "Invocation pour Laylat al-Qadr",
+        "اللّٰهُمَّ إِنَّكَ عَفُوٌّ تُحِبُّ الْعَفْوَ فَاعْفُ عَنِّي — O Allah! You are Most Forgiving and love forgiveness, so forgive me." to "اللّٰهُمَّ إِنَّكَ عَفُوٌّ تُحِبُّ الْعَفْوَ فَاعْفُ عَنِّي — Ô Allah ! Tu es Celui qui pardonne et Tu aimes le pardon, alors pardonne-moi.",
+        "Qiyam-ul-Lail" to "Qiyam-ul-Lail",
+        "Whoever stands in prayer on this night with faith and hoping for reward has their past sins forgiven. Pray nafl and Salat-ut-Tasbeeh." to "Quiconque se tient en prière cette nuit-là avec foi et en espérant la récompense verra ses péchés passés pardonnés. Priez nafl et Salat-ut-Tasbeeh.",
+        "Surah Al-Qadr and recitation" to "Sourate Al-Qadr et récitation",
+        "Recite Surah Al-Qadr, Surah Yaseen, Surah Mulk and as much Quran as you can." to "Récitez la sourate Al-Qadr, la sourate Yaseen, la sourate Mulk et autant de Coran que possible.",
+        "Odd nights of the last ten" to "Nuits impaires des dix derniers jours",
+        "Seek Laylat al-Qadr on the 21st, 23rd, 25th, 27th and 29th nights. I'tikaf is Sunnat-e-Mu'akkadah alal kifayah." to "Recherchez Laylat al-Qadr les nuits du 21, 23, 25, 27 et 29. L'I'tikaf est Sunnat-e-Mu'akkadah alal kifayah.",
+        "Sadqa-e-Fitr" to "Sadqa-e-Fitr",
+        "Before the Eid prayer, pay Sadqa-e-Fitr on behalf of every member of the household (wajib)." to "Avant la prière de l'Aïd, versez la Sadqa-e-Fitr au nom de chaque membre du foyer (wajib).",
+        "Sunnahs of Eid" to "Sunnahs de l'Aïd",
+        "Ghusl, miswak, good clothes, perfume, eating an odd number of dates before the prayer, and going by one route and returning by another." to "Ghusl, miswak, beaux vêtements, parfum, manger un nombre impair de dattes avant la prière, et aller par un chemin et revenir par un autre.",
+        "Takbeer" to "Takbeer",
+        "Recite the takbeer quietly on the way to the Eidgah: اللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ لَا إِلٰهَ إِلَّا اللّٰهُ وَاللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ وَلِلّٰهِ الْحَمْدُ" to "Récitez le takbeer doucement en vous rendant à l'Eidgah : اللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ لَا إِلٰهَ إِلَّا اللّٰهُ وَاللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ وَلِلّٰهِ الْحَمْدُ",
+        "Eid prayer" to "Prière de l'Aïd",
+        "2 rak'ahs wajib with 6 extra takbeers (Hanafi), then listen to the khutbah." to "2 rak'ahs wajib avec 6 takbeers supplémentaires (Hanafite), puis écoutez le khutbah.",
+        "6 fasts of Shawwal" to "6 jeûnes de Shawwal",
+        "Whoever fasts Ramadan and then 6 days of Shawwal, it is as if they fasted the whole year." to "Quiconque jeûne le Ramadan puis 6 jours de Shawwal, c'est comme s'il avait jeûné toute l'année.",
+        "Fast of Arafah" to "Jeûne d'Arafah",
+        "For those not performing Hajj, the fast of 9 Dhul-Hijjah expiates the sins of the previous and coming year." to "Pour ceux qui n'accomplissent pas le Hajj, le jeûne du 9 Dhul-Hijjah expie les péchés de l'année précédente et de l'année suivante.",
+        "The best dua of Arafah" to "La meilleure invocation d'Arafah",
+        "لَا إِلٰهَ إِلَّا اللّٰهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ" to "لَا إِلٰهَ إِلَّا اللّٰهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ",
+        "Takbeer-e-Tashreeq" to "Takbeer-e-Tashreeq",
+        "From Fajr of 9 Dhul-Hijjah to Asr of the 13th, once after every fard prayer: اللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ لَا إِلٰهَ إِلَّا اللّٰهُ وَاللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ وَلِلّٰهِ الْحَمْدُ (wajib)" to "Du Fajr du 9 Dhul-Hijjah à l'Asr du 13, une fois après chaque prière obligatoire : اللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ لَا إِلٰهَ إِلَّا اللّٰهُ وَاللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ وَلِلّٰهِ الْحَمْدُ (wajib)",
+        "The first 10 days of Dhul-Hijjah" to "Les dix premiers jours de Dhul-Hijjah",
+        "Good deeds in these days are the most beloved to Allah — do abundant zikr, tahleel, takbeer and tahmeed." to "Les bonnes actions durant ces jours sont les plus aimées d'Allah — multipliez le dhikr, le tahleel, le takbeer et le tahmeed.",
+        "Not cutting hair and nails" to "Ne pas couper cheveux et ongles",
+        "One who will offer Qurbani should not cut their hair or nails from 1 Dhul-Hijjah until the sacrifice (mustahab)." to "Celui qui offrira la Qurbani ne devrait pas couper ses cheveux ni ses ongles du 1er Dhul-Hijjah jusqu'au sacrifice (mustahab).",
+        "Qurbani" to "Qurbani",
+        "Qurbani is wajib on one who owns the nisab (10–12 Dhul-Hijjah). At the time of slaughter: بِسْمِ اللّٰهِ اللّٰهُ أَكْبَرُ" to "La Qurbani est wajib pour celui qui possède le nisab (10–12 Dhul-Hijjah). Au moment de l'abattage : بِسْمِ اللّٰهِ اللّٰهُ أَكْبَرُ",
+        "Ghusl, good clothes, perfume; eat nothing before the prayer (eating from the Qurbani meat is mustahab), and recite the takbeer aloud on the way." to "Ghusl, beaux vêtements, parfum; ne rien manger avant la prière (manger de la viande de la Qurbani est mustahab), et réciter le takbeer à voix haute en chemin.",
+        "Eid-ul-Adha prayer" to "Prière de l'Aïd al-Adha",
+        "2 rak'ahs wajib with 6 extra takbeers (Hanafi), then the khutbah." to "2 rak'ahs wajib avec 6 takbeers supplémentaires (Hanafite), puis le khutbah.",
+        "Distributing the meat" to "Distribution de la viande",
+        "It is mustahab to divide the meat into 3 parts: for the household, relatives and the poor." to "Il est mustahab de diviser la viande en 3 parts : pour le foyer, les proches et les pauvres.",
+        "Continue Takbeer-e-Tashreeq" to "Continuer le Takbeer-e-Tashreeq",
+        "Recite the takbeer after every fard prayer until Asr of 13 Dhul-Hijjah. Fasting is forbidden on the Ayyam-e-Tashreeq (11–13)." to "Récitez le takbeer après chaque prière obligatoire jusqu'à l'Asr du 13 Dhul-Hijjah. Le jeûne est interdit pendant les Ayyam-e-Tashreeq (11-13).",
+        "Do not treat Muharram as a month of mourning, or consider nikah, travel or other permissible happy occasions unlucky in it." to "Ne considérez pas Muharram comme un mois de deuil, et ne tenez pas le nikah, le voyage ou d'autres occasions heureuses permises pour malchanceux durant ce mois.",
+        "Do not make the customary taziyas, nor venerate them or ask them to fulfil wishes." to "Ne fabriquez pas les taziyas coutumières, ne les vénérez pas et ne leur demandez pas d'exaucer des vœux.",
+        "Avoid matam, chest-beating, nauha and harming your own body." to "Évitez le matam, se frapper la poitrine, le nauha et de vous blesser le corps.",
+        "In Milad gatherings or processions, avoid music, immodesty, missing prayers and extravagance." to "Dans les rassemblements ou processions du Milad, évitez la musique, l'indécence, le manquement aux prières et le gaspillage.",
+        "Offer niyaz in the name of Allah; do not consider Ghaus-e-Azam equal to Allah or an independent helper. Do not treat any particular date as obligatory." to "Offrez le niyaz au nom d'Allah; ne considérez pas Ghaus-e-Azam comme l'égal d'Allah ou un aide indépendant. Ne traitez aucune date particulière comme obligatoire.",
+        "Do not present any particular fast or prayer of Rajab as fard or a binding Sunnah." to "Ne présentez aucun jeûne ou prière particulier de Rajab comme fard ou Sunnah contraignante.",
+        "Do not consider 27 Rajab the definite date of the Mi'raj, or any particular prayer/fast on it a binding Sunnah." to "Ne considérez pas le 27 Rajab comme la date certaine du Mi'raj, ni aucune prière/jeûne particulier ce jour-là comme Sunnah contraignante.",
+        "Avoid firecrackers, fireworks, troubling people, and treating halwa as a necessary custom." to "Évitez les pétards, feux d'artifice, de déranger les gens, et de considérer le halwa comme une coutume nécessaire.",
+        "While fasting, avoid lying, backbiting, quarrelling and neglecting prayer." to "En jeûnant, évitez le mensonge, la médisance, les disputes et la négligence de la prière.",
+        "Do not rely on the 27th night alone and neglect the other odd nights of the last ten." to "Ne comptez pas uniquement sur la 27e nuit et ne négligez pas les autres nuits impaires des dix derniers jours.",
+        "Do not fast on the day of Eid; do not neglect the prayer or Sadqa-e-Fitr." to "Ne jeûnez pas le jour de l'Aïd; ne négligez pas la prière ni la Sadqa-e-Fitr.",
+        "Do not impose the non-pilgrim's fast of Arafah on those performing wuquf at Arafat during Hajj." to "N'imposez pas le jeûne d'Arafah du non-pèlerin à ceux qui accomplissent le wuquf à Arafat pendant le Hajj.",
+        "Do not make Qurbani a show or for riya; keep things clean and be gentle with the animals." to "Ne faites pas de la Qurbani un spectacle ou par ostentation; restez propres et soyez doux avec les animaux.",
+        "Gyarhvi Sharif" to "Gyarhvi Sharif",
+        "11th Rabi' al-Thani, remembrance of Shaykh Abdul Qadir Jilani (RA)." to "11 Rabi' al-Thani, commémoration de Shaykh Abdul Qadir Jilani (RA).",
+        "Start of Ramadan" to "Début du Ramadan",
+        "First fast of Ramadan. Taraweeh begins the night before." to "Premier jeûne du Ramadan. Le Taraweeh commence la nuit précédente.",
+        "Laylat al-Qadr" to "Laylat al-Qadr",
+        "Commonly observed on the 27th night; seek it in the odd nights of the last ten." to "Généralement observée la 27e nuit; recherchez-la dans les nuits impaires des dix derniers jours.",
+        "Eid al-Fitr" to "Aïd al-Fitr",
+        "1st Shawwal. Pay Sadaqat al-Fitr before the Eid prayer." to "1er Shawwal. Versez la Sadaqat al-Fitr avant la prière de l'Aïd.",
+        "Day of Arafah" to "Jour d'Arafah",
+        "9th Dhu al-Hijjah. Fasting expiates sins of two years (Sahih Muslim)." to "9 Dhu al-Hijjah. Le jeûne expie les péchés de deux ans (Sahih Muslim).",
+        "Eid al-Adha" to "Aïd al-Adha",
+        "10th Dhu al-Hijjah. Qurbani from the 10th to the 12th." to "10 Dhu al-Hijjah. Qurbani du 10 au 12.",
+        "Islamic jurisprudence regarding marital dissolution (talaq), complex inheritance, and personal legal verdicts requires direct review of both parties' detailed circumstances by a qualified local mufti or Islamic scholar." to "La jurisprudence islamique concernant la dissolution du mariage (talaq), les héritages complexes et les avis juridiques personnels nécessite un examen direct de la situation détaillée des deux parties par un mufti local qualifié ou un érudit islamique.",
+        "Legal verdicts in personal disputes cannot be issued by automated systems or general textbooks, as individual statements, intentions, and local contracts directly impact the legal validity." to "Les avis juridiques dans les litiges personnels ne peuvent être émis par des systèmes automatisés ou des manuels généraux, car les déclarations individuelles, les intentions et les contrats locaux influencent directement la validité juridique.",
+        "High-stakes personal fiqh questions require in-person consultation with a qualified local Islamic scholar." to "Les questions de fiqh personnel à fort enjeu nécessitent une consultation en personne avec un érudit islamique local qualifié.",
+        "In Islam, patience (Sabr) is coupled directly with prayer (Salah) as the believers' active fortress in moments of hardship. Rather than passive endurance, Sabr means emotional resilience, avoiding panic, and maintaining trust in Allah's wisdom." to "En Islam, la patience (Sabr) est directement liée à la prière (Salah), forteresse active du croyant dans les moments d'épreuve. Plutôt qu'une endurance passive, le Sabr signifie la résilience émotionnelle, éviter la panique et maintenir la confiance en la sagesse d'Allah.",
+        "Ibn Kathir notes in his Tafsir: When heavy trials occur, two aids support the human being: restraining the soul from forbidden despair (patience) and turning to the coolness of the eyes in prayer." to "Ibn Kathir note dans son Tafsir : lorsque de lourdes épreuves surviennent, deux aides soutiennent l'être humain : retenir l'âme du désespoir interdit (patience) et se tourner vers la fraîcheur des yeux dans la prière.",
+        "Scholars emphasize three types of Sabr: patience upon acts of obedience, patience against committing sins, and patience with painful decrees." to "Les érudits soulignent trois types de Sabr : la patience dans l'obéissance, la patience contre le péché et la patience face aux décrets douloureux.",
+        "Kindness and continuous prayer for parents (Birr al-Walidayn) holds the highest priority in Islamic ethics, placed directly next to the monotheistic worship of Allah." to "La bonté et la prière continue pour les parents (Birr al-Walidayn) occupent la plus haute priorité dans l'éthique islamique, juste après l'adoration monothéiste d'Allah.",
+        "Al-Qurtubi explains that filial piety remains obligatory even if parents are of another faith, provided they do not command disobedience to God." to "Al-Qurtubi explique que la piété filiale reste obligatoire même si les parents sont d'une autre confession, tant qu'ils n'ordonnent pas la désobéissance envers Dieu.",
+        "Wudu is the ritual purification obligatory for Salah. Its core Quranic requirements are washing the face, arms including elbows, wiping the head, and washing feet to the ankles." to "Le Wudu est la purification rituelle obligatoire pour la Salah. Ses exigences coraniques essentielles sont de laver le visage, les bras jusqu'aux coudes, d'essuyer la tête et de laver les pieds jusqu'aux chevilles.",
+        "All recognized schools agree on the 4 pillars mentioned in the Quranic verse, with differences regarding whether rubbing (Dalk) and uninterrupted continuity (Muwalat) are obligatory or recommended." to "Toutes les écoles reconnues s'accordent sur les 4 piliers mentionnés dans le verset coranique, avec des divergences sur le caractère obligatoire ou recommandé du frottement (Dalk) et de la continuité ininterrompue (Muwalat).",
+        "Hanafi school considers wiping a quarter of the head sufficient; Shafi'i considers wiping any portion of hair sufficient; Maliki and Hanbali mandate wiping the entire head." to "L'école Hanafite considère qu'essuyer un quart de la tête suffit; l'école Shafi'ite considère qu'essuyer une portion de cheveux suffit; les écoles Malikite et Hanbalite exigent d'essuyer toute la tête.",
+        "According to authentic Quranic and Prophetic sources, believers are instructed to build their daily life upon constant mindfulness of Allah (Taqwa), establishing prayer, speaking truth, and upholding righteous character." to "Selon des sources coraniques et prophétiques authentiques, les croyants sont invités à bâtir leur vie quotidienne sur la conscience constante d'Allah (Taqwa), l'accomplissement de la prière, la véracité et le maintien d'un caractère vertueux.",
+        "Classical commentators emphasize that Islamic practice balances personal spiritual duties (Ibadah) with exemplary social ethics (Mu'amalat)." to "Les commentateurs classiques soulignent que la pratique islamique équilibre les devoirs spirituels personnels (Ibadah) avec une éthique sociale exemplaire (Mu'amalat)."
     ),
     words = mapOf(
         "Prayer" to "Prière", "Schedule" to "Horaire", "Location" to "Lieu", "Language" to "Langue",
@@ -745,6 +909,68 @@ internal val germanPack = UiLanguagePack(
         "Reset" to "Zurücksetzen", "Count" to "Zähler",
         "Quick access" to "Schnellzugriff", "Qibla" to "Qiblah", "Hadith" to "Hadithe", "Calendar" to "Kalender",
         "Naat" to "Lobgesang (Naat)", "Zakat" to "Zakah", "Salah" to "Salat",
+        "The Essentials of Wudu (Ablution)" to "Die Grundlagen des Wudu (rituelle Waschung)",
+        "Understand the 4 Quranic obligations of Wudu and common authentic prophetic sunnahs." to "Verstehen Sie die 4 koranischen Pflichten des Wudu und gängige authentische prophetische Sunnahs.",
+        """
+                Wudu is the spiritual and physical purification required before standing in prayer.
+
+                The Quran establishes four obligatory pillars (Fara'id) in Surah Al-Ma'idah (5:6):
+                1. Washing the face from forehead to chin and ear to ear.
+                2. Washing both arms including the elbows.
+                3. Wiping at least a quarter of the head with wet hands (Hanafi; Sunnat is wiping the whole head).
+                4. Washing both feet up to and including the ankles.
+
+                Prophetic Sunnahs (Recommended Practices):
+                - Starting with Bismillah and intention (Niyyah) in the heart.
+                - Washing the hands thrice up to wrists.
+                - Rinsing the mouth (Madmadah) and cleaning the nose (Istinshaq) thrice.
+                - Running wet fingers through the beard and between fingers and toes (Takhlil).
+                - Maintaining sequential order (Tartib) without prolonged interruption (Muwalat).
+            """.trimIndent() to
+            "Wudu ist die spirituelle und körperliche Reinigung, die vor dem Verrichten des Gebets erforderlich ist.\n\nDer Koran legt in Sure Al-Ma'idah (5:6) vier verpflichtende Säulen (Fara'id) fest:\n1. Das Waschen des Gesichts von der Stirn bis zum Kinn und von Ohr zu Ohr.\n2. Das Waschen beider Arme einschließlich der Ellbogen.\n3. Das Abwischen mindestens eines Viertels des Kopfes mit nassen Händen (Hanafitisch; Sunna ist das Abwischen des ganzen Kopfes).\n4. Das Waschen beider Füße bis einschließlich der Knöchel.\n\nProphetische Sunnahs (empfohlene Praktiken):\n- Beginn mit Bismillah und der Absicht (Niyyah) im Herzen.\n- Dreimaliges Waschen der Hände bis zu den Handgelenken.\n- Dreimaliges Ausspülen des Mundes (Madmadah) und Reinigen der Nase (Istinshaq).\n- Das Durchziehen nasser Finger durch den Bart und zwischen Fingern und Zehen (Takhlil).\n- Das Einhalten der Reihenfolge (Tartib) ohne längere Unterbrechung (Muwalat).",
+        "Do not waste water even if by a flowing stream." to "Verschwenden Sie kein Wasser, selbst an einem fließenden Bach.",
+        "Ensure dry spots on heels and elbows are reached." to "Stellen Sie sicher, dass trockene Stellen an Fersen und Ellbogen erreicht werden.",
+        "Recite the Kalimah Shahadah and supplication after finishing." to "Rezitieren Sie nach dem Abschluss die Kalimah Shahada und das Bittgebet.",
+        "Attaining Khushu' (Tranquility) in Prayer" to "Khushu' (Ruhe) im Gebet erlangen",
+        "How to calm a wandering mind and feel divine connection during your daily prayers." to "Wie man einen abschweifenden Geist beruhigt und während der täglichen Gebete eine göttliche Verbindung spürt.",
+        """
+                Khushu' is inner humility, stillness of the limbs, and attentive contemplation of what one is reciting.
+
+                Practical Anchors for Khushu':
+                - Prepare before the Takbir: Perform wudu mindfully, arrive before iqamah, and eliminate immediate physical distractions.
+                - Contemplate the Words: Recite slowly (Tartil). When saying 'Al-Hamdu lillahi Rabbil-Alameen', remember Allah responds directly: 'My servant has praised Me' (Sahih Muslim 395).
+                - Fix the Gaze: Direct your gaze respectfully at the place of prostration (Sujud), rather than looking around.
+                - Remember the Final Prayer: The Prophet (peace be upon him) advised: 'Pray as if it were your farewell prayer' (Sunan Ibn Majah 4171).
+            """.trimIndent() to
+            "Khushu' ist innere Demut, Ruhe der Glieder und aufmerksame Betrachtung dessen, was man rezitiert.\n\nPraktische Anker für Khushu':\n- Vorbereitung vor dem Takbir: Vollziehen Sie den Wudu achtsam, kommen Sie vor der Iqamah an und beseitigen Sie unmittelbare körperliche Ablenkungen.\n- Betrachten Sie die Worte: Rezitieren Sie langsam (Tartil). Beim Sagen von 'Al-Hamdu lillahi Rabbil-Alameen' denken Sie daran, dass Allah direkt antwortet: 'Mein Diener hat Mich gepriesen' (Sahih Muslim 395).\n- Fixieren Sie den Blick: Richten Sie Ihren Blick respektvoll auf die Stelle der Niederwerfung (Sujud), anstatt umherzuschauen.\n- Erinnern Sie sich an das letzte Gebet: Der Prophet (Friede sei mit ihm) riet: 'Bete, als wäre es dein Abschiedsgebet' (Sunan Ibn Majah 4171).",
+        "Pause for 2 seconds after each ayah before reciting the next." to "Pausieren Sie 2 Sekunden nach jedem Vers, bevor Sie den nächsten rezitieren.",
+        "Vary the short surahs recited in Salah to prevent mechanical repetition." to "Variieren Sie die im Salah rezitierten kurzen Suren, um mechanische Wiederholung zu vermeiden.",
+        "Take a deep breath and consciously let go of worldly tasks before saying 'Allahu Akbar'." to "Atmen Sie tief durch und lassen Sie bewusst die weltlichen Aufgaben los, bevor Sie 'Allahu Akbar' sagen.",
+        "Rights of Neighbors in Islam" to "Rechte der Nachbarn im Islam",
+        "The high ethical status of neighbors regardless of their faith or background." to "Der hohe ethische Status der Nachbarn, unabhängig von ihrem Glauben oder Hintergrund.",
+        """
+                The Prophet Muhammad (peace be upon him) said: 'Jibril kept enjoining good treatment of the neighbor upon me until I thought he would assign him a share of inheritance.' (Sahih al-Bukhari 6014).
+
+                Islamic teachings identify three classes of neighbors:
+                1. A neighbor who is a relative and Muslim: has three rights (kinship, Islam, neighborhood).
+                2. A neighbor who is Muslim: has two rights (Islam and neighborhood).
+                3. A neighbor of different faith: has the sacred right of good neighborhood and kindness.
+
+                Harm to neighbors is strictly condemned: 'By Allah he does not believe... whose neighbor is not safe from his harm.' (Sahih al-Bukhari 6016).
+            """.trimIndent() to
+            "Der Prophet Muhammad (Friede sei mit ihm) sagte: 'Jibril ermahnte mich immer wieder zur guten Behandlung des Nachbarn, bis ich dachte, er würde ihm einen Erbanteil zuweisen.' (Sahih al-Bukhari 6014).\n\nDie islamischen Lehren unterscheiden drei Klassen von Nachbarn:\n1. Ein Nachbar, der verwandt und Muslim ist: hat drei Rechte (Verwandtschaft, Islam, Nachbarschaft).\n2. Ein Nachbar, der Muslim ist: hat zwei Rechte (Islam und Nachbarschaft).\n3. Ein Nachbar anderen Glaubens: hat das heilige Recht auf gute Nachbarschaft und Güte.\n\nSchaden gegenüber Nachbarn wird streng verurteilt: 'Bei Allah, er glaubt nicht... dessen Nachbar vor seinem Schaden nicht sicher ist.' (Sahih al-Bukhari 6016).",
+        "Share homemade food or fruit occasionally." to "Teilen Sie gelegentlich hausgemachtes Essen oder Obst.",
+        "Keep noise levels respectful during late night and early mornings." to "Halten Sie den Lärmpegel spät nachts und früh morgens rücksichtsvoll.",
+        "Help senior neighbors with groceries or physical tasks." to "Helfen Sie älteren Nachbarn bei Einkäufen oder körperlichen Aufgaben.",
+        "The Noble Quran, Surah Al-Ma'idah (5:6)" to "Der Edle Koran, Sure Al-Ma'idah (5:6)",
+        "Sahih al-Bukhari 159 (Hadith of Uthman describing Prophet's wudu)" to "Sahih al-Bukhari 159 (Hadith von Uthman über den Wudu des Propheten)",
+        "Al-Hidaya, Kitab al-Taharah (Imam Marghinani, Hanafi)" to "Al-Hidaya, Kitab al-Taharah (Imam Marghinani, hanafitisch)",
+        "Surah Al-Mu'minun (23:1-2): 'Successful indeed are the believers who are humble in their prayers.'" to "Sure Al-Mu'minun (23:1-2): „Erfolgreich sind wahrlich die Gläubigen, die in ihrem Gebet demütig sind.“",
+        "Ihya Ulum al-Din, Kitab Asrar al-Salah (Imam Ghazali)" to "Ihya Ulum al-Din, Kitab Asrar al-Salah (Imam Ghazali)",
+        "Sahih Muslim 395 (Hadith Qudsi on Surat al-Fatihah)" to "Sahih Muslim 395 (Hadith Qudsi über Surat al-Fatihah)",
+        "Sahih al-Bukhari 6014, 6016" to "Sahih al-Bukhari 6014, 6016",
+        "Sahih Muslim 2625 (Abu Dharr on adding water to broth to share with neighbors)" to "Sahih Muslim 2625 (Abu Dharr über das Hinzufügen von Wasser zur Brühe, um sie mit Nachbarn zu teilen)",
+        "Adab al-Mufrad (Imam al-Bukhari)" to "Adab al-Mufrad (Imam al-Bukhari)",
         "Dua on seeing the new moon" to "Bittgebet beim Sichten des Neumonds",
         "On sighting the moon, recite: اللّٰهُمَّ أَهِلَّهُ عَلَيْنَا بِالْأَمْنِ وَالْإِيمَانِ وَالسَّلَامَةِ وَالْإِسْلَامِ رَبِّي وَرَبُّكَ اللّٰهُ" to "Beim Sichten des Mondes rezitieren: اللّٰهُمَّ أَهِلَّهُ عَلَيْنَا بِالْأَمْنِ وَالْإِيمَانِ وَالسَّلَامَةِ وَالْإِسْلَامِ رَبِّي وَرَبُّكَ اللّٰهُ",
         "Fasting in Muharram" to "Fasten im Muharram",
@@ -886,7 +1112,20 @@ internal val germanPack = UiLanguagePack(
         "Day of Arafah" to "Tag von Arafah",
         "9th Dhu al-Hijjah. Fasting expiates sins of two years (Sahih Muslim)." to "9. Dhu al-Hijjah. Das Fasten sühnt die Sünden zweier Jahre (Sahih Muslim).",
         "Eid al-Adha" to "Eid al-Adha",
-        "10th Dhu al-Hijjah. Qurbani from the 10th to the 12th." to "10. Dhu al-Hijjah. Qurbani vom 10. bis zum 12."
+        "10th Dhu al-Hijjah. Qurbani from the 10th to the 12th." to "10. Dhu al-Hijjah. Qurbani vom 10. bis zum 12.",
+        "Islamic jurisprudence regarding marital dissolution (talaq), complex inheritance, and personal legal verdicts requires direct review of both parties' detailed circumstances by a qualified local mufti or Islamic scholar." to "Die islamische Rechtsprechung zu Ehescheidung (Talaq), komplexen Erbschaften und persönlichen Rechtsgutachten erfordert eine direkte Prüfung der detaillierten Umstände beider Parteien durch einen qualifizierten örtlichen Mufti oder islamischen Gelehrten.",
+        "Legal verdicts in personal disputes cannot be issued by automated systems or general textbooks, as individual statements, intentions, and local contracts directly impact the legal validity." to "Rechtsgutachten in persönlichen Streitigkeiten können nicht von automatisierten Systemen oder allgemeinen Lehrbüchern erteilt werden, da individuelle Aussagen, Absichten und örtliche Verträge die Rechtsgültigkeit direkt beeinflussen.",
+        "High-stakes personal fiqh questions require in-person consultation with a qualified local Islamic scholar." to "Persönliche Fiqh-Fragen von großer Tragweite erfordern eine persönliche Beratung mit einem qualifizierten örtlichen islamischen Gelehrten.",
+        "In Islam, patience (Sabr) is coupled directly with prayer (Salah) as the believers' active fortress in moments of hardship. Rather than passive endurance, Sabr means emotional resilience, avoiding panic, and maintaining trust in Allah's wisdom." to "Im Islam ist Geduld (Sabr) direkt mit dem Gebet (Salah) verbunden, als aktive Festung des Gläubigen in Zeiten der Not. Statt passivem Erdulden bedeutet Sabr emotionale Widerstandskraft, das Vermeiden von Panik und das Bewahren des Vertrauens in Allahs Weisheit.",
+        "Ibn Kathir notes in his Tafsir: When heavy trials occur, two aids support the human being: restraining the soul from forbidden despair (patience) and turning to the coolness of the eyes in prayer." to "Ibn Kathir bemerkt in seinem Tafsir: Wenn schwere Prüfungen eintreten, unterstützen zwei Dinge den Menschen: die Seele von verbotener Verzweiflung zurückzuhalten (Geduld) und sich der Augenweide des Gebets zuzuwenden.",
+        "Scholars emphasize three types of Sabr: patience upon acts of obedience, patience against committing sins, and patience with painful decrees." to "Gelehrte betonen drei Arten von Sabr: Geduld beim Gehorsam, Geduld gegen das Begehen von Sünden und Geduld mit schmerzhaften Bestimmungen.",
+        "Kindness and continuous prayer for parents (Birr al-Walidayn) holds the highest priority in Islamic ethics, placed directly next to the monotheistic worship of Allah." to "Güte und beständiges Bittgebet für die Eltern (Birr al-Walidayn) haben in der islamischen Ethik höchste Priorität, direkt neben der monotheistischen Anbetung Allahs.",
+        "Al-Qurtubi explains that filial piety remains obligatory even if parents are of another faith, provided they do not command disobedience to God." to "Al-Qurtubi erklärt, dass die kindliche Pflicht auch dann verpflichtend bleibt, wenn die Eltern einem anderen Glauben angehören, solange sie nicht zum Ungehorsam gegen Gott auffordern.",
+        "Wudu is the ritual purification obligatory for Salah. Its core Quranic requirements are washing the face, arms including elbows, wiping the head, and washing feet to the ankles." to "Wudu ist die für die Salah vorgeschriebene rituelle Reinigung. Ihre grundlegenden koranischen Anforderungen sind das Waschen des Gesichts, der Arme einschließlich der Ellbogen, das Abwischen des Kopfes und das Waschen der Füße bis zu den Knöcheln.",
+        "All recognized schools agree on the 4 pillars mentioned in the Quranic verse, with differences regarding whether rubbing (Dalk) and uninterrupted continuity (Muwalat) are obligatory or recommended." to "Alle anerkannten Rechtsschulen stimmen den 4 im koranischen Vers genannten Säulen zu, mit Unterschieden darüber, ob Reiben (Dalk) und ununterbrochene Kontinuität (Muwalat) verpflichtend oder empfohlen sind.",
+        "Hanafi school considers wiping a quarter of the head sufficient; Shafi'i considers wiping any portion of hair sufficient; Maliki and Hanbali mandate wiping the entire head." to "Die hanafitische Schule hält das Abwischen eines Viertels des Kopfes für ausreichend; die schafiitische Schule hält das Abwischen eines beliebigen Haarteils für ausreichend; die malikitische und hanbalitische Schule schreiben das Abwischen des gesamten Kopfes vor.",
+        "According to authentic Quranic and Prophetic sources, believers are instructed to build their daily life upon constant mindfulness of Allah (Taqwa), establishing prayer, speaking truth, and upholding righteous character." to "Gemäß authentischen koranischen und prophetischen Quellen werden die Gläubigen angewiesen, ihr tägliches Leben auf beständiges Gottesbewusstsein (Taqwa), die Verrichtung des Gebets, das Sprechen der Wahrheit und die Wahrung eines rechtschaffenen Charakters zu gründen.",
+        "Classical commentators emphasize that Islamic practice balances personal spiritual duties (Ibadah) with exemplary social ethics (Mu'amalat)." to "Klassische Kommentatoren betonen, dass die islamische Praxis persönliche geistliche Pflichten (Ibadah) mit vorbildlicher sozialer Ethik (Mu'amalat) in Einklang bringt."
     ),
     words = mapOf(
         "Prayer" to "Gebet", "Schedule" to "Zeitplan", "Location" to "Standort", "Language" to "Sprache",

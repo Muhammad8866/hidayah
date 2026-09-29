@@ -30,7 +30,7 @@ object DuaTranslations {
         "tr" to { DuaTr1.MAP },
         "id" to { DuaId1.MAP },
         "ru" to { DuaRu1.MAP },
-        "de" to { DuaDe1.MAP + DuaDe2.MAP },
+        "de" to { DuaDe1.MAP + DuaDe2.MAP + DuaDe3.MAP },
         "pt" to { DuaPt1.MAP + DuaPt2.MAP + DuaPt3.MAP + DuaPt4.MAP + DuaPt5.MAP },
         "zh" to { DuaZh1.MAP },
         "sw" to { DuaSw1.MAP },
