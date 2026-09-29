@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -119,7 +120,7 @@ private fun JourneyTracker(
     var done by remember(journey) { mutableStateOf(prefs.getStringSet(doneKey(journey), emptySet()).orEmpty().toSet()) }
     val next = nextPendingStep(steps, done)
     var expanded by rememberSaveable(journey) { mutableStateOf(next?.id) }
-    var confirmReset by remember { mutableStateOf(false) }
+    var confirmReset by rememberSaveable { mutableStateOf(false) }
 
     fun save(updated: Set<String>) {
         done = updated
@@ -271,7 +272,7 @@ private fun StepCard(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onToggleExpand)
+                    .clickable(role = Role.Button, onClick = onToggleExpand)
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -584,7 +585,7 @@ private fun CollapsibleCard(
         Row(
             Modifier
                 .fillMaxWidth()
-                .clickable { expanded = !expanded }
+                .clickable(role = Role.Button) { expanded = !expanded }
                 .padding(16.dp)
                 .testTag(testTag),
             verticalAlignment = Alignment.CenterVertically
@@ -640,7 +641,7 @@ private fun PreparationCard(prefs: SharedPreferences, accent: Color) {
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .clickable {
+                        .clickable(role = Role.Button) {
                             ready = if (checked) ready - item.id else ready + item.id
                             prefs.edit().putStringSet(KEY_PREP, ready).apply()
                         },

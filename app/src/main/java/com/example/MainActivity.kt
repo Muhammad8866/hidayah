@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.LayoutDirection
@@ -104,6 +105,7 @@ class MainActivity : ComponentActivity() {
         viewModel.startCompass()
         viewModel.syncPlatformLanguage()
         viewModel.refreshRealtimeDate()
+        viewModel.refreshNotificationPermission()
         // Re-check on every foreground entry. This covers the common flow where the
         // user enables device location in Android Settings and then returns here.
         viewModel.startLiveLocation()
@@ -111,6 +113,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         viewModel.stopCompass()
+        viewModel.pauseLiveLocation()
         super.onStop()
     }
 
@@ -140,20 +143,20 @@ class MainActivity : ComponentActivity() {
                     LocalAppLocale provides locale
                 ) {
                 val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
-                var currentDestination by remember { mutableStateOf(AppDestination.HOME) }
+                var currentDestination by rememberSaveable { mutableStateOf(AppDestination.HOME) }
                 var showPrayerTransparency by remember { mutableStateOf(false) }
-                var showQibla by remember { mutableStateOf(false) }
-                var showMoreSettings by remember { mutableStateOf(false) }
-                var activeDailyTool by remember { mutableStateOf(DailyTool.PRAYER_TRACKER) }
+                var showQibla by rememberSaveable { mutableStateOf(false) }
+                var showMoreSettings by rememberSaveable { mutableStateOf(false) }
+                var activeDailyTool by rememberSaveable { mutableStateOf(DailyTool.PRAYER_TRACKER) }
                 // Screens listed under More can also be opened from Home; Back returns to wherever they came from.
-                var moreBackTarget by remember { mutableStateOf(AppDestination.MORE) }
+                var moreBackTarget by rememberSaveable { mutableStateOf(AppDestination.MORE) }
                 val openSecondary = { destination: AppDestination, from: AppDestination ->
                     moreBackTarget = from
                     currentDestination = destination
                 }
                 val backFromSecondary = { currentDestination = moreBackTarget }
                 // Full-screen PDF readers hide every piece of app chrome around the source page.
-                var readerImmersive by remember { mutableStateOf(false) }
+                var readerImmersive by rememberSaveable { mutableStateOf(false) }
                 BackHandler(enabled = readerImmersive || showQibla || currentDestination != AppDestination.HOME) {
                     when {
                         readerImmersive -> readerImmersive = false
@@ -173,28 +176,24 @@ class MainActivity : ComponentActivity() {
 
                 val context = LocalContext.current
                 val haptics = LocalHapticFeedback.current
+                var useCurrentLocationAfterPermission by remember { mutableStateOf(false) }
                 val permissionLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestMultiplePermissions()
                 ) { permissions ->
-                    if (permissions[Manifest.permission.POST_NOTIFICATIONS] == true) {
-                        viewModel.setNotificationsEnabled(true)
+                    if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                        permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
+                        viewModel.startLiveLocation(userRequested = useCurrentLocationAfterPermission)
                     }
-                    if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true || permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true) viewModel.startLiveLocation()
+                    useCurrentLocationAfterPermission = false
                 }
 
                 LaunchedEffect(Unit) {
                     val hasLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        val hasPermission = ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.POST_NOTIFICATIONS
-                        ) == PackageManager.PERMISSION_GRANTED
-                        permissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-                    } else {
+                    if (viewModel.usesLiveLocation()) {
                         if (!hasLocation) permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+                        else viewModel.startLiveLocation()
                     }
-                    if (hasLocation) viewModel.startLiveLocation()
                 }
 
                 Scaffold(
@@ -282,11 +281,12 @@ class MainActivity : ComponentActivity() {
                                     val hasLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                                         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                                     if (!hasLocation) {
+                                        useCurrentLocationAfterPermission = true
                                         permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
                                     } else if (uiState.locationIssue == LocationIssue.SERVICES_OFF) {
                                         context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
                                     } else {
-                                        viewModel.startLiveLocation()
+                                        viewModel.startLiveLocation(userRequested = true)
                                     }
                                 }
                             )

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -84,7 +85,7 @@ fun CityChallengesScreen(onBack: () -> Unit, uiState: MainUiState?, modifier: Mo
     var editing by rememberSaveable { mutableStateOf(false) }
     var refreshKey by remember { mutableIntStateOf(0) }
     var state by remember { mutableStateOf<BoardState>(BoardState.Loading) }
-    var confirmLeave by remember { mutableStateOf(false) }
+    var confirmLeave by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     val confidentAyahs = uiState?.hifzList?.count { it.confidence >= 3 } ?: 0
@@ -168,7 +169,7 @@ fun CityChallengesScreen(onBack: () -> Unit, uiState: MainUiState?, modifier: Mo
             }
         }
         item(key = "actions") {
-            val invite = localizedUiText("Join me in the weekly city challenge on Deen Companion!")
+            val invite = localizedUiText("Join me in the weekly city challenge on HIDAYAH!")
             ToolCard {
                 ActionRow(Icons.Default.Share, "Invite your neighbours", "More people from your area, more points for your area.") {
                     val place = listOf(p.areaName, p.cityName).filter { it.isNotBlank() }.joinToString(", ")
@@ -674,7 +675,7 @@ private fun AreaRow(rank: Int, a: CcArea, mine: Boolean, accent: Color, goal: Cc
 private fun ActionRow(icon: ImageVector, title: String, subtitle: String?, danger: Boolean = false, onClick: () -> Unit) {
     val tint = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 6.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClick = onClick).padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, null, tint = tint)

@@ -52,6 +52,15 @@ fun RamadanScreen(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null
 ) {
+    if (!uiState.hasConfirmedLocation) {
+        Column(modifier = modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center) {
+            LocalizedText("Choose a city on Home for Sehri and Iftar times.",
+                style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+        }
+        return
+    }
     val timeZone = TimeZone.getTimeZone(uiState.selectedCity.timeZoneId)
 
     // Live clock for the Sehri/Iftar (or Ramadan) countdown.

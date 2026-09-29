@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -131,7 +132,9 @@ internal fun QuranPdfLibrary(
                         open = { onOpenIdChange(item.id) },
                         download = {
                             scope.launch {
-                                PdfQuran.download(item).onFailure { snackbar.showSnackbar(failedText) }
+                                PdfQuran.download(item).onFailure { error ->
+                                    snackbar.showSnackbar(if (item.id == "kanzul_iman") error.message ?: failedText else failedText)
+                                }
                             }
                         },
                         delete = { confirmDelete = item }
@@ -379,7 +382,7 @@ private fun PdfBookPager(
     val pagerState = rememberPagerState(initialPage = PdfQuran.lastPage(book).coerceIn(0, count - 1)) { count }
     val scope = rememberCoroutineScope()
     var zoomed by remember { mutableStateOf(false) }
-    var showNavigator by remember { mutableStateOf(false) }
+    var showNavigator by rememberSaveable { mutableStateOf(false) }
     val lastIndex = count - 1
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.settledPage }.collect { PdfQuran.saveLastPage(book, it) }
@@ -643,7 +646,7 @@ private fun PdfNavigatorDialog(
                 }
                 when (tab) {
                     0 -> {
-                        var query by remember { mutableStateOf("") }
+                        var query by rememberSaveable { mutableStateOf("") }
                         val language = LocalAppLanguage.current
                         val surahs = remember(query, language) {
                             val q = query.trim()
@@ -669,7 +672,7 @@ private fun PdfNavigatorDialog(
                                 Row(
                                     Modifier.fillMaxWidth()
                                         .background(if (item.number == currentSurah) highlight else Color.Transparent)
-                                        .clickable { open(page) }
+                                        .clickable(role = Role.Button) { open(page) }
                                         .padding(vertical = 8.dp)
                                         .testTag("pdf_surah_${item.number}"),
                                     verticalAlignment = Alignment.CenterVertically
@@ -692,12 +695,12 @@ private fun PdfNavigatorDialog(
                     1 -> {
                         val listState = rememberLazyListState((currentPara - 3).coerceAtLeast(0))
                         LazyColumn(Modifier.heightIn(max = 420.dp).testTag("pdf_para_list"), listState) {
-                            items((1..30).toList()) { para ->
+                            items((1..30).toList(), key = { it }) { para ->
                                 val page = book.paraPages[para - 1]
                                 Row(
                                     Modifier.fillMaxWidth()
                                         .background(if (para == currentPara) highlight else Color.Transparent)
-                                        .clickable { open(page) }
+                                        .clickable(role = Role.Button) { open(page) }
                                         .padding(vertical = 12.dp)
                                         .testTag("pdf_para_$para"),
                                     horizontalArrangement = Arrangement.SpaceBetween

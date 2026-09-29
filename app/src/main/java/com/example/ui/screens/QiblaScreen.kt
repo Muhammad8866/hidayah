@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import com.example.prayer.QiblaGuidance
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizedUiText
-import com.example.viewmodel.LocationIssue
 import com.example.viewmodel.MainUiState
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -41,10 +40,23 @@ fun QiblaScreen(
     onUseCurrentLocation: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    if (!uiState.hasConfirmedLocation) {
+        Column(modifier = modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center) {
+            LocalizedText("Choose a city on Home or use device location for Qibla direction.",
+                style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+            onUseCurrentLocation?.let { callback ->
+                Spacer(Modifier.height(16.dp))
+                Button(onClick = callback) { LocalizedText("Use device location") }
+            }
+        }
+        return
+    }
     val bearing = uiState.qiblaBearing
     val sensorUnreliable = uiState.compassAccuracy == SensorManager.SENSOR_STATUS_UNRELIABLE
     val sensorLow = uiState.compassAccuracy == SensorManager.SENSOR_STATUS_ACCURACY_LOW
-    val trueHeading = if (uiState.isLiveLocation && !sensorUnreliable) {
+    val trueHeading = if (!sensorUnreliable) {
         uiState.deviceHeading?.let { heading ->
             uiState.magneticDeclination?.let { QiblaGuidance.trueHeading(heading.toDouble(), it.toDouble()) }
         }
@@ -56,8 +68,8 @@ fun QiblaScreen(
         sensorUnreliable || sensorLow -> "Calibrate compass for accuracy"
         turn != null && turn > 0 -> "Turn right ${abs(turn).roundToInt()}°"
         turn != null -> "Turn left ${abs(turn).roundToInt()}°"
-        uiState.isLiveLocation -> "Waiting for compass"
-        else -> "Bearing from true north"
+        uiState.deviceHeading == null -> "Bearing from true north"
+        else -> "Waiting for compass"
     }
 
     Column(
@@ -117,23 +129,6 @@ fun QiblaScreen(
 
         Spacer(Modifier.height(16.dp))
         when {
-            !uiState.isLiveLocation -> {
-                InfoCard(
-                    icon = { Icon(Icons.Default.GpsFixed, contentDescription = null) },
-                    title = "Use your current location",
-                    body = when (uiState.locationIssue) {
-                        LocationIssue.SERVICES_OFF -> "Turn on device location for a live compass."
-                        LocationIssue.PERMISSION_DENIED -> "Allow location for a live compass. The city bearing is shown above."
-                        null -> "Live guidance needs your location to correct magnetic north."
-                    }
-                )
-                if (onUseCurrentLocation != null) {
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = onUseCurrentLocation, modifier = Modifier.fillMaxWidth()) {
-                        LocalizedText(if (uiState.locationIssue == LocationIssue.SERVICES_OFF) "Open location settings" else "Use current location")
-                    }
-                }
-            }
             uiState.deviceHeading == null -> InfoCard(
                 icon = { Icon(Icons.Default.CompassCalibration, contentDescription = null) },
                 title = "Compass unavailable",
@@ -150,6 +145,14 @@ fun QiblaScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
+        }
+        if (!uiState.isLiveLocation && onUseCurrentLocation != null) {
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = onUseCurrentLocation) {
+                Icon(Icons.Default.GpsFixed, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                LocalizedText("Use current location")
+            }
         }
         Spacer(Modifier.height(16.dp))
     }

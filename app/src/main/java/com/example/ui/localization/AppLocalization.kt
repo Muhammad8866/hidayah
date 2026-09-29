@@ -89,7 +89,6 @@ private val hindiPhrases = linkedMapOf(
     "Calculation Authority" to "गणना पद्धति", "Asr Juristic Calculation" to "असर की गणना पद्धति",
     "Hijri Moon Sighting Adjustment" to "हिजरी चाँद समायोजन",
     "Prayer Notifications Service" to "नमाज़ सूचना सेवा", "Enable Prayer Alerts" to "नमाज़ की सूचनाएँ चालू करें",
-    "Privacy & Offline Architecture" to "गोपनीयता और ऑफ़लाइन व्यवस्था",
     "Content Governance & Sources" to "सामग्री और स्रोत",
     "Today's Prayer Schedule" to "आज की नमाज़ का समय", "Calculated Salah Start" to "नमाज़ शुरू होने का समय",
     "Explore The Noble Quran" to "पवित्र क़ुरआन पढ़ें", "Daily Adhkar" to "रोज़ाना अज़कार",
@@ -343,7 +342,6 @@ private val urduPhrases = linkedMapOf(
     "Calculation Authority" to "حساب کا طریقہ", "Asr Juristic Calculation" to "عصر کے حساب کا طریقہ",
     "Hijri Moon Sighting Adjustment" to "ہجری چاند کی رویت کی درستی",
     "Prayer Notifications Service" to "نماز کی اطلاع کی خدمت", "Enable Prayer Alerts" to "نماز کی اطلاعات فعال کریں",
-    "Privacy & Offline Architecture" to "رازداری اور آف لائن نظام",
     "Content Governance & Sources" to "مواد اور مآخذ",
     "Today's Prayer Schedule" to "آج کی نمازوں کے اوقات", "Calculated Salah Start" to "نماز شروع ہونے کا وقت",
     "Explore The Noble Quran" to "قرآن کریم پڑھیں", "Daily Adhkar" to "روزانہ اذکار",
@@ -674,7 +672,6 @@ private val hinglishPhrases = mapOf(
     "Hijri Moon Sighting Adjustment" to "Hijri chaand ki date adjust karein",
     "Prayer Notifications Service" to "Namaz notification service",
     "Enable Prayer Alerts" to "Namaz alerts chalu karein",
-    "Privacy & Offline Architecture" to "Privacy aur offline system",
     "Content Governance & Sources" to "Content aur sources",
     "Today's Prayer Schedule" to "Aaj ki namaz ka waqt",
     "Calculated Salah Start" to "Namaz shuru hone ka waqt",
@@ -862,7 +859,6 @@ private val coreUiReferenceKeys: Set<String> = setOf(
     "Calculation Authority", "Asr Juristic Calculation",
     "Hijri Moon Sighting Adjustment",
     "Prayer Notifications Service", "Enable Prayer Alerts",
-    "Privacy & Offline Architecture",
     "Content Governance & Sources",
     "Today's Prayer Schedule", "Calculated Salah Start",
     "Explore The Noble Quran", "Daily Adhkar",
@@ -906,8 +902,47 @@ fun localizeUiText(text: String, language: String): String {
     homeRefreshLabels[language]?.get(text)?.let { return it }
     homeDashboardLabels[language]?.get(text)?.let { return it }
     homeShortcutLabels[language]?.get(text)?.let { return it }
+    widgetLabels[language]?.get(text)?.let { return it }
+    auditUiLabels[language]?.get(text)?.let { return it }
+    prayerAlertPromptLabels[language]?.get(text)?.let { return it }
     return languagePacks[language]?.localize(text) ?: text
 }
+
+/**
+ * Home-screen widget copy, plus "Next Prayer": word-by-word packs would join a masculine
+ * "Next" to the feminine "namaz" (अगला नमाज़).
+ */
+private val widgetLabels = mapOf(
+    "hinglish" to mapOf(
+        "Next Prayer" to "Agli namaz",
+        "Choose city in app" to "App mein shehar chunein",
+        "Open app to check your location" to "Apni location check karne ke liye app kholein"
+    ),
+    "hi" to mapOf(
+        "Next Prayer" to "अगली नमाज़",
+        "Choose city in app" to "ऐप में शहर चुनें",
+        "Open app to check your location" to "अपनी लोकेशन जाँचने के लिए ऐप खोलें"
+    ),
+    "ur" to mapOf(
+        "Next Prayer" to "اگلی نماز",
+        "Choose city in app" to "ایپ میں شہر منتخب کریں",
+        "Open app to check your location" to "اپنی لوکیشن دیکھنے کے لیے ایپ کھولیں"
+    ),
+    "ar" to mapOf(
+        "Next Prayer" to "الصلاة القادمة",
+        "Choose city in app" to "اختر المدينة في التطبيق",
+        "Prayer times unavailable" to "مواقيت الصلاة غير متاحة",
+        "Open app to check your location" to "افتح التطبيق للتحقق من موقعك",
+        "Fajr" to "الفجر", "Dhuhr" to "الظهر", "Asr" to "العصر", "Maghrib" to "المغرب", "Isha" to "العشاء"
+    ),
+    "bn" to mapOf(
+        "Next Prayer" to "পরবর্তী নামাজ",
+        "Choose city in app" to "অ্যাপে শহর বেছে নিন",
+        "Prayer times unavailable" to "নামাজের সময় পাওয়া যাচ্ছে না",
+        "Open app to check your location" to "আপনার অবস্থান দেখতে অ্যাপ খুলুন",
+        "Fajr" to "ফজর", "Dhuhr" to "যোহর", "Asr" to "আসর", "Maghrib" to "মাগরিব", "Isha" to "এশা"
+    )
+)
 
 /** Copy introduced by the refreshed Home dashboard. Other languages fall back to word-level packs. */
 private val homeRefreshLabels = mapOf(
@@ -1200,9 +1235,10 @@ fun LocalizedPhraseText(
     lineHeight: TextUnit = TextUnit.Unspecified,
     overflow: TextOverflow = TextOverflow.Clip,
     maxLines: Int = Int.MAX_VALUE,
-    style: TextStyle = LocalTextStyle.current
+    style: TextStyle = LocalTextStyle.current,
+    language: String = LocalAppLanguage.current
 ) = MaterialText(
-    text = localizePhrase(text, LocalAppLanguage.current),
+    text = localizePhrase(text, language),
     modifier = modifier,
     color = color,
     fontWeight = fontWeight,

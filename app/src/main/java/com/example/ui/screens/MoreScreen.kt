@@ -27,7 +27,14 @@ import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.NightsStay
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -90,6 +97,8 @@ fun MoreScreen(
             Color(0xFFC0664A), "more_festivals", onNavigateToFestivals)
     )
 
+    val context = LocalContext.current
+    var showCredits by rememberSaveable { mutableStateOf(false) }
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -118,11 +127,30 @@ fun MoreScreen(
             Spacer(Modifier.height(4.dp))
             MoreSettingsRow(onClick = onOpenSettings)
         }
+        item {
+            MoreSettingsRow(
+                onClick = { openExternalUrl(context, PRIVACY_POLICY_URL) },
+                title = "Privacy Policy",
+                subtitle = "What data the app uses and why",
+                icon = Icons.Default.PrivacyTip,
+                tag = "more_privacy_policy"
+            )
+        }
+        item {
+            MoreSettingsRow(
+                onClick = { showCredits = true },
+                title = "Sources & Credits",
+                subtitle = "Where the Quran, audio and books come from",
+                icon = Icons.Default.Info,
+                tag = "more_credits"
+            )
+        }
     }
+    if (showCredits) CreditsDialog(onDismiss = { showCredits = false })
 }
 
 private fun LazyListScope.featureGrid(features: List<MoreFeature>) {
-    items(features.chunked(2)) { pair ->
+    items(features.chunked(2), key = { pair -> pair.joinToString("|") { it.title } }) { pair ->
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -221,13 +249,19 @@ private fun MoreFeatureTile(feature: MoreFeature, modifier: Modifier = Modifier)
 }
 
 @Composable
-private fun MoreSettingsRow(onClick: () -> Unit) {
+private fun MoreSettingsRow(
+    onClick: () -> Unit,
+    title: String = "Settings & Privacy",
+    subtitle: String = "Language, alerts & prayer times",
+    icon: ImageVector = Icons.Default.Settings,
+    tag: String = "more_settings"
+) {
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 72.dp)
-            .testTag("more_settings"),
+            .testTag(tag),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
     ) {
@@ -243,7 +277,7 @@ private fun MoreSettingsRow(onClick: () -> Unit) {
                 modifier = Modifier.size(46.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Settings,
+                    imageVector = icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(11.dp)
@@ -252,13 +286,13 @@ private fun MoreSettingsRow(onClick: () -> Unit) {
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 LocalizedText(
-                    text = "Settings & Privacy",
+                    text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
                 MoreSubtitle(
-                    text = "Language, alerts & prayer times",
+                    text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 2
                 )

@@ -17,6 +17,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import com.example.ui.localization.localizedUiText
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -77,6 +80,14 @@ private enum class SessionKind { REVISION, NEW, WEAK }
 private const val TARGET_READS = 3
 private val MistakeRed = Color(0xFFB73A32)
 
+// Mushaf paper palette that follows the app theme (dark paper in dark mode).
+private val hifzDark: Boolean @Composable get() = MaterialTheme.colorScheme.background.luminance() < 0.5f
+private val HifzPaper: Color @Composable get() = if (hifzDark) Color(0xFF16140F) else MushafPaper
+private val HifzCard: Color @Composable get() = if (hifzDark) Color(0xFF221F18) else QuranCard
+private val HifzMuted: Color @Composable get() = if (hifzDark) Color(0xFFB9AE99) else QuranMuted
+private val HifzGold: Color @Composable get() = if (hifzDark) Color(0xFFD9B878) else MushafGold
+private val HifzAccent: Color @Composable get() = if (hifzDark) Color(0xFF8FD1AE) else QuranGreen
+
 private data class GradeStyle(val grade: HifzGrade, val title: String, val description: String, val color: Color)
 private val gradeStyles = listOf(
     GradeStyle(HifzGrade.FORGOT, "Forgot", "Couldn't recall it", MistakeRed),
@@ -123,7 +134,7 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
     var revealed by rememberSaveable { mutableIntStateOf(0) }
     var grades by rememberSaveable { mutableStateOf(listOf<Int>()) }
 
-    var chooseSurah by remember { mutableStateOf(false) }
+    var chooseSurah by rememberSaveable { mutableStateOf(false) }
     var chooseAyahFor by remember { mutableStateOf<Int?>(null) }
     var retryKey by remember { mutableIntStateOf(0) }
     val loaded = remember { mutableStateMapOf<Int, List<Ayah>>() }
@@ -132,7 +143,7 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
     var listening by remember { mutableStateOf(false) }
     var checkingVoice by remember { mutableStateOf(false) }
     var speechError by remember { mutableStateOf<String?>(null) }
-    var transcript by remember { mutableStateOf("") }
+    var transcript by rememberSaveable { mutableStateOf("") }
     var assessment by remember { mutableStateOf<HifzAssessment?>(null) }
     var activeSpeech by remember { mutableStateOf<AyahReference?>(null) }
     val recognizer = remember { if (SpeechRecognizer.isRecognitionAvailable(context)) SpeechRecognizer.createSpeechRecognizer(context) else null }
@@ -292,14 +303,14 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
     }
 
     LazyColumn(
-        modifier = modifier.fillMaxSize().background(MushafPaper).testTag("hifz_coach"),
+        modifier = modifier.fillMaxSize().background(HifzPaper).testTag("hifz_coach"),
         contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         when (page) {
             CoachPage.HOME -> {
                 item {
-                    Text("Hifz Coach", color = QuranGreen, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    Text("Memorise a little every day, revise what you know.", color = QuranMuted, fontSize = 14.sp)
+                    Text("Hifz Coach", color = HifzAccent, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text("Memorise a little every day, revise what you know.", color = HifzMuted, fontSize = 14.sp)
                 }
                 if (cards.isNotEmpty()) item {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -313,24 +324,24 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                         SectionLabel("TODAY'S REVISION")
                         val due = summary.dueCards.size
                         if (due > 0) {
-                            Text("$due ayah${if (due == 1) "" else "s"} to revise", color = QuranGreen, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            Text("$due ayah${if (due == 1) "" else "s"} to revise", color = HifzAccent, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                             val batch = minOf(due, HifzCoachLogic.MAX_REVISION)
-                            Text("About $batch min · revising keeps your hifz safe", color = QuranMuted, fontSize = 13.sp)
+                            Text("About $batch min · revising keeps your hifz safe", color = HifzMuted, fontSize = 13.sp)
                             if (summary.totalToday > 0) LinearProgressIndicator(progress = { summary.progress }, modifier = Modifier.fillMaxWidth().clip(CircleShape),
-                                color = QuranGreen, trackColor = QuranGoldLight.copy(alpha = .4f))
+                                color = HifzAccent, trackColor = QuranGoldLight.copy(alpha = .4f))
                             PrimaryButton(if (due > batch) "Revise next $batch" else "Start revision", Modifier.testTag("hifz_start_due")) {
                                 begin(SessionKind.REVISION, HifzCoachLogic.revisionQueue(summary.dueCards))
                             }
                         } else {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.CheckCircle, null, tint = QuranGreen, modifier = Modifier.size(26.dp))
+                                Icon(Icons.Default.CheckCircle, null, tint = HifzAccent, modifier = Modifier.size(26.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text("All revised for today", color = QuranGreen, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                Text("All revised for today", color = HifzAccent, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                             }
                             val next = cards.minOfOrNull { it.schedule.nextReviewEpochMs }
                             if (next != null) {
                                 val days = ((SmartHifzRevisionPlanner.dayKey(next) - SmartHifzRevisionPlanner.dayKey(System.currentTimeMillis())) / 86_400_000L).toInt()
-                                Text("Next revision ${HifzCoachLogic.intervalLabel(days)}. Memorise something new below.", color = QuranMuted, fontSize = 13.sp)
+                                Text("Next revision ${HifzCoachLogic.intervalLabel(days)}. Memorise something new below.", color = HifzMuted, fontSize = 13.sp)
                             }
                         }
                     }
@@ -342,17 +353,17 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                         val end = minOf(s.totalAyat, nextNew.ayah.value + sessionLength - 1)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text(s.englishName, color = QuranGreen, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                                Text(s.englishName, color = HifzAccent, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                                 Text(if (end > nextNew.ayah.value) "Ayah ${nextNew.ayah.value}–$end of ${s.totalAyat}" else "Ayah ${nextNew.ayah.value} of ${s.totalAyat}",
-                                    color = QuranMuted, fontSize = 13.sp)
+                                    color = HifzMuted, fontSize = 13.sp)
                             }
-                            Text(s.arabicName, color = QuranGreen, fontFamily = IndoPakFont, fontSize = 24.sp)
+                            Text(s.arabicName, color = HifzAccent, fontFamily = IndoPakFont, fontSize = 24.sp)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = { chooseSurah = true }, modifier = Modifier.weight(1f)) { Text("Change surah", maxLines = 1) }
                             OutlinedButton(onClick = { chooseAyahFor = nextNew.surah.value }, modifier = Modifier.weight(1f)) { Text("Change ayah", maxLines = 1) }
                         }
-                        Text("Ayahs per session", color = QuranMuted, fontSize = 13.sp)
+                        Text("Ayahs per session", color = HifzMuted, fontSize = 13.sp)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf(1, 3, 5, 10).forEach { length ->
                                 FilterChip(selected = sessionLength == length, onClick = {
@@ -368,30 +379,30 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text("Needs attention", color = QuranGreen, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                Text("Ayahs you found hard recently", color = QuranMuted, fontSize = 12.sp)
+                                Text("Needs attention", color = HifzAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                Text("Ayahs you found hard recently", color = HifzMuted, fontSize = 12.sp)
                             }
                             TextButton(onClick = {
                                 begin(SessionKind.WEAK, weakCards.take(HifzCoachLogic.MAX_REVISION).map { HifzQueueItem(it.reference, learnFirst = true) })
-                            }) { Text("Practise all", color = MushafGold, fontWeight = FontWeight.Bold) }
+                            }) { Text("Practise all", color = HifzGold, fontWeight = FontWeight.Bold) }
                         }
                     }
                     items(weakCards.take(5), key = { it.reference.toString() }) { card ->
-                        Surface(onClick = { begin(SessionKind.WEAK, listOf(HifzQueueItem(card.reference, learnFirst = true))) }, color = QuranCard,
+                        Surface(onClick = { begin(SessionKind.WEAK, listOf(HifzQueueItem(card.reference, learnFirst = true))) }, color = HifzCard,
                             shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, MushafBorder.copy(alpha = .3f)), modifier = Modifier.fillMaxWidth()) {
                             Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text("${surahName(card.reference.surah.value)} · Ayah ${card.reference.ayah.value}", color = QuranGreen, fontWeight = FontWeight.SemiBold)
-                                    Text("Recall ${card.averageAccuracy}% · ${card.attempts} tr${if (card.attempts == 1) "y" else "ies"}", color = QuranMuted, fontSize = 12.sp)
+                                    Text("${surahName(card.reference.surah.value)} · Ayah ${card.reference.ayah.value}", color = HifzAccent, fontWeight = FontWeight.SemiBold)
+                                    Text("Recall ${card.averageAccuracy}% · ${card.attempts} tr${if (card.attempts == 1) "y" else "ies"}", color = HifzMuted, fontSize = 12.sp)
                                 }
-                                Text("Practise", color = MushafGold, fontWeight = FontWeight.SemiBold)
+                                Text("Practise", color = HifzGold, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
                 }
                 item {
                     TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://tanzil.net"))) }) {
-                        Text("Arabic text: Tanzil Quran Text (Simple 1.1)", fontSize = 12.sp, color = QuranMuted)
+                        Text("Arabic text: Tanzil Quran Text (Simple 1.1)", fontSize = 12.sp, color = HifzMuted)
                     }
                 }
             }
@@ -399,10 +410,10 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                 val cur = item ?: return@LazyColumn
                 item {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = ::leave) { Icon(Icons.Default.Close, "End session", tint = QuranGreen) }
+                        IconButton(onClick = ::leave) { Icon(Icons.Default.Close, "End session", tint = HifzAccent) }
                         Column(Modifier.weight(1f)) {
-                            Text("${surahName(cur.reference.surah.value)} · Ayah ${cur.reference.ayah.value}", color = QuranGreen, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                            Text("Ayah ${index + 1} of ${queue.size}", color = QuranMuted, fontSize = 12.sp)
+                            Text("${surahName(cur.reference.surah.value)} · Ayah ${cur.reference.ayah.value}", color = HifzAccent, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                            Text("Ayah ${index + 1} of ${queue.size}", color = HifzMuted, fontSize = 12.sp)
                         }
                         val badge = when {
                             cur.isRetry -> "Once more"
@@ -411,12 +422,12 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                             else -> "Revision"
                         }
                         Surface(color = QuranGoldLight.copy(alpha = .45f), shape = CircleShape) {
-                            Text(badge, color = QuranGreen, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                            Text(badge, color = HifzAccent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
                         }
                     }
                     Spacer(Modifier.height(6.dp))
                     LinearProgressIndicator(progress = { if (queue.isEmpty()) 0f else index.toFloat() / queue.size },
-                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape), color = QuranGreen, trackColor = QuranGoldLight.copy(alpha = .35f))
+                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape), color = HifzAccent, trackColor = QuranGoldLight.copy(alpha = .35f))
                 }
                 item { StepIndicator(step, showRead = cur.learnFirst) }
                 if (current == null) item {
@@ -426,19 +437,19 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                             TextButton(onClick = { retryKey++ }) { Text("Try again") }
                         } else Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp); Spacer(Modifier.width(10.dp))
-                            Text("Opening ayah…", color = QuranMuted)
+                            Text("Opening ayah…", color = HifzMuted)
                         }
                     }
                 } else when (step) {
                     PracticeStep.LEARN -> item {
                         CoachCard {
-                            Text("Read it carefully, then read it aloud a few times.", color = QuranMuted, fontSize = 14.sp)
+                            Text("Read it carefully, then read it aloud a few times.", color = HifzMuted, fontSize = 14.sp)
                             AyahText(buildAnnotatedString { append(current.arabicText) })
                             ListenButton(audioState, speed, ::changeSpeed, onPlay = { playAyah(cur.reference) }, onStop = ::stopAudio)
                             HorizontalDivider(color = MushafBorder.copy(alpha = .25f))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text("Read aloud $TARGET_READS times", color = QuranGreen, fontWeight = FontWeight.SemiBold)
+                                    Text("Read aloud $TARGET_READS times", color = HifzAccent, fontWeight = FontWeight.SemiBold)
                                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 6.dp)) {
                                         repeat(TARGET_READS) { dot ->
                                             Box(Modifier.size(14.dp).clip(CircleShape).background(if (dot < reads) QuranGreen else QuranGoldLight.copy(alpha = .45f)))
@@ -458,29 +469,29 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                     PracticeStep.RECALL -> item {
                         val words = wordsOf(current.arabicText)
                         CoachCard {
-                            Text("Recite this ayah from memory", color = QuranGreen, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Recite this ayah from memory", color = HifzAccent, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
                             Box(Modifier.fillMaxWidth().heightIn(min = 150.dp).clip(RoundedCornerShape(14.dp))
-                                .background(MushafPaper).border(1.dp, MushafBorder.copy(alpha = .3f), RoundedCornerShape(14.dp)),
+                                .background(HifzPaper).border(1.dp, MushafBorder.copy(alpha = .3f), RoundedCornerShape(14.dp)),
                                 contentAlignment = Alignment.Center) {
                                 if (revealed == 0) Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("• • •", color = MushafGold, fontSize = 26.sp)
-                                    Text("Ayah is hidden", color = QuranMuted, fontSize = 13.sp)
+                                    Text("• • •", color = HifzGold, fontSize = 26.sp)
+                                    Text("Ayah is hidden", color = HifzMuted, fontSize = 13.sp)
                                 } else Text(words.take(revealed).joinToString(" ") + if (revealed < words.size) " …" else "",
-                                    modifier = Modifier.fillMaxWidth().padding(16.dp), color = QuranGreen,
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp), color = HifzAccent,
                                     fontFamily = IndoPakFont, fontSize = 27.sp, lineHeight = 44.sp, textAlign = TextAlign.Right)
                             }
                             if (recognizer != null) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     FilledIconButton(onClick = ::toggleMic, enabled = !checkingVoice, modifier = Modifier.size(56.dp),
                                         colors = IconButtonDefaults.filledIconButtonColors(containerColor = if (listening) MistakeRed else QuranGreen)) {
-                                        Icon(if (listening) Icons.Default.Stop else Icons.Default.Mic, if (listening) "Finish" else "Check with microphone", tint = Color.White)
+                                        Icon(if (listening) Icons.Default.Stop else Icons.Default.Mic, localizedUiText(if (listening) "Finish" else "Check with microphone"), tint = Color.White)
                                     }
                                     Spacer(Modifier.width(12.dp))
                                     Text(when {
                                         listening -> "Listening… recite now, tap to finish"
                                         checkingVoice -> "Checking your recitation…"
                                         else -> "Tap the mic to recite aloud and get checked (optional)"
-                                    }, color = QuranMuted, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                                    }, color = HifzMuted, fontSize = 13.sp, modifier = Modifier.weight(1f))
                                 }
                             }
                             speechError?.let { e -> Text(e, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) }
@@ -503,35 +514,35 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                         val a = assessment
                         item {
                             CoachCard {
-                                Text("Compare with what you recited", color = QuranMuted, fontSize = 14.sp)
+                                Text("Compare with what you recited", color = HifzMuted, fontSize = 14.sp)
                                 AyahText(if (a != null) buildAnnotatedString {
                                     a.words.forEachIndexed { i, word ->
                                         if (i > 0) append(' ')
                                         val wrong = i in a.incorrectIndices
-                                        withStyle(SpanStyle(color = if (wrong) MistakeRed else QuranGreen, fontWeight = if (wrong) FontWeight.Bold else FontWeight.Normal)) { append(word) }
+                                        withStyle(SpanStyle(color = if (wrong) MistakeRed else HifzAccent, fontWeight = if (wrong) FontWeight.Bold else FontWeight.Normal)) { append(word) }
                                     }
                                 } else buildAnnotatedString { append(current.arabicText) })
                                 if (a != null) {
                                     Surface(color = QuranGoldLight.copy(alpha = .25f), shape = RoundedCornerShape(12.dp)) {
                                         Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                                            Text("Voice match ${a.score}%", color = QuranGreen, fontWeight = FontWeight.Bold)
+                                            Text("Voice match ${a.score}%", color = HifzAccent, fontWeight = FontWeight.Bold)
                                             Text(if (a.incorrectIndices.isEmpty()) "Every word matched. MashaAllah!"
                                                 else "Words in red may have been missed. Speech recognition isn't perfect, so trust your own judgement.",
-                                                color = QuranMuted, fontSize = 12.sp)
+                                                color = HifzMuted, fontSize = 12.sp)
                                         }
                                     }
                                 }
-                                if (revealed > 0) Text("You used ${revealed} hint word${if (revealed == 1) "" else "s"}.", color = MushafGold, fontSize = 13.sp)
+                                if (revealed > 0) Text("You used ${revealed} hint word${if (revealed == 1) "" else "s"}.", color = HifzGold, fontSize = 13.sp)
                                 Row {
                                     ListenButton(audioState, speed, ::changeSpeed, onPlay = { playAyah(cur.reference) }, onStop = ::stopAudio)
                                     Spacer(Modifier.weight(1f))
-                                    TextButton(onClick = { resetItemState(); step = PracticeStep.RECALL }) { Text("Try again", color = QuranGreen) }
+                                    TextButton(onClick = { resetItemState(); step = PracticeStep.RECALL }) { Text("Try again", color = HifzAccent) }
                                 }
                             }
                         }
                         item {
-                            Text("How well did you remember it?", color = QuranGreen, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("This decides when the ayah comes back for revision.", color = QuranMuted, fontSize = 13.sp)
+                            Text("How well did you remember it?", color = HifzAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("This decides when the ayah comes back for revision.", color = HifzMuted, fontSize = 13.sp)
                             Spacer(Modifier.height(10.dp))
                             val suggested = HifzCoachLogic.suggestedGrade(a?.score, revealed, words.size)
                             val existing = cards.firstOrNull { c -> c.reference == cur.reference } ?: SmartHifzCard(cur.reference)
@@ -555,10 +566,10 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
             CoachPage.COMPLETE -> {
                 item {
                     CoachCard {
-                        Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(52.dp).align(Alignment.CenterHorizontally), tint = QuranGreen)
-                        Text("Session complete", color = QuranGreen, fontSize = 25.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
+                        Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(52.dp).align(Alignment.CenterHorizontally), tint = HifzAccent)
+                        Text("Session complete", color = HifzAccent, fontSize = 25.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
                         val reviewed = queue.map { q -> q.reference }.distinct().size
-                        Text("MashaAllah! You practised $reviewed ayah${if (reviewed == 1) "" else "s"}.", color = QuranMuted,
+                        Text("MashaAllah! You practised $reviewed ayah${if (reviewed == 1) "" else "s"}.", color = HifzMuted,
                             textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             gradeStyles.forEach { style ->
@@ -566,12 +577,12 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                                 Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(style.color.copy(alpha = .1f)).padding(vertical = 10.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text("$count", color = style.color, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                    Text(style.title, color = QuranMuted, fontSize = 11.sp)
+                                    Text(localizedUiText(style.title), color = HifzMuted, fontSize = 11.sp)
                                 }
                             }
                         }
                         Text("Each ayah will return for revision at the right time, so it stays in your memory.",
-                            color = QuranMuted, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                            color = HifzMuted, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                         val due = summary.dueCards.size
                         when {
                             due > 0 -> PrimaryButton("Revise $due due ayah${if (due == 1) "" else "s"}") {
@@ -579,7 +590,7 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                             }
                             kind == SessionKind.NEW -> PrimaryButton("Memorise next $sessionLength") { startNewPassage() }
                         }
-                        OutlinedButton(onClick = ::leave, modifier = Modifier.fillMaxWidth()) { Text("Back to Coach", color = QuranGreen) }
+                        OutlinedButton(onClick = ::leave, modifier = Modifier.fillMaxWidth()) { Text("Back to Coach", color = HifzAccent) }
                     }
                 }
             }
@@ -593,20 +604,20 @@ private enum class AudioState { IDLE, LOADING, PLAYING, ERROR }
 private fun ListenButton(state: AudioState, speed: Float, onSpeedChange: (Float) -> Unit, onPlay: () -> Unit, onStop: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         TextButton(onClick = if (state == AudioState.IDLE || state == AudioState.ERROR) onPlay else onStop) {
-            if (state == AudioState.LOADING) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = QuranGreen)
-            else Icon(if (state == AudioState.PLAYING) Icons.Default.Stop else Icons.Default.Headphones, null, tint = QuranGreen, modifier = Modifier.size(18.dp))
+            if (state == AudioState.LOADING) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = HifzAccent)
+            else Icon(if (state == AudioState.PLAYING) Icons.Default.Stop else Icons.Default.Headphones, null, tint = HifzAccent, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text(when (state) { AudioState.PLAYING -> "Stop"; AudioState.LOADING -> "Loading…"; else -> "Listen" }, color = QuranGreen)
+            Text(when (state) { AudioState.PLAYING -> "Stop"; AudioState.LOADING -> "Loading…"; else -> "Listen" }, color = HifzAccent)
         }
         // The error hint takes the speed pill's place so the row still fits beside "Try again".
-        if (state == AudioState.ERROR) Text("Needs internet", color = QuranMuted, fontSize = 12.sp)
-        else PlaybackSpeedButton(speed, onSpeedChange, color = QuranGreen)
+        if (state == AudioState.ERROR) Text("Needs internet", color = HifzMuted, fontSize = 12.sp)
+        else PlaybackSpeedButton(speed, onSpeedChange, color = HifzAccent)
     }
 }
 
 @Composable
 private fun AyahText(text: AnnotatedString) {
-    Text(text, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), color = QuranGreen,
+    Text(text, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), color = HifzAccent,
         fontFamily = IndoPakFont, fontSize = 29.sp, lineHeight = 50.sp, textAlign = TextAlign.Right)
 }
 
@@ -623,7 +634,7 @@ private fun StepIndicator(step: PracticeStep, showRead: Boolean) {
             Row(Modifier.weight(1f).clip(CircleShape).background(when {
                 active -> QuranGreen; done -> QuranGreen.copy(alpha = .15f); else -> QuranGoldLight.copy(alpha = .3f)
             }).padding(vertical = 7.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Text(if (done) "✓ $label" else "${i + 1}  $label", color = if (active) Color.White else QuranGreen,
+                Text(if (done) "✓ $label" else "${i + 1}  $label", color = if (active) Color.White else HifzAccent,
                     fontSize = 13.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium)
             }
         }
@@ -633,17 +644,17 @@ private fun StepIndicator(step: PracticeStep, showRead: Boolean) {
 @Composable
 private fun GradeButton(style: GradeStyle, whenText: String, suggested: Boolean, modifier: Modifier, onClick: () -> Unit) {
     Surface(onClick = onClick, modifier = modifier.testTag("hifz_grade_${style.grade.name.lowercase()}"),
-        color = if (suggested) style.color.copy(alpha = .1f) else QuranCard, shape = RoundedCornerShape(14.dp),
+        color = if (suggested) style.color.copy(alpha = .1f) else HifzCard, shape = RoundedCornerShape(14.dp),
         border = BorderStroke(if (suggested) 2.dp else 1.dp, if (suggested) style.color else MushafBorder.copy(alpha = .45f))) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(10.dp).clip(CircleShape).background(style.color))
                 Spacer(Modifier.width(8.dp))
-                Text(style.title, color = QuranGreen, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.weight(1f))
-                if (suggested) Text("Suggested", color = style.color, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(localizedUiText(style.title), color = HifzAccent, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.weight(1f))
+                if (suggested) Text(localizedUiText("Suggested"), color = style.color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
-            Text(style.description, color = QuranMuted, fontSize = 12.sp)
-            Text(whenText, color = MushafGold, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            Text(localizedUiText(style.description), color = HifzMuted, fontSize = 12.sp)
+            Text(whenText, color = HifzGold, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -663,8 +674,8 @@ private fun HowItWorksCard() {
                 }
                 Spacer(Modifier.width(12.dp))
                 Column {
-                    Text(title, color = QuranGreen, fontWeight = FontWeight.Bold)
-                    Text(body, color = QuranMuted, fontSize = 13.sp)
+                    Text(title, color = HifzAccent, fontWeight = FontWeight.Bold)
+                    Text(body, color = HifzMuted, fontSize = 13.sp)
                 }
             }
         }
@@ -673,19 +684,19 @@ private fun HowItWorksCard() {
 
 @Composable
 private fun StatTile(value: String, label: String, modifier: Modifier, icon: androidx.compose.ui.graphics.vector.ImageVector? = null) {
-    Surface(color = QuranCard, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, MushafBorder.copy(alpha = .3f)), modifier = modifier) {
+    Surface(color = HifzCard, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, MushafBorder.copy(alpha = .3f)), modifier = modifier) {
         Column(Modifier.padding(vertical = 12.dp, horizontal = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (icon != null) Icon(icon, null, tint = Color(0xFFD9822B), modifier = Modifier.size(18.dp))
-                Text(value, color = QuranGreen, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(value, color = HifzAccent, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
-            Text(label, color = QuranMuted, fontSize = 11.sp, textAlign = TextAlign.Center)
+            Text(label, color = HifzMuted, fontSize = 11.sp, textAlign = TextAlign.Center)
         }
     }
 }
 
 @Composable
-private fun SectionLabel(text: String) = Text(text, color = MushafGold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+private fun SectionLabel(text: String) = Text(text, color = HifzGold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
 
 @Composable
 private fun PrimaryButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
@@ -695,7 +706,7 @@ private fun PrimaryButton(text: String, modifier: Modifier = Modifier, onClick: 
 
 @Composable
 private fun SurahPickerDialog(onPick: (Int) -> Unit, onDismiss: () -> Unit) {
-    var query by remember { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Choose a surah") },
@@ -705,15 +716,15 @@ private fun SurahPickerDialog(onPick: (Int) -> Unit, onDismiss: () -> Unit) {
                     leadingIcon = { Icon(Icons.Default.Search, null) }, label = { Text("Name or number") }, singleLine = true)
                 val q = query.trim()
                 LazyColumn(Modifier.heightIn(max = 380.dp)) {
-                    items(FullQuranCatalog.surahs.filter { q.isEmpty() || it.englishName.contains(q, true) || it.arabicName.contains(q) || it.number.toString() == q }) { s ->
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { onPick(s.number) }.padding(horizontal = 8.dp, vertical = 10.dp),
+                    items(FullQuranCatalog.surahs.filter { q.isEmpty() || it.englishName.contains(q, true) || it.arabicName.contains(q) || it.number.toString() == q }, key = { it.number }) { s ->
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button) { onPick(s.number) }.padding(horizontal = 8.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically) {
-                            Text("${s.number}", color = MushafGold, fontWeight = FontWeight.Bold, modifier = Modifier.width(34.dp))
+                            Text("${s.number}", color = HifzGold, fontWeight = FontWeight.Bold, modifier = Modifier.width(34.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(s.englishName, color = QuranGreen, fontWeight = FontWeight.SemiBold)
-                                Text("${s.totalAyat} ayahs", color = QuranMuted, fontSize = 12.sp)
+                                Text(s.englishName, color = HifzAccent, fontWeight = FontWeight.SemiBold)
+                                Text("${s.totalAyat} ayahs", color = HifzMuted, fontSize = 12.sp)
                             }
-                            Text(s.arabicName, color = QuranGreen, fontFamily = IndoPakFont, fontSize = 18.sp)
+                            Text(s.arabicName, color = HifzAccent, fontFamily = IndoPakFont, fontSize = 18.sp)
                         }
                     }
                 }
@@ -725,7 +736,7 @@ private fun SurahPickerDialog(onPick: (Int) -> Unit, onDismiss: () -> Unit) {
 @Composable
 private fun AyahPickerDialog(surah: Int, initial: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
     val total = totalAyat(surah)
-    var input by remember { mutableStateOf(initial.toString()) }
+    var input by rememberSaveable { mutableStateOf(initial.toString()) }
     val value = input.toIntOrNull()?.takeIf { it in 1..total }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -746,7 +757,7 @@ private fun AyahPickerDialog(surah: Int, initial: Int, onPick: (Int) -> Unit, on
 
 @Composable
 private fun CoachCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(color = QuranCard, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, MushafBorder.copy(alpha = .35f)), modifier = Modifier.fillMaxWidth()) {
+    Surface(color = HifzCard, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, MushafBorder.copy(alpha = .35f)), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
     }
 }

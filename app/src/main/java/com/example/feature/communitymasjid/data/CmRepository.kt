@@ -106,6 +106,12 @@ class CmRepository(context: Context) {
 
     suspend fun history(docId: String): List<CmHistoryEntry> = remote.fetchHistory(docId)
 
+    suspend fun report(docId: String, target: String, reason: String) = remote.report(docId, target, reason)
+
+    val hasAccount: Boolean get() = remote.hasAccount
+
+    suspend fun deleteAccount() = remote.deleteAnonymousAccount()
+
     /** Client-side spam guard; the Firestore rules enforce the same limits server-side. */
     suspend fun localRateLimitProblem(kind: String): String? {
         val now = System.currentTimeMillis()

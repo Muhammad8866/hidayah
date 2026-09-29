@@ -60,8 +60,10 @@ object CmTimingRules {
             }
             val azan = minutes(time.azan)
             val jamaat = minutes(time.jamaat)
-            if (jamaat < azan) errors += "${prayer.label}: Jamaat cannot be before Azan"
-            if (jamaat - azan > MAX_AZAN_TO_JAMAAT_MINUTES) {
+            // Mirrors firestore.rules: the gap wraps past midnight (Isha 23:45 -> 00:10 is 25 min).
+            val gap = (jamaat - azan + 1440) % 1440
+            if (jamaat < azan && gap > MAX_AZAN_TO_JAMAAT_MINUTES) errors += "${prayer.label}: Jamaat cannot be before Azan"
+            else if (gap > MAX_AZAN_TO_JAMAAT_MINUTES) {
                 errors += "${prayer.label}: Jamaat is more than $MAX_AZAN_TO_JAMAAT_MINUTES min after Azan"
             }
         }

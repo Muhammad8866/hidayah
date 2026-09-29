@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.border
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.selected
@@ -128,7 +129,7 @@ fun QuranScreen(
                 isImmersive = isImmersive,
                 onImmersiveChange = onImmersiveChange
             )
-            1 -> QuranAudioLibrary(Modifier.weight(1f))
+            1 -> QuranListenLibrary(Modifier.weight(1f))
             2 -> HifzCoachScreen(Modifier.weight(1f))
             else -> QuranWordLearningScreen(Modifier.weight(1f))
         }
@@ -152,7 +153,7 @@ private fun QuranHeader(section: Int, select: (Int) -> Unit) {
             Column(Modifier.weight(1f)) {
                 LocalizedText("Al-Quran", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 LocalizedText(
-                    when (section) { 0 -> "Read the Mushaf of your choice"; 1 -> "Recitation by Mishary Rashid Alafasy"; 2 -> "Practice from memory"; else -> "Listen word by word and learn meanings" },
+                    when (section) { 0 -> "Read the Mushaf of your choice"; 1 -> "Listen to Quran recitation and tafseer"; 2 -> "Practice from memory"; else -> "Listen word by word and learn meanings" },
                     color = QuranGoldLight, fontSize = 12.sp, maxLines = 1
                 )
             }
@@ -200,9 +201,9 @@ internal fun QuranReader(
     onImmersiveChange: (Boolean) -> Unit = {}
 ) {
     var drag by remember { mutableFloatStateOf(0f) }
-    var showPagePicker by remember { mutableStateOf(false) }
-    var showSurahPicker by remember { mutableStateOf(false) }
-    var showParaPicker by remember { mutableStateOf(false) }
+    var showPagePicker by rememberSaveable { mutableStateOf(false) }
+    var showSurahPicker by rememberSaveable { mutableStateOf(false) }
+    var showParaPicker by rememberSaveable { mutableStateOf(false) }
     fun turn(offset: Int) {
         if (!uiState.isQuranLoading) loadPage(uiState.quranPageNumber + offset)
     }
@@ -325,14 +326,14 @@ internal fun ImmersivePageControls(
     }
 }
 
-private val juzSurahRanges = listOf(
+internal val juzSurahRanges = listOf(
     1..2, 2..2, 2..3, 3..4, 4..4, 4..5, 5..6, 6..7, 7..8, 8..9,
     9..11, 11..12, 12..14, 15..16, 17..18, 18..20, 20..22, 23..25, 25..27, 27..29,
     29..33, 33..36, 36..39, 39..41, 41..45, 46..51, 51..57, 58..66, 67..77, 78..114
 )
 
 @Composable
-private fun QuranAudioLibrary(modifier: Modifier = Modifier) {
+internal fun QuranAudioLibrary(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     // Shared engine: playback keeps running in the background service after leaving this screen.
     LaunchedEffect(Unit) { QuranAudioManager.init(context) }
@@ -386,7 +387,12 @@ private fun QuranAudioLibrary(modifier: Modifier = Modifier) {
                         shape = RoundedCornerShape(50),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = QuranGreen, unfocusedBorderColor = MushafBorder.copy(alpha = .6f),
-                            focusedContainerColor = QuranCard, unfocusedContainerColor = QuranCard
+                            focusedContainerColor = QuranCard, unfocusedContainerColor = QuranCard,
+                            // The field sits on fixed light paper, so dark-theme defaults would be unreadable.
+                            focusedTextColor = MushafInk, unfocusedTextColor = MushafInk, cursorColor = QuranGreen,
+                            focusedPlaceholderColor = QuranMuted, unfocusedPlaceholderColor = QuranMuted,
+                            focusedLeadingIconColor = QuranMuted, unfocusedLeadingIconColor = QuranMuted,
+                            focusedTrailingIconColor = QuranMuted, unfocusedTrailingIconColor = QuranMuted
                         )
                     )
                 }
@@ -403,7 +409,7 @@ private fun QuranAudioLibrary(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun quranChipColors() = FilterChipDefaults.filterChipColors(
+internal fun quranChipColors() = FilterChipDefaults.filterChipColors(
     selectedContainerColor = QuranGreen, selectedLabelColor = Color.White,
     containerColor = QuranCard, labelColor = QuranGreen
 )
@@ -510,7 +516,7 @@ private fun AudioSurahRow(surah: com.example.domain.model.Surah, state: QuranAud
     Row(
         Modifier.fillMaxWidth()
             .background(if (active) QuranGoldLight.copy(alpha = .25f) else Color.Transparent)
-            .clickable(onClick = play)
+            .clickable(role = Role.Button, onClick = play)
             .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp)
             .testTag("quran_audio_surah_$number"),
         verticalAlignment = Alignment.CenterVertically
@@ -548,7 +554,7 @@ private fun AudioParaRow(para: Int, chapters: List<Int>, state: QuranAudioState)
     val active = state.playingSurah in chapters
     Row(
         Modifier.fillMaxWidth()
-            .clickable { QuranAudioManager.playQueue(chapters) }
+            .clickable(role = Role.Button) { QuranAudioManager.playQueue(chapters) }
             .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -557,7 +563,8 @@ private fun AudioParaRow(para: Int, chapters: List<Int>, state: QuranAudioState)
         Column(Modifier.weight(1f)) {
             LocalizedText("Para $para", fontWeight = FontWeight.SemiBold, color = MushafInk)
             LocalizedText(
-                "${QuranAudioManager.surahName(chapters.first())} – ${QuranAudioManager.surahName(chapters.last())}",
+                // Recitation files are whole surahs, so a Para that starts or ends mid-surah plays those surahs in full.
+                "${QuranAudioManager.surahName(chapters.first())} – ${QuranAudioManager.surahName(chapters.last())} (${localizedUiText("full surahs")})",
                 fontSize = 12.sp, color = QuranMuted, maxLines = 1
             )
             LocalizedText(
@@ -577,15 +584,16 @@ private fun AudioParaRow(para: Int, chapters: List<Int>, state: QuranAudioState)
 }
 
 @Composable
-private fun AudioRowActions(
+internal fun AudioRowActions(
     playing: Boolean, downloading: Boolean, downloaded: Boolean,
-    play: () -> Unit, download: () -> Unit, delete: () -> Unit
+    play: () -> Unit, download: () -> Unit, delete: () -> Unit,
+    removeMessage: String = "This recitation will still play online."
 ) {
-    var confirmDelete by remember { mutableStateOf(false) }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
     if (confirmDelete) AlertDialog(
         onDismissRequest = { confirmDelete = false },
         title = { LocalizedText("Remove download?") },
-        text = { LocalizedText("This recitation will still play online.") },
+        text = { LocalizedText(removeMessage) },
         confirmButton = { TextButton({ delete(); confirmDelete = false }) { LocalizedText("Remove") } },
         dismissButton = { TextButton({ confirmDelete = false }) { LocalizedText("Cancel") } }
     )
@@ -676,8 +684,8 @@ private fun MushafPage(state: MainUiState, isImmersive: Boolean = false) {
         ) {
             if (!isImmersive) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    LocalizedText("مصحف ہند و پاک • ۱۳ سطر", color = MushafGold, fontSize = 10.sp)
-                    LocalizedText("صفحہ ${arabicDigits(state.quranPageNumber)}", color = MushafGold, fontSize = 10.sp)
+                    LocalizedText("مصحف ہند و پاک • ۱۳ سطر", color = MushafGold, fontSize = 12.sp)
+                    LocalizedText("صفحہ ${arabicDigits(state.quranPageNumber)}", color = MushafGold, fontSize = 12.sp)
                 }
                 HorizontalDivider(Modifier.padding(vertical = 4.dp), color = MushafBorder)
             }
@@ -773,7 +781,7 @@ private fun SurahPickerDialog(state: MainUiState, dismiss: () -> Unit, open: (In
                 items(state.allSurahs, key = { it.number }) { surah ->
                     val page = state.quranSurahStartPages[surah.number]
                     Row(
-                        Modifier.fillMaxWidth().clickable(enabled = page != null) { page?.let(open) }.padding(vertical = 10.dp),
+                        Modifier.fillMaxWidth().clickable(role = Role.Button, enabled = page != null) { page?.let(open) }.padding(vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         LocalizedText("${surah.number}", Modifier.width(36.dp), color = MaterialTheme.colorScheme.primary)
@@ -801,9 +809,9 @@ private fun ParaPickerDialog(dismiss: () -> Unit, open: (Int) -> Unit) {
         title = { LocalizedText("Select Para (Juz)") },
         text = {
             LazyColumn(Modifier.heightIn(max = 420.dp)) {
-                items(paraStartPages.indices.toList()) { index ->
+                items(paraStartPages.indices.toList(), key = { it }) { index ->
                     Row(
-                        Modifier.fillMaxWidth().clickable { open(paraStartPages[index]) }.padding(vertical = 12.dp),
+                        Modifier.fillMaxWidth().clickable(role = Role.Button) { open(paraStartPages[index]) }.padding(vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         LocalizedText("Para ${index + 1}", fontWeight = FontWeight.SemiBold)

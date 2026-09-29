@@ -13,13 +13,32 @@ import com.example.domain.model.PredefinedLocations
 object PrayerSettingsStore {
     const val PREFS_NAME = "deen_app_preferences"
     const val NOTIFICATIONS_ENABLED_KEY = "notifications_enabled"
+    private const val NOTIFICATIONS_CHOSEN_KEY = "notifications_user_chosen"
+    private const val LIVE_LOCATION_KEY = "use_live_location"
     const val HIJRI_CALENDAR_KEY = "hijri_calendar_region"
 
     fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun notificationsEnabled(prefs: SharedPreferences): Boolean =
-        prefs.getBoolean(NOTIFICATIONS_ENABLED_KEY, true)
+        prefs.getBoolean(NOTIFICATIONS_CHOSEN_KEY, false) &&
+            prefs.getBoolean(NOTIFICATIONS_ENABLED_KEY, false)
+
+    fun saveNotificationsEnabled(prefs: SharedPreferences, enabled: Boolean) {
+        prefs.edit().putBoolean(NOTIFICATIONS_CHOSEN_KEY, true)
+            .putBoolean(NOTIFICATIONS_ENABLED_KEY, enabled).apply()
+    }
+
+    fun useLiveLocation(prefs: SharedPreferences): Boolean =
+        prefs.getBoolean(LIVE_LOCATION_KEY, true)
+
+    fun saveUseLiveLocation(prefs: SharedPreferences, enabled: Boolean) {
+        prefs.edit().putBoolean(LIVE_LOCATION_KEY, enabled).apply()
+    }
+
+    fun hasSavedCity(prefs: SharedPreferences): Boolean =
+        prefs.getString("city_latitude", null)?.toDoubleOrNull() != null &&
+            prefs.getString("city_longitude", null)?.toDoubleOrNull() != null
 
     /** Restores the chosen moon-sighting calendar and its confirmed months into the Hijri helpers. */
     fun restoreHijriPreference(prefs: SharedPreferences) {

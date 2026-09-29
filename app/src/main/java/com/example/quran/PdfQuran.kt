@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.util.LruCache
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -32,9 +33,8 @@ import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Stores and renders the Quran PDFs of [QuranPdfCatalog]. Files are kept byte for byte as
- * published: the bundled one is copied out of the APK (PdfRenderer needs a real file), the others
- * are fetched from [QuranPdf.url]. "Download" keeps a copy for offline reading; reading online
- * fetches into the cache, which Android may clear. Every copy is checked against its SHA-256.
+ * published. The Hindi edition is delivered on demand by Google Play; other editions are fetched
+ * from [QuranPdf.url]. Every copy is checked against its SHA-256 before it is rendered.
  */
 object PdfQuran {
 
@@ -79,17 +79,22 @@ object PdfQuran {
     private fun savedFile(book: QuranPdf) = File(File(appContext.filesDir, "quran_pdfs"), book.fileName)
     private fun cachedFile(book: QuranPdf) = File(File(appContext.cacheDir, "quran_pdfs"), book.fileName)
 
-    /** True when the book opens without internet, including a bundled fallback copy. */
-    fun isOffline(book: QuranPdf) = bundledFileExists(book) || savedFile(book).length() == book.sizeBytes
+    private fun isHindiEdition(book: QuranPdf) = book.id == "kanzul_iman"
+
+    /** True when the book opens without internet, including an installed on-demand copy. */
+    fun isOffline(book: QuranPdf) = bundledFileExists(book) || savedFile(book).length() == book.sizeBytes ||
+        (isHindiEdition(book) && HindiQuranAssetPack.file(appContext)?.length() == book.sizeBytes)
 
     /** Downloaded by the user (and so removable), independently of a bundled fallback copy. */
-    fun isDownloaded(book: QuranPdf) = savedFile(book).length() == book.sizeBytes
+    fun isDownloaded(book: QuranPdf) = savedFile(book).length() == book.sizeBytes ||
+        (isHindiEdition(book) && HindiQuranAssetPack.file(appContext)?.length() == book.sizeBytes)
 
     /** Keeps [book] on the phone for offline reading. */
     suspend fun download(book: QuranPdf): Result<Unit> = runCatching {
         val cached = cachedFile(book)
         lockFor(book).withLock {
             if (isDownloaded(book)) return@withLock
+            if (isHindiEdition(book) && !bundledFileExists(book) && verifiedPackFile(book) != null) return@withLock
             val target = savedFile(book)
             if (cached.length() == book.sizeBytes) withContext(Dispatchers.IO) { store(cached.inputStream(), book, target) }
             else fetch(book, target)
@@ -100,7 +105,30 @@ object PdfQuran {
     fun delete(book: QuranPdf) {
         Documents.close(book.id)
         savedFile(book).delete()
+        cachedFile(book).delete()
+        if (isHindiEdition(book)) {
+            HindiQuranAssetPack.remove(appContext) { _changes.update { it + 1 } }
+        }
         _changes.update { it + 1 }
+    }
+
+    /**
+     * The Hindi edition from its Play asset pack, or null when Play cannot deliver it (e.g. a
+     * sideloaded install) so the caller falls back to the same GitHub download as other books.
+     */
+    private suspend fun verifiedPackFile(book: QuranPdf): File? = try {
+        val packFile = HindiQuranAssetPack.fetch(appContext) { fraction ->
+            _progress.update { it + (book.id to fraction) }
+        }
+        packFile.takeIf {
+            it.length() == book.sizeBytes && withContext(Dispatchers.IO) { sha256(it) } == book.sha256
+        }
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (packError: Exception) {
+        null
+    } finally {
+        _progress.update { it - book.id }
     }
 
     /** A verified local file for [book], falling back to a bundled copy if online fetch fails. */
@@ -108,6 +136,17 @@ object PdfQuran {
         savedFile(book).takeIf { it.length() == book.sizeBytes }?.let { return@withLock it }
         val cached = cachedFile(book)
         if (cached.length() == book.sizeBytes) return@withLock cached
+        if (isHindiEdition(book)) {
+            if (bundledFileExists(book)) {
+                val fallback = File(appContext.cacheDir, "quran_pdfs/${book.fileName}.bundled")
+                withContext(Dispatchers.IO) { store(appContext.assets.open(book.fileName), book, fallback) }
+                return@withLock fallback
+            }
+            verifiedPackFile(book)?.let {
+                _changes.update { it + 1 }
+                return@withLock it
+            }
+        }
         try {
             fetch(book, cached)
             cached
@@ -370,11 +409,10 @@ object PdfQuran {
         val pageCount: Int = renderer.pageCount
         private val lock = Mutex()
         @Volatile private var closed = false
-        private val memory = object : LruCache<Pair<Int, Int>, Bitmap>((Runtime.getRuntime().maxMemory() / 5).toInt()) {
-            override fun sizeOf(key: Pair<Int, Int>, value: Bitmap) = value.byteCount
-        }
+        /** Unique per opened document, so entries in the store-wide [PageCache] never collide. */
+        private val cacheId = PageCache.nextId()
 
-        fun cached(index: Int, width: Int): Bitmap? = memory.get(index to width)
+        fun cached(index: Int, width: Int): Bitmap? = PageCache.get(cacheId, index, width)
 
         /** Renders one page [width] pixels wide, keeping the page's own aspect ratio. */
         suspend fun render(index: Int, width: Int): Bitmap? {
@@ -390,20 +428,36 @@ object PdfQuran {
                                 page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                             }
                         }
-                    }.getOrNull()?.also { memory.put(index to width, it) }
+                    }.getOrNull()?.also { PageCache.put(cacheId, index, width, it) }
                 }
             }
         }
 
         internal fun close() {
             closed = true
-            memory.evictAll()
+            PageCache.evict(cacheId)
             runCatching { renderer.close() }
             runCatching { descriptor.close() }
         }
     }
 
     /** Keeps each opened book's renderer so going back to the list and in again is instant. */
+    /**
+     * One bounded bitmap cache shared by every open document. Each book used to keep its own
+     * cache of up to a fifth of the heap, so opening a few books could exhaust memory.
+     */
+    private object PageCache {
+        private var counter = 0L
+        private val memory = object : LruCache<Triple<Long, Int, Int>, Bitmap>((Runtime.getRuntime().maxMemory() / 6).toInt()) {
+            override fun sizeOf(key: Triple<Long, Int, Int>, value: Bitmap): Int = value.byteCount
+        }
+
+        @Synchronized fun nextId(): Long = ++counter
+        fun get(id: Long, index: Int, width: Int): Bitmap? = memory.get(Triple(id, index, width))
+        fun put(id: Long, index: Int, width: Int, bitmap: Bitmap) { memory.put(Triple(id, index, width), bitmap) }
+        fun evict(id: Long) = memory.snapshot().keys.filter { it.first == id }.forEach { memory.remove(it) }
+    }
+
     private object Documents {
         private val open = mutableMapOf<String, Pair<File, Document>>()
 

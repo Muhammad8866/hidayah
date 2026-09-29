@@ -1,5 +1,6 @@
 package com.example.feature.communitymasjid.ui
 
+import com.example.ui.localization.localizedUiText
 import android.Manifest
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -29,6 +30,9 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LocationOff
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -46,6 +50,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -84,7 +89,12 @@ fun CommunityMasjidScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    var showAddMosque by remember { mutableStateOf(false) }
+    var showAddMosque by rememberSaveable { mutableStateOf(false) }
+    var showDeleteData by rememberSaveable { mutableStateOf(false) }
+    var pendingContribution by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val requireGuidelines: (() -> Unit) -> Unit = { action ->
+        if (state.guidelinesAccepted) action() else pendingContribution = action
+    }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         viewModel.onPermissionResult(result.values.any { it })
     }
@@ -108,13 +118,14 @@ fun CommunityMasjidScreen(
                     onBack = onBack,
                     onRefresh = { viewModel.refreshList(force = true) },
                     onOpen = viewModel::openMosque,
-                    onAddMosque = { showAddMosque = true },
+                    onAddMosque = { requireGuidelines { showAddMosque = true } },
+                    onDeleteData = { showDeleteData = true },
                     onRequestPermission = {
                         permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
                     }
                 )
             } else {
-                CmDetailContent(state = state, detail = detail, viewModel = viewModel)
+                CmDetailContent(state = state, detail = detail, viewModel = viewModel, requireGuidelines = requireGuidelines)
             }
         }
         if (detail == null && !state.hasLocationPermission) {
@@ -139,6 +150,40 @@ fun CommunityMasjidScreen(
             onDismiss = { showAddMosque = false }
         )
     }
+    pendingContribution?.let { action ->
+        AlertDialog(
+            onDismissRequest = { pendingContribution = null },
+            title = { LocalizedText("Community guidelines") },
+            text = {
+                LocalizedText(
+                    "Share only accurate masjid names and timings, and only when you are at the masjid. " +
+                        "No offensive, political or promotional content. What you add is public and anonymous; " +
+                        "wrong or abusive entries are removed by votes and reports."
+                )
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.acceptGuidelines(); pendingContribution = null; action() }) { LocalizedText("I agree") }
+            },
+            dismissButton = { TextButton(onClick = { pendingContribution = null }) { LocalizedText("Cancel") } }
+        )
+    }
+    if (showDeleteData) {
+        AlertDialog(
+            onDismissRequest = { showDeleteData = false },
+            title = { LocalizedText("Delete my community data") },
+            text = {
+                LocalizedText(
+                    "This removes your City challenge board entries and deletes your anonymous community account. " +
+                        "Timings, votes and masjids you already shared stay as anonymous community data and are no longer linked to you. " +
+                        "This cannot be undone."
+                )
+            },
+            confirmButton = {
+                Button(onClick = { showDeleteData = false; viewModel.deleteMyCommunityData() }) { LocalizedText("Delete") }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteData = false }) { LocalizedText("Cancel") } }
+        )
+    }
 }
 
 @Composable
@@ -160,6 +205,7 @@ private fun CmListContent(
     onRefresh: () -> Unit,
     onOpen: (CmMosque) -> Unit,
     onAddMosque: () -> Unit,
+    onDeleteData: () -> Unit,
     onRequestPermission: () -> Unit
 ) {
     LazyColumn(
@@ -174,10 +220,15 @@ private fun CmListContent(
                 onBack = onBack
             ) {
                 if (state.hasLocationPermission && state.communityConfigured) {
-                    IconButton(onClick = onAddMosque) { Icon(Icons.Filled.AddLocationAlt, contentDescription = "Add Masjid") }
+                    IconButton(onClick = onAddMosque) { Icon(Icons.Filled.AddLocationAlt, contentDescription = localizedUiText("Add Masjid")) }
                 }
                 if (state.isLoadingList) CircularProgressIndicator(Modifier.size(22.dp).padding(end = 4.dp), strokeWidth = 2.dp)
-                else IconButton(onClick = onRefresh, enabled = state.hasLocationPermission) { Icon(Icons.Filled.Refresh, contentDescription = "Refresh") }
+                else IconButton(onClick = onRefresh, enabled = state.hasLocationPermission) { Icon(Icons.Filled.Refresh, contentDescription = localizedUiText("Refresh")) }
+                if (state.communityConfigured) {
+                    IconButton(onClick = onDeleteData, enabled = !state.isDeletingData) {
+                        Icon(Icons.Filled.DeleteForever, contentDescription = localizedUiText("Delete my community data"))
+                    }
+                }
             }
         }
         if (!state.communityConfigured || state.communityError != null) {
@@ -255,9 +306,9 @@ private fun CmAddMosqueDialog(
     onSubmit: (String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
-    var showErrors by remember { mutableStateOf(false) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var address by rememberSaveable { mutableStateOf("") }
+    var showErrors by rememberSaveable { mutableStateOf(false) }
     val problems = validate(name, address)
     AlertDialog(
         onDismissRequest = { if (!isSubmitting) onDismiss() },
@@ -350,9 +401,15 @@ private fun CmMosqueCard(mosque: CmMosque, record: CmCommunityRecord?, onClick: 
 }
 
 @Composable
-private fun CmDetailContent(state: CmUiState, detail: CmDetailState, viewModel: CommunityMasjidViewModel) {
-    var showEditor by remember { mutableStateOf(false) }
-    var showReportDialog by remember { mutableStateOf(false) }
+private fun CmDetailContent(
+    state: CmUiState,
+    detail: CmDetailState,
+    viewModel: CommunityMasjidViewModel,
+    requireGuidelines: (() -> Unit) -> Unit
+) {
+    var showEditor by rememberSaveable { mutableStateOf(false) }
+    var showReportDialog by rememberSaveable { mutableStateOf(false) }
+    var showContentReport by rememberSaveable { mutableStateOf(false) }
     val proximity = viewModel.proximityTo(detail.mosque, state.location)
     val record = detail.record
     val canAct = state.communityConfigured && !detail.isSubmitting && proximity?.canAct == true
@@ -371,7 +428,12 @@ private fun CmDetailContent(state: CmUiState, detail: CmDetailState, viewModel: 
                 onBack = viewModel::closeMosque
             ) {
                 if (detail.isLoading) CircularProgressIndicator(Modifier.size(22.dp).padding(end = 4.dp), strokeWidth = 2.dp)
-                else IconButton(onClick = viewModel::refreshDetail) { Icon(Icons.Filled.Refresh, contentDescription = "Refresh") }
+                else IconButton(onClick = viewModel::refreshDetail) { Icon(Icons.Filled.Refresh, contentDescription = localizedUiText("Refresh")) }
+                if (state.communityConfigured) {
+                    IconButton(onClick = { showContentReport = true }, modifier = Modifier.testTag("cm_report_content")) {
+                        Icon(Icons.Filled.Flag, contentDescription = localizedUiText("Report content"))
+                    }
+                }
             }
         }
         item { CmProximityCard(proximity, state.isLocating, onUpdate = viewModel::refreshLocation) }
@@ -415,7 +477,7 @@ private fun CmDetailContent(state: CmUiState, detail: CmDetailState, viewModel: 
                 }
                 Spacer(Modifier.height(12.dp))
                 Button(
-                    onClick = { showEditor = true },
+                    onClick = { requireGuidelines { showEditor = true } },
                     enabled = canAct,
                     modifier = Modifier.fillMaxWidth().testTag("cm_update_timings")
                 ) {
@@ -518,6 +580,45 @@ private fun CmDetailContent(state: CmUiState, detail: CmDetailState, viewModel: 
             onDismiss = { showReportDialog = false }
         )
     }
+    if (showContentReport) {
+        CmContentReportDialog(
+            hasTimings = record?.current != null,
+            onReport = { target, reason -> showContentReport = false; viewModel.report(target, reason) },
+            onDismiss = { showContentReport = false }
+        )
+    }
+}
+
+/** Moderation report, separate from votes: works anywhere and goes to cm_reports for review. */
+@Composable
+private fun CmContentReportDialog(hasTimings: Boolean, onReport: (target: String, reason: String) -> Unit, onDismiss: () -> Unit) {
+    var target by rememberSaveable { mutableStateOf("mosque") }
+    val reasons = listOf(
+        "wrong_info" to "Wrong information",
+        "offensive" to "Offensive or abusive",
+        "spam" to "Spam or promotion",
+        "other" to "Something else"
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { LocalizedText("Report content") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (hasTimings) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = target == "mosque", onClick = { target = "mosque" }, label = { LocalizedText("Masjid") })
+                        FilterChip(selected = target == "timing", onClick = { target = "timing" }, label = { LocalizedText("Timings") })
+                    }
+                }
+                LocalizedText("What is wrong?", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                reasons.forEach { (key, label) ->
+                    OutlinedButton(onClick = { onReport(target, key) }, modifier = Modifier.fillMaxWidth()) { LocalizedText(label) }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { LocalizedText("Cancel") } }
+    )
 }
 
 /** 👍 / 👎 pair; the user's own current vote is shown filled. */

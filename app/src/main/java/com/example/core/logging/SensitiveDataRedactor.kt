@@ -32,7 +32,7 @@ object SensitiveDataRedactor {
 }
 
 object SafeLogger {
-    private const val TAG = "DeenCompanion"
+    private const val TAG = "Hidayah"
 
     fun d(component: String, message: String) {
         val clean = SensitiveDataRedactor.redact(message)

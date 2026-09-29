@@ -6,6 +6,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
@@ -65,12 +67,17 @@ import kotlinx.coroutines.launch
 
 private val HadithGreen = Color(0xFF173F31)
 private val HadithGold = Color(0xFFD3B765)
-private val HadithPaper = Color(0xFFF8F3E7)
-private val HadithInk = Color(0xFF17221D)
 private val HadithGreenDeep = Color(0xFF0E2A20)
-private val HadithGoldDark = Color(0xFF8A6D1F)
-private val HadithMuted = Color(0xFF66706A)
-private val HadithLine = Color(0xFFE6DDC6)
+
+// Paper palette follows the app theme so the library never glares in dark mode.
+private val hadithDark: Boolean @Composable get() = MaterialTheme.colorScheme.background.luminance() < 0.5f
+private val HadithPaper: Color @Composable get() = if (hadithDark) Color(0xFF151B18) else Color(0xFFF8F3E7)
+private val HadithCard: Color @Composable get() = if (hadithDark) Color(0xFF1F2824) else Color.White
+private val HadithInk: Color @Composable get() = if (hadithDark) Color(0xFFEFF5F2) else Color(0xFF17221D)
+private val HadithGoldDark: Color @Composable get() = if (hadithDark) Color(0xFFD3B765) else Color(0xFF8A6D1F)
+private val HadithMuted: Color @Composable get() = if (hadithDark) Color(0xFFA9B4AE) else Color(0xFF66706A)
+private val HadithLine: Color @Composable get() = if (hadithDark) Color(0xFF34403A) else Color(0xFFE6DDC6)
+private val HadithAccent: Color @Composable get() = if (hadithDark) Color(0xFF8FD1AE) else HadithGreen
 private val HadithOffline = Color(0xFF2E7D32)
 
 /** Official-source, multilingual Hadith PDF library. Religious text is never generated or edited. */
@@ -171,6 +178,7 @@ private fun HadithLibrary(
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     val downloadFailedText = localizedUiText("Download failed. Check your internet connection.")
+    val retryText = localizedUiText("Retry")
     var query by rememberSaveable { mutableStateOf("") }
     var language by rememberSaveable { mutableStateOf(HadithCatalog.ALL_LANGUAGES) }
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -246,7 +254,12 @@ private fun HadithLibrary(
                     onDownloadAll = { downloadAll(selected.id, it) },
                     onOpen = onOpen,
                     onDownload = { book ->
-                        scope.launch { HadithPdfStore.download(book).onFailure { snackbar.showSnackbar(downloadFailedText) } }
+                        scope.launch {
+                            while (HadithPdfStore.download(book).isFailure &&
+                                snackbar.showSnackbar(downloadFailedText, actionLabel = retryText) ==
+                                androidx.compose.material3.SnackbarResult.ActionPerformed
+                            ) Unit
+                        }
                     },
                     onDelete = { confirmDelete = it }
                 )
@@ -263,7 +276,7 @@ private fun HadithLibrary(
                                 modifier = Modifier.fillMaxWidth().testTag("hadith_search"),
                                 singleLine = true,
                                 placeholder = { LocalizedText("Search Bukhari, Muslim, Tirmidhi…", color = HadithMuted) },
-                                leadingIcon = { Icon(Icons.Default.Search, null, tint = HadithGreen) },
+                                leadingIcon = { Icon(Icons.Default.Search, null, tint = HadithAccent) },
                                 trailingIcon = {
                                     if (query.isNotEmpty()) IconButton({ query = "" }) {
                                         Icon(Icons.Default.Clear, localizedUiText("Clear"))
@@ -271,11 +284,11 @@ private fun HadithLibrary(
                                 },
                                 shape = RoundedCornerShape(16.dp),
                                 colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.White,
-                                    unfocusedContainerColor = Color.White,
+                                    focusedContainerColor = HadithCard,
+                                    unfocusedContainerColor = HadithCard,
                                     focusedIndicatorColor = Color.Transparent,
                                     unfocusedIndicatorColor = Color.Transparent,
-                                    cursorColor = HadithGreen,
+                                    cursorColor = HadithAccent,
                                     focusedTextColor = HadithInk,
                                     unfocusedTextColor = HadithInk
                                 )
@@ -338,11 +351,11 @@ private fun HadithLibrary(
                     item {
                         Row(
                             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
-                                .clickable { showSource = true },
+                                .clickable(role = Role.Button) { showSource = true },
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            Icon(Icons.Default.Verified, null, tint = HadithGreen, modifier = Modifier.size(15.dp))
+                            Icon(Icons.Default.Verified, null, tint = HadithAccent, modifier = Modifier.size(15.dp))
                             Spacer(Modifier.width(6.dp))
                             LocalizedText("Original publisher PDFs · text never modified", fontSize = 11.sp, color = HadithMuted)
                         }
@@ -356,7 +369,7 @@ private fun HadithLibrary(
     if (showSource) {
         AlertDialog(
             onDismissRequest = { showSource = false },
-            icon = { Icon(Icons.Default.Verified, null, tint = HadithGreen) },
+            icon = { Icon(Icons.Default.Verified, null, tint = HadithAccent) },
             title = { LocalizedText("Source and translation policy") },
             text = {
                 LocalizedText(
@@ -365,7 +378,7 @@ private fun HadithLibrary(
                         "Collection, volume, chapter, and page navigation happens in the app around the original PDF."
                 )
             },
-            confirmButton = { TextButton({ showSource = false }) { LocalizedText("Close", color = HadithGreen) } }
+            confirmButton = { TextButton({ showSource = false }) { LocalizedText("Close", color = HadithAccent) } }
         )
     }
 
@@ -468,7 +481,7 @@ private fun LanguageChips(
                 leadingIcon = if (active) ({ Icon(Icons.Default.Check, null, Modifier.size(16.dp)) }) else null,
                 shape = RoundedCornerShape(50),
                 colors = FilterChipDefaults.filterChipColors(
-                    containerColor = Color.White,
+                    containerColor = HadithCard,
                     labelColor = HadithInk,
                     selectedContainerColor = HadithGreen,
                     selectedLabelColor = Color.White,
@@ -500,7 +513,7 @@ private fun ContinueCard(book: HadithBook, offline: Boolean, onClick: () -> Unit
                 Spacer(Modifier.width(6.dp))
                 LocalizedText(
                     languageLabel(book.languageCode) + if (offline) " · Offline" else "",
-                    color = Color.White.copy(alpha = .75f), fontSize = 11.sp
+                    color = Color.White.copy(alpha = .9f), fontSize = 11.sp
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -538,7 +551,7 @@ private fun CollectionCard(collection: HadithCollection, offlineCount: Int, onCl
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("hadith_collection_${collection.id}"),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = HadithCard),
         border = BorderStroke(1.dp, HadithLine)
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -563,7 +576,7 @@ private fun CollectionCard(collection: HadithCollection, offlineCount: Int, onCl
                         Spacer(Modifier.width(6.dp))
                         LocalizedText(
                             "Sihah Sittah",
-                            fontSize = 9.sp, fontWeight = FontWeight.Bold, color = HadithGoldDark,
+                            fontSize = 11.sp, fontWeight = FontWeight.Bold, color = HadithGoldDark,
                             modifier = Modifier.background(HadithGold.copy(alpha = .18f), RoundedCornerShape(6.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         )
@@ -574,7 +587,7 @@ private fun CollectionCard(collection: HadithCollection, offlineCount: Int, onCl
                     fontFamily = ArabicFontFamily,
                     fontSize = 18.sp,
                     lineHeight = 32.sp,
-                    color = HadithGreen,
+                    color = HadithAccent,
                     style = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl)
                 )
                 if (info.compiler.isNotBlank()) LocalizedText(
@@ -637,7 +650,7 @@ private fun CollectionDetail(
         item {
             Surface(
                 shape = RoundedCornerShape(22.dp),
-                color = Color.White,
+                color = HadithCard,
                 border = BorderStroke(1.dp, HadithGold.copy(alpha = .45f))
             ) {
                 Column(
@@ -649,7 +662,7 @@ private fun CollectionDetail(
                         fontFamily = ArabicFontFamily,
                         fontSize = 30.sp,
                         lineHeight = 52.sp,
-                        color = HadithGreen,
+                        color = HadithAccent,
                         textAlign = TextAlign.Center,
                         style = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl)
                     )
@@ -728,7 +741,7 @@ private fun CatalogMessage(text: String, loading: Boolean, retry: (() -> Unit)? 
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (loading) CircularProgressIndicator(color = HadithGreen) else Icon(
+        if (loading) CircularProgressIndicator(color = HadithAccent) else Icon(
             Icons.Default.CloudOff,
             null,
             Modifier.size(42.dp),
@@ -758,7 +771,7 @@ private fun VolumeRow(
     Card(
         onClick = onOpen,
         modifier = Modifier.fillMaxWidth().testTag("hadith_book_${book.id}"),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = HadithCard),
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, HadithLine)
     ) {
@@ -770,7 +783,7 @@ private fun VolumeRow(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 LocalizedText(if (book.volumeCount == 1) "∗" else "${book.volume}", color = HadithGold, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                LocalizedText(if (book.volumeCount == 1) "FULL" else "JILD", color = Color.White.copy(alpha = .75f), fontSize = 8.sp, letterSpacing = 1.sp)
+                LocalizedText(if (book.volumeCount == 1) "FULL" else "JILD", color = Color.White.copy(alpha = .9f), fontSize = 11.sp, letterSpacing = 1.sp)
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -808,12 +821,12 @@ private fun VolumeRow(
                     if (progress > 0f) LinearProgressIndicator(
                         progress = { progress },
                         modifier = Modifier.fillMaxWidth().height(4.dp),
-                        color = HadithGreen,
+                        color = HadithAccent,
                         trackColor = HadithLine,
                         strokeCap = StrokeCap.Round,
                         drawStopIndicator = {}
                     ) else LinearProgressIndicator(
-                        Modifier.fillMaxWidth().height(4.dp), color = HadithGreen, trackColor = HadithLine, strokeCap = StrokeCap.Round
+                        Modifier.fillMaxWidth().height(4.dp), color = HadithAccent, trackColor = HadithLine, strokeCap = StrokeCap.Round
                     )
                 }
             }
@@ -822,10 +835,10 @@ private fun VolumeRow(
                     Icon(Icons.Default.DeleteOutline, localizedUiText("Remove download"), tint = HadithMuted)
                 }
                 progress != null -> Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(22.dp), color = HadithGreen, strokeWidth = 2.dp)
+                    CircularProgressIndicator(Modifier.size(22.dp), color = HadithAccent, strokeWidth = 2.dp)
                 }
                 else -> IconButton(onDownload, Modifier.testTag("hadith_download_${book.id}")) {
-                    Icon(Icons.Default.Download, localizedUiText("Download"), tint = HadithGreen)
+                    Icon(Icons.Default.Download, localizedUiText("Download"), tint = HadithAccent)
                 }
             }
         }
@@ -880,8 +893,8 @@ private fun HadithPdfReader(
                     )
                     Spacer(Modifier.height(10.dp))
                     if (fetched > 0f) LinearProgressIndicator(
-                        progress = { fetched }, Modifier.fillMaxWidth(), color = HadithGreen
-                    ) else LinearProgressIndicator(Modifier.fillMaxWidth(), color = HadithGreen)
+                        progress = { fetched }, Modifier.fillMaxWidth(), color = HadithAccent
+                    ) else LinearProgressIndicator(Modifier.fillMaxWidth(), color = HadithAccent)
                 }
                 else -> CircularProgressIndicator(color = HadithGold)
             }
@@ -908,7 +921,7 @@ private fun HadithReaderBar(
         }
         Column(
             Modifier.weight(1f)
-                .then(if (onSubtitleClick != null) Modifier.clickable(onClick = onSubtitleClick).testTag("hadith_page_navigator") else Modifier)
+                .then(if (onSubtitleClick != null) Modifier.clickable(role = Role.Button, onClick = onSubtitleClick).testTag("hadith_page_navigator") else Modifier)
                 .padding(vertical = 4.dp)
         ) {
             LocalizedText(title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -980,7 +993,7 @@ private fun HadithPdfPager(
                     modifier = Modifier.testTag("hadith_pdf_share")
                 ) {
                     if (sharing) CircularProgressIndicator(Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
-                    else Icon(Icons.Default.Share, "Share Hadith PDF", tint = Color.White)
+                    else Icon(Icons.Default.Share, localizedUiText("Share Hadith PDF"), tint = Color.White)
                 }
                 IconButton({ onImmersiveChange(true) }) {
                     Icon(Icons.Default.Fullscreen, localizedUiText("Full screen"), tint = Color.White)
@@ -1028,11 +1041,11 @@ private fun HadithPdfPager(
         if (!isImmersive && count > 1) {
             var dragging by remember { mutableStateOf<Float?>(null) }
             Row(
-                Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 4.dp, vertical = 2.dp),
+                Modifier.fillMaxWidth().background(HadithCard).padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton({ turn(-1) }, enabled = state.currentPage > 0) {
-                    Icon(Icons.Default.NavigateBefore, localizedUiText("Previous page"), tint = HadithGreen)
+                    Icon(Icons.Default.NavigateBefore, localizedUiText("Previous page"), tint = HadithAccent)
                 }
                 Slider(
                     value = dragging ?: state.currentPage.toFloat(),
@@ -1044,7 +1057,7 @@ private fun HadithPdfPager(
                     valueRange = 0f..last.toFloat(),
                     modifier = Modifier.weight(1f).testTag("hadith_page_slider"),
                     colors = SliderDefaults.colors(
-                        thumbColor = HadithGreen,
+                        thumbColor = HadithAccent,
                         activeTrackColor = HadithGold,
                         inactiveTrackColor = HadithLine
                     )
@@ -1052,12 +1065,12 @@ private fun HadithPdfPager(
                 LocalizedText(
                     "${(dragging?.toInt() ?: state.currentPage) + 1}",
                     fontWeight = FontWeight.Bold,
-                    color = HadithGreen,
+                    color = HadithAccent,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.widthIn(min = 36.dp).clickable { showPageDialog = true }
+                    modifier = Modifier.widthIn(min = 36.dp).clickable(role = Role.Button) { showPageDialog = true }
                 )
                 IconButton({ turn(1) }, enabled = state.currentPage < last) {
-                    Icon(Icons.Default.NavigateNext, localizedUiText("Next page"), tint = HadithGreen)
+                    Icon(Icons.Default.NavigateNext, localizedUiText("Next page"), tint = HadithAccent)
                 }
             }
         }
@@ -1130,7 +1143,7 @@ private fun HadithPdfPager(
                             ListItem(
                                 headlineContent = { LocalizedText(chapter.title, maxLines = 2) },
                                 supportingContent = { LocalizedText("PDF page ${chapter.page}") },
-                                modifier = Modifier.clickable {
+                                modifier = Modifier.clickable(role = Role.Button) {
                                     scope.launch { state.scrollToPage((chapter.page - 1).coerceIn(0, last)) }
                                     showChapterDialog = false
                                 }.testTag("hadith_chapter_${chapter.page}")

@@ -603,7 +603,7 @@ private fun AdhkarCardBody(
             }
         }
         if (language != "en" && title == dua.title) {
-            Text("English", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+            LocalizedText("English", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
         }
 
         Spacer(modifier = Modifier.height(14.dp))

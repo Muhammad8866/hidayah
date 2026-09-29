@@ -97,7 +97,7 @@ fun PrayerTransparencyBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                items(TransparencyCategory.values()) { category ->
+                items(TransparencyCategory.values(), key = { it.name }) { category ->
                     FilterChip(
                         selected = selectedCategory == category,
                         onClick = { selectedCategory = category },

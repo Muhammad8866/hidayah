@@ -17,6 +17,7 @@ data class PrayerSettingsChangedEvent(
 
 data class LocationChangedEvent(
     val newLocation: CityLocation,
+    val liveLocationGeneration: Long? = null,
     override val occurredAtEpochMs: Long = System.currentTimeMillis()
 ) : DomainEvent
 

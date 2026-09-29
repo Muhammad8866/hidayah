@@ -56,6 +56,8 @@ data class CmUiState(
     val communityError: String? = null,
     val detail: CmDetailState? = null,
     val isAddingMosque: Boolean = false,
+    val guidelinesAccepted: Boolean = false,
+    val isDeletingData: Boolean = false,
     val message: String? = null
 ) {
     /** Masjids voted down by the community are left out of the list. */
@@ -74,7 +76,9 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
     private val repository by lazy { CmRepository(application) }
     private val locationProvider = CmLocationProvider(application)
 
-    private val _state = MutableStateFlow(CmUiState())
+    private val prefs = application.getSharedPreferences("community_masjid", android.content.Context.MODE_PRIVATE)
+
+    private val _state = MutableStateFlow(CmUiState(guidelinesAccepted = prefs.getBoolean(KEY_GUIDELINES, false)))
     val state: StateFlow<CmUiState> = _state.asStateFlow()
 
     // Any unexpected failure is surfaced inside this tab and never propagates to the app.
@@ -421,6 +425,53 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
 
     fun consumeMessage() = _state.update { it.copy(message = null) }
 
+    /** Shown once before the first contribution (Play UGC policy: users accept the rules first). */
+    fun acceptGuidelines() {
+        prefs.edit().putBoolean(KEY_GUIDELINES, true).apply()
+        _state.update { it.copy(guidelinesAccepted = true) }
+    }
+
+    /** Sends a moderation report; needs no presence at the masjid. */
+    fun report(target: String, reason: String) {
+        val mosque = _state.value.detail?.mosque ?: return
+        viewModelScope.launch(guard) {
+            val message = runCatching { repository.report(mosque.docId, target, reason) }
+                .fold({ "Thank you. The report was sent for review." }, { friendly(it) })
+            _state.update { it.copy(message = message) }
+        }
+    }
+
+    /**
+     * Deletes this user's City challenge board entries and the anonymous account. Votes, timings and
+     * masjids already shared stay as anonymous community data that no longer links to this device.
+     */
+    fun deleteMyCommunityData() {
+        if (_state.value.isDeletingData) return
+        _state.update { it.copy(isDeletingData = true) }
+        viewModelScope.launch(guard) {
+            val app = getApplication<Application>()
+            val result = runCatching {
+                val local = com.example.feature.citychallenge.CcLocalStore(app)
+                local.profile?.let { profile ->
+                    if (repository.hasAccount) {
+                        com.example.feature.citychallenge.CcRemote(app).deleteMine(profile.cityId, java.time.LocalDate.now())
+                    }
+                }
+                local.profile = null
+                repository.deleteAccount()
+                prefs.edit().remove(KEY_GUIDELINES).apply()
+            }
+            _state.update {
+                it.copy(
+                    isDeletingData = false,
+                    detail = null,
+                    guidelinesAccepted = if (result.isSuccess) false else it.guidelinesAccepted,
+                    message = result.fold({ "Your community data and anonymous account were deleted." }, { e -> friendly(e) })
+                )
+            }
+        }
+    }
+
     /** Takes a fresh fix and enforces the 200 m presence rule before any write. */
     private suspend fun freshPresence(mosque: CmMosque): CmPresence? {
         _state.update { it.copy(isLocating = true) }
@@ -471,5 +522,6 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
     companion object {
         private const val LOCATION_MAX_AGE_MS = 2 * 60 * 1000L
         private const val RELOAD_AFTER_MOVE_METRES = 500.0
+        private const val KEY_GUIDELINES = "guidelines_accepted"
     }
 }

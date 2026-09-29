@@ -78,7 +78,7 @@ class CmOsmDataSource {
     private suspend fun fetch(endpoint: String, query: String): String = suspendCancellableCoroutine { cont ->
         val request = Request.Builder()
             .url(endpoint)
-            .header("User-Agent", "DeenCompanion-Android/1.0 (community-masjid)")
+            .header("User-Agent", "Hidayah-Android/1.0 (community-masjid)")
             .post(FormBody.Builder().add("data", query).build())
             .build()
         val call = client.newCall(request)

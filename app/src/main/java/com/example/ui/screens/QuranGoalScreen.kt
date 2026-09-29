@@ -13,7 +13,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.*
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,10 +49,10 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
     val today = remember { LocalDate.now() }
     var revision by remember { mutableIntStateOf(0) }
     var logDay by remember { mutableStateOf(LogDay.TODAY) }
-    var customPages by remember { mutableStateOf(false) }
-    var editPosition by remember { mutableStateOf(false) }
-    var pickDate by remember { mutableStateOf(false) }
-    var confirmReset by remember { mutableStateOf(false) }
+    var customPages by rememberSaveable { mutableStateOf(false) }
+    var editPosition by rememberSaveable { mutableStateOf(false) }
+    var pickDate by rememberSaveable { mutableStateOf(false) }
+    var confirmReset by rememberSaveable { mutableStateOf(false) }
     var celebrate by remember { mutableStateOf(false) }
 
     // Every value below is re-read after each change.
@@ -552,7 +554,7 @@ private fun ReadingHeatmap(today: LocalDate, accent: Color, dayOf: (LocalDate) -
 
 @Composable
 private fun NumberDialog(title: String, label: String, max: Int, onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
-    var text by remember { mutableStateOf("") }
+    var text by rememberSaveable { mutableStateOf("") }
     val value = text.toIntOrNull()?.takeIf { it in 1..max }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -579,7 +581,7 @@ private fun NumberDialog(title: String, label: String, max: Int, onDismiss: () -
 @Composable
 private fun PositionDialog(current: Int, onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
     var page by remember { mutableIntStateOf(current + 1) }
-    var pageText by remember { mutableStateOf("${current + 1}") }
+    var pageText by rememberSaveable { mutableStateOf("${current + 1}") }
     val readerPage = remember {
         runCatching { PdfQuran.lastBook()?.let { book -> toMadaniPage(PdfQuran.lastPage(book) + 1, book.paraPages, book.pageCount) } }.getOrNull()
     }
@@ -626,7 +628,7 @@ private fun PositionDialog(current: Int, onDismiss: () -> Unit, onConfirm: (Int)
                                 .height(36.dp)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                                .clickable { select(MADANI_PARA_STARTS[para - 1]) },
+                                .clickable(role = Role.Button) { select(MADANI_PARA_STARTS[para - 1]) },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(

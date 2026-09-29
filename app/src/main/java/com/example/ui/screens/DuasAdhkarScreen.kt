@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -488,7 +489,7 @@ private fun OccasionGrid(onPick: (String) -> Unit) {
                 border = BorderStroke(1.dp, colors.outline.copy(alpha = if (isAll) 0f else 0.6f)),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(118.dp)
+                    .heightIn(min = 118.dp)
                     .testTag("dua_occasion_${DuaDatasetRepository.CATEGORIES.indexOf(category)}")
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {

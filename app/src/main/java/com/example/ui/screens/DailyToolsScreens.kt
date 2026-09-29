@@ -765,7 +765,7 @@ internal fun ProgressRing(
 @Composable
 internal fun Stepper(value: Int, onDecrement: () -> Unit, onIncrement: () -> Unit, minimum: Int = 0) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        FilledTonalIconButton(onClick = onDecrement, enabled = value > minimum, modifier = Modifier.size(38.dp)) {
+        FilledTonalIconButton(onClick = onDecrement, enabled = value > minimum, modifier = Modifier.size(48.dp)) {
             Icon(Icons.Default.Remove, contentDescription = localizedUiText("Decrease"))
         }
         Text(
@@ -775,7 +775,7 @@ internal fun Stepper(value: Int, onDecrement: () -> Unit, onIncrement: () -> Uni
             textAlign = TextAlign.Center,
             modifier = Modifier.widthIn(min = 40.dp)
         )
-        FilledTonalIconButton(onClick = onIncrement, modifier = Modifier.size(38.dp)) {
+        FilledTonalIconButton(onClick = onIncrement, modifier = Modifier.size(48.dp)) {
             Icon(Icons.Default.Add, contentDescription = localizedUiText("Increase"))
         }
     }

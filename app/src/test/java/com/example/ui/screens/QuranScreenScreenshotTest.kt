@@ -4,6 +4,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -51,5 +52,25 @@ class QuranScreenScreenshotTest {
         composeRule.onNodeWithTag("quran_tab_audio").performClick()
         composeRule.onNodeWithTag("quran_audio_search").assertExists()
         composeRule.onRoot().captureRoboImage("src/test/screenshots/quran_audio.png")
+    }
+
+    @Test
+    fun tafsirLibrary() {
+        showQuran()
+        composeRule.onNodeWithTag("quran_tab_audio").performClick()
+        composeRule.onNodeWithTag("quran_listen_tafseer").performClick()
+        composeRule.onNodeWithTag("tafsir_audio_search").assertExists()
+        composeRule.onNodeWithTag("tafsir_audio_surah_1").assertExists()
+        composeRule.onRoot().captureRoboImage("src/test/screenshots/quran_tafsir.png")
+    }
+
+    @Test
+    fun tafsirParaLibrary() {
+        showQuran()
+        composeRule.onNodeWithTag("quran_tab_audio").performClick()
+        composeRule.onNodeWithTag("quran_listen_tafseer").performClick()
+        composeRule.onNodeWithText("Para wise").performClick()
+        composeRule.onNodeWithTag("tafsir_audio_para_1").assertExists()
+        composeRule.onRoot().captureRoboImage("src/test/screenshots/quran_tafsir_para.png")
     }
 }

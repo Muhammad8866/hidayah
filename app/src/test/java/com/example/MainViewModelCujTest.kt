@@ -1,5 +1,6 @@
 package com.example
 
+import android.Manifest
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.example.domain.model.AsrJuristicMethod
@@ -7,6 +8,8 @@ import com.example.domain.model.CalculationMethod
 import com.example.domain.model.CityLocation
 import com.example.domain.model.PrayerTimeConfig
 import com.example.domain.model.PrayerType
+import com.example.domain.model.PredefinedLocations
+import com.example.prayer.PrayerSettingsStore
 import com.example.viewmodel.QuranReaderMode
 import com.example.prayer.AstronomicalPrayerCalculator
 import com.example.viewmodel.MainViewModel
@@ -17,6 +20,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 import java.util.Calendar
 import java.util.TimeZone
@@ -31,7 +35,20 @@ class MainViewModelCujTest {
     @Before
     fun setUp() {
         app = ApplicationProvider.getApplicationContext()
+        val prefs = PrayerSettingsStore.prefs(app)
+        prefs.edit().clear().commit()
+        PrayerSettingsStore.saveCity(prefs, PredefinedLocations.DEFAULT_CITY)
         viewModel = MainViewModel(app)
+    }
+
+    @Test
+    fun freshInstallDoesNotCalculateDelhiPrayerTimesBeforeLocationIsChosen() {
+        PrayerSettingsStore.prefs(app).edit().clear().commit()
+        val freshViewModel = MainViewModel(app)
+
+        assertFalse(freshViewModel.uiState.value.hasConfirmedLocation)
+        assertNull(freshViewModel.uiState.value.rawPrayerTimes)
+        assertNotNull(freshViewModel.uiState.value.prayerCalculationError)
     }
 
     @Test
@@ -54,6 +71,10 @@ class MainViewModelCujTest {
         val updatedState = viewModel.uiState.value
         assertEquals("London", updatedState.selectedCity.name)
         assertNotNull(updatedState.rawPrayerTimes)
+        assertFalse(viewModel.usesLiveLocation())
+        viewModel.startLiveLocation()
+        assertEquals("London", viewModel.uiState.value.selectedCity.name)
+        assertFalse(viewModel.usesLiveLocation())
     }
 
     @Test
@@ -166,6 +187,11 @@ class MainViewModelCujTest {
 
     @Test
     fun cuj_notificationToggleAndScheduling() {
+        Shadows.shadowOf(app).denyPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        viewModel.setNotificationsEnabled(true)
+        assertFalse(viewModel.uiState.value.isNotificationEnabled)
+
+        Shadows.shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
         viewModel.setNotificationsEnabled(true)
         assertTrue(viewModel.uiState.value.isNotificationEnabled)
         assertNotNull(viewModel.uiState.value.notificationFeedbackMessage)

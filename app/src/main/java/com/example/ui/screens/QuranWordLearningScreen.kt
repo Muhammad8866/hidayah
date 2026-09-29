@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,6 +76,8 @@ import com.example.core.audio.PlaybackSpeed
 import com.example.ui.components.PlaybackSpeedButton
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.LocalizedText
+import com.example.ui.localization.localizeUiText
+import com.example.ui.localization.persistedAppLanguage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -294,7 +297,8 @@ private class RecitationPlayer(private val context: Context) {
 
     fun release() { stop(); releasePlayer() }
 
-    private fun toast(message: String) = Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    private fun toast(message: String) =
+        Toast.makeText(context, localizeUiText(message, persistedAppLanguage(context)), Toast.LENGTH_SHORT).show()
 }
 
 /** A pending download or delete the user has to confirm. */
@@ -586,7 +590,7 @@ private fun SurahPicker(
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         when {
             progress != null -> Box(
-                Modifier.size(size).clip(CircleShape).clickable(onClick = onCancel), contentAlignment = Alignment.Center
+                Modifier.size(size).clip(CircleShape).clickable(role = Role.Button, onClick = onCancel), contentAlignment = Alignment.Center
             ) {
                 if (progress > 0f) CircularProgressIndicator(progress = { progress }, Modifier.size(28.dp), color = QuranGreen, strokeWidth = 3.dp, trackColor = MushafBorder.copy(alpha = .25f))
                 else CircularProgressIndicator(Modifier.size(28.dp), color = QuranGreen, strokeWidth = 3.dp)
@@ -640,8 +644,8 @@ private fun SurahReader(
     fun itemFor(ayah: Int) = if (ayah <= 1) 0 else ayah - 1 + headerItems
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = itemFor(startAyah))
     val scope = rememberCoroutineScope()
-    var showSettings by remember { mutableStateOf(false) }
-    var showJump by remember { mutableStateOf(false) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+    var showJump by rememberSaveable { mutableStateOf(false) }
     var openWord by rememberSaveable { mutableStateOf<String?>(null) }
     val audio = index?.audio?.get(number - 1)
     player.continuous = state.continuousPlay
@@ -667,7 +671,7 @@ private fun SurahReader(
         Surface(color = QuranCard, shadowElevation = 2.dp) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onBack, Modifier.testTag("quran_wbw_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = QuranGreen) }
-                Column(Modifier.weight(1f).clickable { showJump = true }.testTag("quran_wbw_jump")) {
+                Column(Modifier.weight(1f).clickable(role = Role.Button) { showJump = true }.testTag("quran_wbw_jump")) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         LocalizedText("${surah.number}. ${surah.englishName}", color = MushafInk, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                         Icon(Icons.Default.UnfoldMore, "Go to ayah", tint = QuranMuted, modifier = Modifier.size(18.dp))
@@ -944,14 +948,14 @@ private fun SurahReader(
 }
 
 @Composable private fun SettingSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().clickable(role = Role.Switch) { onChange(!checked) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         LocalizedText(label, color = MushafInk, modifier = Modifier.weight(1f))
         Switch(checked, onChange, colors = SwitchDefaults.colors(checkedTrackColor = QuranGreen))
     }
 }
 
 @Composable private fun JumpToAyahDialog(total: Int, onDismiss: () -> Unit, onJump: (Int) -> Unit) {
-    var text by remember { mutableStateOf("") }
+    var text by rememberSaveable { mutableStateOf("") }
     val value = text.toIntOrNull()
     val valid = value != null && value in 1..total
     AlertDialog(

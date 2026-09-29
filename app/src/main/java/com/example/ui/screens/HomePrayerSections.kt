@@ -4,7 +4,6 @@ package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -37,7 +36,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -74,17 +72,6 @@ private fun AstronomicalPrayerCalculator.RawPrayerTimes.hoursOf(type: PrayerType
     PrayerType.ISHA -> ishaHours
 }
 
-/** Share of the current prayer window already elapsed, for the hero card's progress bar. */
-private fun prayerWindowProgress(uiState: MainUiState): Float? {
-    val raw = uiState.rawPrayerTimes ?: return null
-    if (uiState.prayerCalculationError != null) return null
-    // Fajr may belong to tomorrow, while raw contains today's Fajr.
-    if (uiState.nextPrayer == PrayerType.FAJR) return null
-    val windowMinutes = ((raw.hoursOf(uiState.nextPrayer) - raw.hoursOf(uiState.currentPrayer) + 24.0) % 24.0) * 60.0
-    if (windowMinutes <= 0.0) return null
-    return ((windowMinutes - uiState.minutesUntilNextPrayer) / windowMinutes).toFloat().coerceIn(0f, 1f)
-}
-
 /** True once Isha has started, when the next Fajr is tomorrow's. */
 private fun isNextFajrTomorrow(uiState: MainUiState): Boolean {
     val raw = uiState.rawPrayerTimes ?: return false
@@ -106,12 +93,6 @@ internal fun NextPrayerCard(uiState: MainUiState, onOpenPrayerDetails: () -> Uni
     val prayerName = if (rtlLanguage) uiState.nextPrayer.arabicName else uiState.nextPrayer.displayName
     val time = uiState.nextPrayerTimeFormatted.ifBlank { "--:--" }
     val countdown = countdownText(uiState.minutesUntilNextPrayer)
-    val progress = prayerWindowProgress(uiState)
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress ?: 0f,
-        animationSpec = tween(600),
-        label = "prayerProgress"
-    )
     val onHero = Color.White
     val summary = listOf(
         localizedUiText("Next prayer"), localizedUiText(prayerName), time,
@@ -131,33 +112,17 @@ internal fun NextPrayerCard(uiState: MainUiState, onOpenPrayerDetails: () -> Uni
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Brush.linearGradient(listOf(HeroGradientTop, HeroGradientMiddle, HeroGradientBottom)))
-                .padding(start = 20.dp, top = 12.dp, end = 8.dp, bottom = 20.dp)
+                .padding(horizontal = 18.dp, vertical = 16.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    LocalizedText(
-                        text = "Next prayer",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = GoldAccent,
-                        modifier = Modifier.semantics { heading() }
-                    )
-                    if (isTomorrow) {
-                        Spacer(Modifier.width(8.dp))
-                        HeroPill("Tomorrow", onHero)
-                    }
-                }
-                IconButton(
-                    onClick = onOpenPrayerDetails,
-                    modifier = Modifier.testTag("prayer_transparency_btn")
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = localizedUiText("Prayer Calculation Transparency"),
-                        tint = onHero.copy(alpha = 0.85f)
-                    )
+                LocalizedText("Next prayer", style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold, color = GoldAccent,
+                    modifier = Modifier.weight(1f).semantics { heading() })
+                if (isTomorrow) HeroPill("Tomorrow", onHero)
+                IconButton(onClick = onOpenPrayerDetails,
+                    modifier = Modifier.testTag("prayer_transparency_btn")) {
+                    Icon(Icons.Outlined.Info, localizedUiText("Prayer Calculation Transparency"),
+                        tint = onHero.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
                 }
             }
 
@@ -166,12 +131,11 @@ internal fun NextPrayerCard(uiState: MainUiState, onOpenPrayerDetails: () -> Uni
                     text = "Calculating prayer times…",
                     style = MaterialTheme.typography.titleLarge,
                     color = onHero,
-                    modifier = Modifier.padding(end = 12.dp, top = 4.dp, bottom = 8.dp)
+                    modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
                 )
                 LinearProgressIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(end = 12.dp)
                         .clip(RoundedCornerShape(50)),
                     color = GoldAccent,
                     trackColor = onHero.copy(alpha = 0.16f)
@@ -179,106 +143,36 @@ internal fun NextPrayerCard(uiState: MainUiState, onOpenPrayerDetails: () -> Uni
                 return@Column
             }
 
-            // Name and countdown wrap onto two lines rather than truncating at large font sizes.
             FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(end = 12.dp)
+                modifier = Modifier.fillMaxWidth()
                     .semantics(mergeDescendants = true) { contentDescription = summary },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(Modifier.padding(end = 16.dp)) {
-                    LocalizedText(
-                        text = prayerName,
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = onHero
-                    )
-                    if (!rtlLanguage) Text(
-                        text = uiState.nextPrayer.arabicName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontFamily = ArabicFontFamily,
-                        fontWeight = FontWeight.Normal,
-                        color = onHero.copy(alpha = 0.75f)
-                    )
+                Column(modifier = Modifier.padding(end = 16.dp)) {
+                    LocalizedText(prayerName, style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold, color = onHero)
+                    if (!rtlLanguage) Text(uiState.nextPrayer.arabicName,
+                        style = MaterialTheme.typography.titleSmall, fontFamily = ArabicFontFamily,
+                        color = onHero.copy(alpha = 0.7f))
                 }
-                // The clock time is what people act on, so it is the largest figure; the countdown sits under it.
-                Column(horizontalAlignment = Alignment.End, modifier = Modifier.align(Alignment.Bottom)) {
-                    Text(
-                        text = ltr(time),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = onHero,
-                        maxLines = 1
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(GoldAccent.copy(alpha = 0.22f))
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Timer,
-                            contentDescription = null,
-                            tint = GoldAccent,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        LocalizedText(
-                            text = "Starts in",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = onHero.copy(alpha = 0.85f)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = ltr(countdown),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = onHero,
-                            maxLines = 1
-                        )
-                    }
-                }
+                Text(ltr(time), style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold, color = onHero,
+                    modifier = Modifier.align(Alignment.CenterVertically), maxLines = 1)
             }
 
-            if (progress != null) {
-                Spacer(Modifier.height(16.dp))
-                // The window the bar measures: which prayer time is running right now.
-                val current = if (rtlLanguage) uiState.currentPrayer.arabicName else uiState.currentPrayer.displayName
-                Row(
-                    modifier = Modifier.padding(end = 12.dp, bottom = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    LocalizedText(
-                        text = "Now",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = onHero.copy(alpha = 0.7f)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    LocalizedText(
-                        text = current,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = onHero
-                    )
-                }
-                LinearProgressIndicator(
-                    progress = { animatedProgress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(end = 12.dp)
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(50)),
-                    color = GoldAccent,
-                    trackColor = onHero.copy(alpha = 0.16f),
-                    strokeCap = StrokeCap.Round,
-                    gapSize = 0.dp,
-                    drawStopIndicator = {}
-                )
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.Timer, contentDescription = null, tint = GoldAccent,
+                    modifier = Modifier.size(17.dp))
+                Spacer(Modifier.width(6.dp))
+                LocalizedText("Starts in", style = MaterialTheme.typography.bodySmall,
+                    color = onHero.copy(alpha = 0.8f))
+                Spacer(Modifier.width(6.dp))
+                Text(ltr(countdown), style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold, color = onHero)
             }
+
         }
     }
 }
@@ -300,6 +194,7 @@ private fun HeroPill(text: String, onHero: Color) {
 @Composable
 internal fun PrayerTimesErrorCard(
     locationIssue: LocationIssue?,
+    needsLocation: Boolean = false,
     onRetry: () -> Unit,
     onFixLocation: () -> Unit,
     onOpenDetails: () -> Unit
@@ -332,7 +227,7 @@ internal fun PrayerTimesErrorCard(
                 )
             }
             LocalizedText(
-                text = if (locationIssue != null) "Turn on location so we can find prayer times for where you are."
+                text = if (locationIssue != null || needsLocation) "Choose a city or allow location to see prayer times for where you are."
                 else "We couldn't work out prayer times for this location. Please try again.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer
@@ -342,7 +237,7 @@ internal fun PrayerTimesErrorCard(
                 modifier = Modifier.padding(top = 4.dp)
             ) {
                 Button(
-                    onClick = if (locationIssue != null) onFixLocation else onRetry,
+                    onClick = if (locationIssue != null || needsLocation) onFixLocation else onRetry,
                     modifier = Modifier.heightIn(min = 48.dp).testTag("prayer_times_retry"),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error,
@@ -350,14 +245,14 @@ internal fun PrayerTimesErrorCard(
                     )
                 ) {
                     Icon(
-                        imageVector = if (locationIssue != null) Icons.Default.LocationOn else Icons.Default.Refresh,
+                        imageVector = if (locationIssue != null || needsLocation) Icons.Default.LocationOn else Icons.Default.Refresh,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    LocalizedText(if (locationIssue != null) "Location settings" else "Try again")
+                    LocalizedText(if (locationIssue != null || needsLocation) "Choose city" else "Try again")
                 }
-                if (locationIssue != null) {
+                if (locationIssue != null && !needsLocation) {
                     TextButton(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
                         LocalizedText("Try again", color = MaterialTheme.colorScheme.onErrorContainer)
                     }

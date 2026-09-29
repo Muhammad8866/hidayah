@@ -17,6 +17,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.isRtlAppLanguage
 import com.example.ui.theme.MyApplicationTheme
+import com.example.domain.model.PredefinedLocations
+import com.example.prayer.PrayerSettingsStore
 import com.example.viewmodel.MainViewModel
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -37,7 +39,9 @@ class HomeScreenScreenshotTest {
     val composeRule = createComposeRule()
 
     private fun showHome(language: String = "en", dark: Boolean = false) {
-        val viewModel = MainViewModel(ApplicationProvider.getApplicationContext())
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        PrayerSettingsStore.saveCity(PrayerSettingsStore.prefs(app), PredefinedLocations.DEFAULT_CITY)
+        val viewModel = MainViewModel(app)
         composeRule.setContent {
             val direction = if (isRtlAppLanguage(language)) LayoutDirection.Rtl else LayoutDirection.Ltr
             CompositionLocalProvider(LocalAppLanguage provides language, LocalLayoutDirection provides direction) {

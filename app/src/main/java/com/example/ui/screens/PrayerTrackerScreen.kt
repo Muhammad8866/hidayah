@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,8 +65,8 @@ internal fun PrayerTrackerScreen(onBack: () -> Unit, modifier: Modifier) {
     val selected = LocalDate.ofEpochDay(selectedEpochDay)
     var revision by remember { mutableIntStateOf(0) }
     var lastBulk by remember { mutableStateOf<Pair<LocalDate, List<String>>?>(null) }
-    var showAddDays by remember { mutableStateOf(false) }
-    var confirmClear by remember { mutableStateOf(false) }
+    var showAddDays by rememberSaveable { mutableStateOf(false) }
+    var confirmClear by rememberSaveable { mutableStateOf(false) }
     val times = rememberTrackerTimes(selected, today)
 
     val cache = remember(revision) { mutableMapOf<LocalDate, TrackerDay>() }
@@ -318,7 +319,7 @@ private fun DateStrip(
     val end = minOf(selected.plusDays(3), today)
     val days = (6 downTo 0).map { end.minusDays(it.toLong()) }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { onSelect(selected.minusDays(7)) }, modifier = Modifier.size(32.dp)) {
+        IconButton(onClick = { onSelect(selected.minusDays(7)) }, modifier = Modifier.size(48.dp)) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = localizedUiText("Previous week"))
         }
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -339,7 +340,7 @@ private fun DateStrip(
                             if (date == today && !isSelected) accent else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
                             RoundedCornerShape(14.dp)
                         )
-                        .clickable { onSelect(date) }
+                        .clickable(role = Role.Button) { onSelect(date) }
                         .padding(vertical = 8.dp)
                         .testTag("tracker_day_$date"),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -359,7 +360,7 @@ private fun DateStrip(
         IconButton(
             onClick = { onSelect(selected.plusDays(7)) },
             enabled = selected < today,
-            modifier = Modifier.size(32.dp)
+            modifier = Modifier.size(48.dp)
         ) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = localizedUiText("Next week"))
         }
@@ -531,7 +532,7 @@ private fun MarkOption(option: PrayerMark, selected: Boolean, enabled: Boolean, 
             .heightIn(min = 52.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(container)
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(role = Role.Button, enabled = enabled, onClick = onClick)
             .padding(vertical = 6.dp, horizontal = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -665,7 +666,7 @@ private fun Heatmap(today: LocalDate, selected: LocalDate, accent: Color, dayOf:
                             .clip(RoundedCornerShape(6.dp))
                             .background(fill)
                             .then(if (date == selected) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(6.dp)) else Modifier)
-                            .clickable { onSelect(date) },
+                            .clickable(role = Role.Button) { onSelect(date) },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(

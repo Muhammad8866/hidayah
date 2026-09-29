@@ -203,7 +203,7 @@ suspend fun ccDetectPlace(context: Context, latitude: Double, longitude: Double)
 
 class CcRemote(private val context: Context) {
     private val app: FirebaseApp? by lazy {
-        runCatching { FirebaseApp.getApps(context).firstOrNull() ?: FirebaseApp.initializeApp(context) }.getOrNull()
+        com.example.core.firebase.FirebaseSetup.app(context)
     }
     private val firestore by lazy { FirebaseFirestore.getInstance(requireApp()) }
     private val auth by lazy { FirebaseAuth.getInstance(requireApp()) }
@@ -251,6 +251,19 @@ class CcRemote(private val context: Context) {
         runCatching { members(cityId, weekId).document(uid()).delete().awaitCm() }
     }
 
+    /**
+     * Removes this user's board entries for the last year of weeks in [cityId]. Deleting a missing
+     * document succeeds, so weeks the user never joined cost nothing but a write.
+     */
+    suspend fun deleteMine(cityId: String, today: LocalDate) {
+        val current = auth.currentUser ?: return
+        val batch = firestore.batch()
+        repeat(DELETE_WEEKS) { i ->
+            batch.delete(members(cityId, weekId(today.minusWeeks(i.toLong()))).document(current.uid))
+        }
+        batch.commit().awaitCm()
+    }
+
     private fun DocumentSnapshot.toMember(): CcMember? {
         val name = getString("name") ?: return null
         return CcMember(
@@ -265,5 +278,6 @@ class CcRemote(private val context: Context) {
 
     companion object {
         const val TOP_LIMIT = 300L
+        private const val DELETE_WEEKS = 53
     }
 }

@@ -11,6 +11,9 @@ import android.os.SystemClock
 import android.widget.RemoteViews
 import com.example.MainActivity
 import com.example.R
+import com.example.ui.localization.appLocale
+import com.example.ui.localization.localizeUiText
+import com.example.ui.localization.persistedAppLanguage
 import java.util.Calendar
 import java.util.TimeZone
 
@@ -23,7 +26,7 @@ class PrayerTimesWidget : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action in setOf(ACTION_REFRESH, Intent.ACTION_TIME_CHANGED,
-                Intent.ACTION_TIMEZONE_CHANGED, Intent.ACTION_DATE_CHANGED,
+                Intent.ACTION_TIMEZONE_CHANGED,
                 Intent.ACTION_MY_PACKAGE_REPLACED)) refresh(context)
     }
 
@@ -43,15 +46,19 @@ class PrayerTimesWidget : AppWidgetProvider() {
 
         private fun render(context: Context, manager: AppWidgetManager, ids: IntArray) {
             val prefs = PrayerSettingsStore.prefs(context)
+            val hasCity = PrayerSettingsStore.hasSavedCity(prefs)
             val city = PrayerSettingsStore.loadCity(prefs)
             val zone = TimeZone.getTimeZone(city.timeZoneId)
             val today = Calendar.getInstance(zone)
             val tomorrow = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) }
             val config = PrayerSettingsStore.loadConfig(prefs)
-            val result = runCatching {
+            val language = persistedAppLanguage(context)
+            val locale = appLocale(language)
+            fun tr(text: String) = localizeUiText(text, language)
+            val result = if (hasCity) runCatching {
                 AstronomicalPrayerCalculator.calculateTimes(today, city.latitude, city.longitude, config) to
                     AstronomicalPrayerCalculator.calculateTimes(tomorrow, city.latitude, city.longitude, config)
-            }.getOrNull()
+            }.getOrNull() else null
             val rows = result?.first?.let { raw ->
                 listOf("Fajr" to raw.fajrHours, "Dhuhr" to raw.dhuhrHours,
                     "Asr" to raw.asrHours, "Maghrib" to raw.maghribHours, "Isha" to raw.ishaHours)
@@ -66,18 +73,18 @@ class PrayerTimesWidget : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             ids.forEach { id ->
                 val views = RemoteViews(context.packageName, R.layout.prayer_widget)
-                views.setTextViewText(R.id.widget_location, city.name)
-                views.setTextViewText(R.id.widget_next, next?.first ?: "Prayer times unavailable")
+                views.setTextViewText(R.id.widget_location, if (hasCity) city.name else tr("Choose city in app"))
+                views.setTextViewText(R.id.widget_next, tr(next?.first ?: "Prayer times unavailable"))
                 views.setTextViewText(R.id.widget_next_time, next?.second?.let {
-                    java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).apply {
+                    java.text.SimpleDateFormat("h:mm a", locale).apply {
                         timeZone = zone
                     }.format(java.util.Date(it))
-                } ?: "Open app to check your location")
+                } ?: tr("Open app to check your location"))
                 val rowIds = intArrayOf(R.id.widget_fajr, R.id.widget_dhuhr, R.id.widget_asr,
                     R.id.widget_maghrib, R.id.widget_isha)
                 rowIds.forEachIndexed { index, viewId ->
                     views.setTextViewText(viewId, rows?.get(index)?.let { (name, hours) ->
-                        "$name\n${AstronomicalPrayerCalculator.formatHoursToAmPm(hours)}"
+                        "${tr(name)}\n${AstronomicalPrayerCalculator.formatHoursToAmPm(hours, locale)}"
                     } ?: "—")
                 }
                 if (next != null) {
@@ -88,10 +95,22 @@ class PrayerTimesWidget : AppWidgetProvider() {
                 views.setOnClickPendingIntent(R.id.widget_root, launch)
                 manager.updateAppWidget(id, views)
             }
-            next?.let { (_, time) ->
-                context.getSystemService(AlarmManager::class.java)?.setAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP, time + 1000L, refreshIntent(context))
+            next?.let { (_, time) -> scheduleRefresh(context, time + 1000L) }
+        }
+
+        /** Exact when allowed, so the countdown never runs past zero while waiting for a late refresh. */
+        private fun scheduleRefresh(context: Context, atMillis: Long) {
+            val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return
+            val intent = refreshIntent(context)
+            if (PrayerNotificationReceiver.canScheduleExactAlarms(context)) {
+                try {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, intent)
+                    return
+                } catch (e: SecurityException) {
+                    // Permission revoked between the check and the call; fall through to inexact.
+                }
             }
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, intent)
         }
 
         private fun refreshIntent(context: Context): PendingIntent = PendingIntent.getBroadcast(

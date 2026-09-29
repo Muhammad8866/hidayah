@@ -55,7 +55,7 @@ class CmCommunityUnavailableException(message: String) : Exception(message)
 class CmFirebaseDataSource(private val context: Context) {
 
     private val app: FirebaseApp? by lazy {
-        runCatching { FirebaseApp.getApps(context).firstOrNull() ?: FirebaseApp.initializeApp(context) }.getOrNull()
+        com.example.core.firebase.FirebaseSetup.app(context)
     }
     private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance(requireApp()) }
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance(requireApp()) }
@@ -73,6 +73,33 @@ class CmFirebaseDataSource(private val context: Context) {
         auth.currentUser?.let { return it.uid }
         val result = auth.signInAnonymously().awaitCm()
         return result.user?.uid ?: throw CmCommunityUnavailableException("Anonymous sign-in failed")
+    }
+
+    /** A moderation report; reports are write-only for clients and reviewed in the Firebase console. */
+    suspend fun report(docId: String, target: String, reason: String) {
+        val uid = ensureUid()
+        firestore.collection(REPORTS).document().set(
+            mapOf(
+                "mosqueId" to docId,
+                "target" to target,
+                "reason" to reason,
+                "uid" to uid,
+                "createdAt" to FieldValue.serverTimestamp()
+            )
+        ).awaitCm()
+    }
+
+    /** True once the anonymous identity exists; there is nothing to delete before that. */
+    val hasAccount: Boolean get() = app != null && auth.currentUser != null
+
+    /**
+     * Deletes the anonymous Firebase user. Votes, timings and masjids already written stay as
+     * anonymous community data: their uid no longer maps to any account or device.
+     */
+    suspend fun deleteAnonymousAccount() {
+        requireApp()
+        auth.currentUser?.delete()?.awaitCm()
+        auth.signOut()
     }
 
     /** One query per 30 IDs, run in parallel; missing documents come back as `exists = false`. */
@@ -420,6 +447,7 @@ class CmFirebaseDataSource(private val context: Context) {
         const val TIMING_VOTES = "cm_timing_votes"
         const val HISTORY = "cm_history"
         const val USERS = "cm_users"
+        const val REPORTS = "cm_reports"
         const val GEO5 = "geo5"
         const val SOURCE_USER = "user"
         const val USER_MOSQUE_PREFIX = "user_"

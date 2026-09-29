@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hidayah Privacy Policy</title>
+<style>
+  :root { --bg:#fff; --fg:#1b1f1d; --muted:#5b6660; --accent:#1f7a5c; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#121513; --fg:#e7ece9; --muted:#a3ada8; --accent:#5fc59d; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:1.6rem; margin-bottom:0; } h2 { font-size:1.15rem; margin-top:2rem; color:var(--accent); }
+  .muted { color:var(--muted); } a { color:var(--accent); } li { margin:.3rem 0; }
+</style>
+</head>
+<body>
+<main>
+<h1>Hidayah Privacy Policy</h1>
+<p class="muted">App: Hidayah (package com.aistudio.deencompanion.quranj) · Effective date: 29 September 2026</p>
+
+<p>Hidayah is a Quran, prayer-times and Islamic learning app. We built it to work mostly offline, and we collect as little data as we can. The app shows no ads, has no analytics or advertising SDKs, and we never sell your data.</p>
+
+<h2>1. Location</h2>
+<ul>
+  <li><b>Prayer times, Qibla and Ramzan timetable:</b> these are calculated <b>on your device</b> from your location. The coordinates stay on your phone.</li>
+  <li><b>Nearby masjids:</b> when you open Community Masjid, your approximate coordinates are sent to public OpenStreetMap Overpass servers (overpass-api.de and mirrors) to find mosques near you.</li>
+  <li><b>Community votes and contributions:</b> when you add a masjid, add a timing or vote, your current location goes to our Firebase backend. The server checks that you are within 200 m of the masjid. Your raw location is only used for this check. The server does not keep it with your vote.</li>
+  <li>Location permission is optional. You can also pick a city by hand.</li>
+</ul>
+
+<h2>2. Microphone</h2>
+<p>Hifz Coach uses your device's speech recognizer (usually Google) to check your recitation, and only while you press the mic button. We do not record, store or upload your audio. Your device's speech service handles recognition under its own privacy terms.</p>
+
+<h2>3. Community features (Firebase)</h2>
+<ul>
+  <li>Community Masjid and City Challenge use <b>Firebase Anonymous Authentication</b>. This gives the app a random ID with no name, email or phone number.</li>
+  <li>We store in <b>Google Cloud Firestore</b>: masjids and timings you add, your votes, any content reports you send, and your City Challenge participation. Other users can see what you contribute. Your anonymous ID is never shown to them.</li>
+  <li><b>Firebase App Check</b> uses Google Play Integrity to confirm that requests come from the real app. This helps stop abuse.</li>
+  <li>Google processes this data as our service provider: <a href="https://firebase.google.com/support/privacy">Firebase privacy</a>.</li>
+</ul>
+
+<h2>4. Downloads from third-party hosts</h2>
+<p>Some content is downloaded when you ask for it. Your device connects directly to these hosts, and they can see your IP address as with any web request:</p>
+<ul>
+  <li>GitHub (github.com, raw.githubusercontent.com): Quran PDFs, word-by-word audio, hadith PDFs, naats</li>
+  <li>Quran.com / QuranCDN, EveryAyah, QuranicAudio, AlQuran Cloud: Quran data and recitation audio</li>
+  <li>Dawat-e-Islami (dawateislami.net), Internet Archive (archive.org), Google Drive, Emaan Library: books and hadith PDFs</li>
+  <li>jsDelivr CDN and currency-api.pages.dev: gold, silver and currency rates for the Zakat calculator</li>
+</ul>
+
+<h2>5. Data stored on your device</h2>
+<p>Your settings, bookmarks, reading progress, prayer tracking and downloaded files stay on your device. If you enable Android backup, they are included in your personal Google backup. Uninstalling the app deletes them.</p>
+
+<h2>6. Notifications and alarms</h2>
+<p>The app schedules prayer alerts on your device. Nothing about them is sent to us.</p>
+
+<h2>7. Deleting your data</h2>
+<ul>
+  <li>In the app, open <b>Community Masjid → menu → "Delete my community data"</b>. This removes your votes and your user record, then deletes your anonymous account.</li>
+  <li>If you contributed a masjid or a timing, it can stay visible to others after deletion, but it is no longer linked to you.</li>
+  <li>You can also email us to ask for deletion. We handle requests within 30 days.</li>
+</ul>
+
+<h2>8. Children</h2>
+<p>The app is not directed at children under 13, and we do not knowingly collect personal data from them.</p>
+
+<h2>9. Security</h2>
+<p>All network traffic uses HTTPS. Firestore security rules only allow users to change their own votes.</p>
+
+<h2>10. Changes</h2>
+<p>If this policy changes, we will update this page and the effective date above.</p>
+
+<h2>11. Contact</h2>
+<p>Muhammad Garana · <a href="mailto:muhammadgarana@gmail.com">muhammadgarana@gmail.com</a></p>
+</main>
+</body>
+</html>

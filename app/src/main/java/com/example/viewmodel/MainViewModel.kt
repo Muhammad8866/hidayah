@@ -21,8 +21,6 @@ import com.google.android.gms.location.*
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room
-import com.example.ai.AiAssistantResponse
-import com.example.ai.SourceConstrainedIslamicAssistant
 import com.example.core.event.DomainEventBus
 import com.example.core.event.LocationChangedEvent
 import com.example.core.event.PrayerSettingsChangedEvent
@@ -61,6 +59,7 @@ import kotlin.math.roundToInt
 
 data class MainUiState(
     val selectedCity: CityLocation = PredefinedLocations.DEFAULT_CITY,
+    val hasConfirmedLocation: Boolean = false,
     val prayerConfig: PrayerTimeConfig = PrayerTimeConfig(),
     val rawPrayerTimes: AstronomicalPrayerCalculator.RawPrayerTimes? = null,
     val tomorrowPrayerTimes: AstronomicalPrayerCalculator.RawPrayerTimes? = null,
@@ -118,11 +117,6 @@ data class MainUiState(
     val locationIssue: LocationIssue? = null,
     val isQuranLoading: Boolean = true,
     
-    // AI Assistant (Clean fresh state)
-    val aiQuery: String = "",
-    val aiResponse: AiAssistantResponse? = null,
-    val isAiThinking: Boolean = false,
-    
     // Islamic festivals (pending in the running Gregorian year)
     val festivalSchedule: FestivalSchedule? = null,
     val isFestivalsLoading: Boolean = false,
@@ -138,7 +132,7 @@ data class MainUiState(
     
     // Settings & Privacy
     val isDataSaverActive: Boolean = false,
-    val isNotificationEnabled: Boolean = true,
+    val isNotificationEnabled: Boolean = false,
     val notificationFeedbackMessage: String? = null,
     val hijriAdjustmentDays: Int = 0,
     /** Moon-sighting calendar chosen in Settings ([HijriRegion.id]); null follows the location. */
@@ -264,6 +258,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
     private val sensorManager = application.getSystemService(SensorManager::class.java)
     private var locationCallback: LocationCallback? = null
+    private var currentLocationRequest: CancellationTokenSource? = null
+    @Volatile private var liveLocationGeneration = 0L
+    @Volatile private var useLiveLocation = PrayerSettingsStore.useLiveLocation(appPreferences)
     private var rotationSensor: Sensor? = null
     private var sensorListener: SensorEventListener? = null
     private val headingFilter = CompassHeadingFilter()
@@ -289,6 +286,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val config = PrayerSettingsStore.loadConfig(appPreferences, defaults.prayerConfig)
         return defaults.copy(
             selectedCity = city,
+            hasConfirmedLocation = PrayerSettingsStore.hasSavedCity(appPreferences),
             prayerConfig = config,
             isNotificationEnabled = PrayerSettingsStore.notificationsEnabled(appPreferences),
             languageCode = loadLanguageCode(),
@@ -472,8 +470,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             DomainEventBus.observe<LocationChangedEvent>().collect { event ->
+                if (event.liveLocationGeneration != null &&
+                    (!useLiveLocation || event.liveLocationGeneration != liveLocationGeneration)) return@collect
                 persistCity(event.newLocation)
-                _uiState.update { it.copy(selectedCity = event.newLocation) }
+                _uiState.update {
+                    it.copy(
+                        selectedCity = event.newLocation,
+                        hasConfirmedLocation = true,
+                        isLiveLocation = event.liveLocationGeneration != null,
+                        locationIssue = null,
+                        locationStatus = if (event.liveLocationGeneration != null) "Live GPS • ${event.newLocation.name}"
+                            else "Selected city • ${event.newLocation.name}"
+                    )
+                }
                 recalculatePrayerTimes()
                 recalculateQibla()
                 refreshFestivals()
@@ -498,23 +507,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun selectCity(city: CityLocation) {
-        _uiState.update { it.copy(isLiveLocation = false, magneticDeclination = null) }
+        stopLiveLocation()
         viewModelScope.launch {
             DomainEventBus.publish(LocationChangedEvent(city))
         }
     }
 
+    private fun stopLiveLocation() {
+        useLiveLocation = false
+        PrayerSettingsStore.saveUseLiveLocation(appPreferences, false)
+        liveLocationGeneration++
+        currentLocationRequest?.cancel()
+        currentLocationRequest = null
+        locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
+        locationCallback = null
+        _uiState.update { it.copy(isLiveLocation = false, magneticDeclination = cityDeclination(it.selectedCity), locationIssue = null) }
+    }
+
+    /** Stops GPS while the app is in the background; [startLiveLocation] resumes it on return. */
+    fun pauseLiveLocation() {
+        currentLocationRequest?.cancel()
+        currentLocationRequest = null
+        locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
+        locationCallback = null
+    }
+
+    fun usesLiveLocation(): Boolean = useLiveLocation
+
     /** Called after the user grants precise location. Updates GPS every 30 seconds while app is open. */
-    fun startLiveLocation() {
+    fun startLiveLocation(userRequested: Boolean = false) {
+        if (userRequested && !useLiveLocation) {
+            useLiveLocation = true
+            PrayerSettingsStore.saveUseLiveLocation(appPreferences, true)
+            liveLocationGeneration++
+        }
+        if (!useLiveLocation) return
         val fineGranted = ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val coarseGranted = ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         if (!fineGranted && !coarseGranted) {
-            _uiState.update { it.copy(isLiveLocation = false, magneticDeclination = null, locationIssue = LocationIssue.PERMISSION_DENIED) }
+            _uiState.update { it.copy(isLiveLocation = false, magneticDeclination = cityDeclination(it.selectedCity), locationIssue = LocationIssue.PERMISSION_DENIED) }
             return
         }
         val locationManager = getApplication<Application>().getSystemService(android.location.LocationManager::class.java)
         if (locationManager != null && !androidx.core.location.LocationManagerCompat.isLocationEnabled(locationManager)) {
-            _uiState.update { it.copy(isLiveLocation = false, magneticDeclination = null, locationIssue = LocationIssue.SERVICES_OFF) }
+            _uiState.update { it.copy(isLiveLocation = false, magneticDeclination = cityDeclination(it.selectedCity), locationIssue = LocationIssue.SERVICES_OFF) }
         } else {
             _uiState.update { it.copy(locationIssue = null) }
         }
@@ -534,7 +570,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         // Ask for a fresh fix whenever the app returns to the foreground. If Android
         // location was just switched on this updates the dashboard without a tap.
-        val cancellationTokenSource = CancellationTokenSource()
+        currentLocationRequest?.cancel()
+        val cancellationTokenSource = CancellationTokenSource().also { currentLocationRequest = it }
         fusedLocationClient.getCurrentLocation(priority, cancellationTokenSource.token)
             .addOnSuccessListener { location ->
                 location?.let { updateLiveLocation(it) }
@@ -547,6 +584,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun updateLiveLocation(location: Location) {
+        if (!useLiveLocation) return
+        val generation = liveLocationGeneration
         // A stale cached fix can put the compass's magnetic correction in the wrong place.
         val ageNanos = SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos
         if (ageNanos < 0 || ageNanos > 10L * 60L * 1_000_000_000L) return
@@ -577,8 +616,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 .ifBlank { "Live GPS" }
             val zoneId = TimeZoneResolver.resolve(longitude, address?.countryCode)
             val city = CityLocation(displayName, region, latitude, longitude, zoneId)
-            DomainEventBus.publish(LocationChangedEvent(city))
-            _uiState.update { it.copy(isLiveLocation = true, locationIssue = null, locationStatus = "Live GPS • $displayName") }
+            if (useLiveLocation && generation == liveLocationGeneration) {
+                DomainEventBus.publish(LocationChangedEvent(city, liveLocationGeneration = generation))
+            }
         }
     }
 
@@ -591,7 +631,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val rotation = FloatArray(9)
                 val orientation = FloatArray(3)
                 SensorManager.getRotationMatrixFromVector(rotation, event.values)
-                SensorManager.getOrientation(rotation, orientation)
+                // Held upright, azimuth of the flat-phone axes becomes unstable; use the
+                // direction the back of the phone faces instead.
+                val matrix = if (kotlin.math.abs(rotation[8]) < 0.5f) {
+                    FloatArray(9).also { SensorManager.remapCoordinateSystem(rotation, SensorManager.AXIS_X, SensorManager.AXIS_Z, it) }
+                } else rotation
+                SensorManager.getOrientation(matrix, orientation)
                 val magneticHeading = Math.toDegrees(orientation[0].toDouble())
                 val heading = headingFilter.filter(magneticHeading).toFloat()
                 _uiState.update { it.copy(deviceHeading = heading, compassAccuracy = event.accuracy) }
@@ -611,7 +656,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setCustomCoordinates(name: String, latitude: Double, longitude: Double, timeZoneId: String? = null) {
-        _uiState.update { it.copy(isLiveLocation = false, magneticDeclination = null) }
+        stopLiveLocation()
         val sanitizedName = SensitiveDataRedactor.redact(name)
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             // The coordinates may be in another country, so the phone's zone is not assumed.
@@ -708,14 +753,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setNotificationsEnabled(enabled: Boolean) {
-        appPreferences.edit().putBoolean(PrayerSettingsStore.NOTIFICATIONS_ENABLED_KEY, enabled).apply()
-        _uiState.update { it.copy(isNotificationEnabled = enabled) }
-        if (enabled) {
+        val allowed = !enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        val active = enabled && allowed
+        PrayerSettingsStore.saveNotificationsEnabled(appPreferences, active)
+        _uiState.update { it.copy(isNotificationEnabled = active) }
+        if (active) {
             schedulePrayerNotifications()
-            _uiState.update { it.copy(notificationFeedbackMessage = "Prayer notifications enabled and scheduled.") }
+            _uiState.update { it.copy(notificationFeedbackMessage =
+                if (it.hasConfirmedLocation) "Prayer notifications enabled and scheduled."
+                else "Prayer notifications enabled. Choose a city to schedule alerts.") }
         } else {
             PrayerNotificationReceiver.cancelPrayerAlerts(getApplication())
-            _uiState.update { it.copy(notificationFeedbackMessage = "Prayer notifications disabled.") }
+            _uiState.update { it.copy(notificationFeedbackMessage =
+                if (enabled) "Allow notifications to enable prayer alerts." else "Prayer notifications disabled.") }
+        }
+    }
+
+    fun refreshNotificationPermission() {
+        if (_uiState.value.isNotificationEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            setNotificationsEnabled(false)
         }
     }
 
@@ -724,6 +782,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun triggerTestNotification() {
+        if (!_uiState.value.hasConfirmedLocation) {
+            _uiState.update { it.copy(notificationFeedbackMessage = "Choose a city before testing prayer alerts.") }
+            return
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            _uiState.update { it.copy(notificationFeedbackMessage = "Allow notifications to enable prayer alerts.") }
+            return
+        }
         val city = _uiState.value.selectedCity
         val hijriFormatted = formatHijriDate(_uiState.value.hijriDate, _uiState.value.languageCode)
         PrayerNotificationReceiver.showPrayerNotification(
@@ -789,6 +856,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     RemoteQuranRepository.loadSurahStartPages(getApplication())
                 }
+                check(lines.isNotEmpty()) { "Verified Quran page cannot be empty" }
                 Result.success(lines to surahPages)
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -799,7 +867,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { current ->
                 result.fold(
                     onSuccess = { (lines, surahPages) ->
-                        check(lines.isNotEmpty()) { "Verified Quran page cannot be empty" }
                     current.copy(
                         quranPageNumber = safePage,
                         quranPageLines = lines,
@@ -823,9 +890,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadKanzulImanSurah(surah: Surah) {
         viewModelScope.launch {
-            val ayat = RemoteQuranRepository.loadSurah(surah.number, surah.totalAyat)
+            val ayat = runCatching { RemoteQuranRepository.loadSurah(surah.number, surah.totalAyat) }
+                .getOrDefault(emptyList())
             _uiState.update { current ->
-                if (current.selectedSurah.number == surah.number) current.copy(currentAyat = ayat, isQuranLoading = false) else current
+                if (current.selectedSurah.number != surah.number) current
+                else current.copy(
+                    currentAyat = ayat,
+                    isQuranLoading = false,
+                    quranLoadError = if (ayat.isEmpty()) "Surah could not be loaded. Check your internet connection and try again." else null
+                )
             }
         }
     }
@@ -964,15 +1037,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun askAiAssistant(prompt: String) {
-        if (prompt.isBlank()) return
-        val sanitizedPrompt = SensitiveDataRedactor.redact(prompt)
-        _uiState.update { it.copy(isAiThinking = true, aiQuery = sanitizedPrompt) }
-        viewModelScope.launch {
-            val response = SourceConstrainedIslamicAssistant.answerQuery(sanitizedPrompt)
-            _uiState.update { it.copy(aiResponse = response, isAiThinking = false) }
-        }
-    }
 
     fun toggleBookmark(surah: Surah, ayah: Ayah) {
         viewModelScope.launch {
@@ -987,7 +1051,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         surahNumber = surah.number,
                         ayahNumber = ayah.ayahNumber,
                         surahName = surah.englishName,
-                        ayahSnippet = ayah.englishTranslation.take(60) + "..."
+                        ayahSnippet = ayah.englishTranslation.let { if (it.length > 60) it.take(60) + "..." else it }
                     )
                 )
             }
@@ -1017,6 +1081,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun recalculatePrayerTimes() {
         com.example.prayer.PrayerTimesWidget.refresh(getApplication())
+        if (!_uiState.value.hasConfirmedLocation) {
+            _uiState.update {
+                it.copy(
+                    rawPrayerTimes = null,
+                    tomorrowPrayerTimes = null,
+                    nextPrayerTimeFormatted = "",
+                    minutesUntilNextPrayer = 0,
+                    prayerCalculationError = "Choose a city or allow location to see prayer times."
+                )
+            }
+            return
+        }
         val city = _uiState.value.selectedCity
         val config = _uiState.value.prayerConfig
         val cal = Calendar.getInstance(TimeZone.getTimeZone(city.timeZoneId))
@@ -1160,6 +1236,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** Live timetable during Ramadan; otherwise a countdown to the next one. */
     private fun refreshRamadanSchedule() {
         val state = _uiState.value
+        if (!state.hasConfirmedLocation) {
+            _uiState.update { it.copy(ramadanSchedule = null, upcomingRamadan = null) }
+            return
+        }
         val schedule = runCatching {
             RamadanTimetable.build(state.hijriDateTonight ?: state.hijriDate, state.selectedCity, state.prayerConfig, locale = appLocale(state.languageCode))
         }.getOrNull()
@@ -1170,13 +1250,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun recalculateQibla() {
+        if (!_uiState.value.hasConfirmedLocation) return
         val city = _uiState.value.selectedCity
         val bearing = QiblaCalculator.calculateQiblaBearing(city.latitude, city.longitude)
         val dist = QiblaCalculator.calculateDistanceToMakkahKm(city.latitude, city.longitude)
-        _uiState.update { it.copy(qiblaBearing = bearing, distanceToMakkahKm = dist) }
+        _uiState.update {
+            // Live GPS keeps its own fix; otherwise the saved city is close enough for the
+            // magnetic correction, so the compass works with device location switched off.
+            it.copy(qiblaBearing = bearing, distanceToMakkahKm = dist,
+                magneticDeclination = if (it.isLiveLocation && it.magneticDeclination != null) it.magneticDeclination
+                    else cityDeclination(city))
+        }
     }
 
+    private fun cityDeclination(city: CityLocation): Float =
+        GeomagneticField(city.latitude.toFloat(), city.longitude.toFloat(), 0f, System.currentTimeMillis()).declination
+
     override fun onCleared() {
+        currentLocationRequest?.cancel()
         locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
         stopCompass()
         super.onCleared()

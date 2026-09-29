@@ -2,7 +2,17 @@
 
 package com.example.ui.screens
 
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.background
@@ -49,6 +59,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.domain.model.AdhkarDatasetRepository
 import com.example.domain.model.PrayerType
+import com.example.domain.model.PredefinedLocations
 import com.example.prayer.AstronomicalPrayerCalculator
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.LocalAppLocale
@@ -98,7 +109,9 @@ internal data class HomeActions(
     val onOpenPrayerTracker: () -> Unit = {},
     val onOpenQuranGoal: () -> Unit = {},
     val onRetryPrayerTimes: () -> Unit = {},
-    val onFixLocation: () -> Unit = {}
+    val onFixLocation: () -> Unit = {},
+    val onEnablePrayerAlerts: () -> Unit = {},
+    val onDismissPrayerAlertPrompt: () -> Unit = {}
 )
 
 @Composable
@@ -119,6 +132,16 @@ fun HomeScreen(
     val context = LocalContext.current
     val language = LocalAppLanguage.current
     val snackbarHostState = remember { SnackbarHostState() }
+    var showCityPicker by rememberSaveable { mutableStateOf(false) }
+    val prefs = remember { com.example.prayer.PrayerSettingsStore.prefs(context) }
+    var alertPromptDismissed by remember { mutableStateOf(prefs.getBoolean(ALERT_PROMPT_DISMISSED_KEY, false)) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted && notificationPermissionPermanentlyDenied(context)) openAppNotificationSettings(context)
+        // When denied this reports why alerts stayed off.
+        viewModel.setNotificationsEnabled(true)
+    }
 
     // Tracker and Quran goal live in SharedPreferences; re-read them whenever Home is resumed.
     var resumeCount by remember { mutableIntStateOf(0) }
@@ -162,18 +185,62 @@ fun HomeScreen(
             onOpenPrayerTracker = { onOpenDailyTool(DailyTool.PRAYER_TRACKER) },
             onOpenQuranGoal = { onOpenDailyTool(DailyTool.QURAN_GOAL) },
             onRetryPrayerTimes = viewModel::recalculatePrayerTimes,
-            onFixLocation = { openLocationSettings(context, uiState.locationIssue) }
+            onFixLocation = { showCityPicker = true },
+            onEnablePrayerAlerts = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                ) notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                else viewModel.setNotificationsEnabled(true)
+            },
+            onDismissPrayerAlertPrompt = {
+                prefs.edit().putBoolean(ALERT_PROMPT_DISMISSED_KEY, true).apply()
+                alertPromptDismissed = true
+            }
         )
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        HomeContent(uiState = uiState, progress = progress, actions = actions)
+        HomeContent(
+            uiState = uiState,
+            progress = progress,
+            actions = actions,
+            showPrayerAlertPrompt = !alertPromptDismissed && uiState.hasConfirmedLocation && !uiState.isNotificationEnabled
+        )
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
                 .testTag("notification_feedback_snackbar")
+        )
+    }
+    if (showCityPicker) {
+        AlertDialog(
+            onDismissRequest = { showCityPicker = false },
+            title = { LocalizedText("Choose your city") },
+            text = {
+                LazyColumn(Modifier.heightIn(max = 400.dp)) {
+                    items(PredefinedLocations.CITIES.size, key = { i -> PredefinedLocations.CITIES[i].let { "${it.name}|${it.stateOrCountry}" } }) { index ->
+                        val city = PredefinedLocations.CITIES[index]
+                        TextButton(
+                            onClick = {
+                                viewModel.selectCity(city)
+                                showCityPicker = false
+                            },
+                            modifier = Modifier.fillMaxWidth().testTag("city_option_${city.name.lowercase()}")
+                        ) { LocalizedText("${city.name}, ${city.stateOrCountry}") }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showCityPicker = false
+                    openLocationSettings(context, uiState.locationIssue)
+                }) { LocalizedText("Use device location") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCityPicker = false }) { LocalizedText("Cancel") }
+            }
         )
     }
 }
@@ -183,9 +250,10 @@ internal fun HomeContent(
     uiState: MainUiState,
     progress: TodayProgress,
     actions: HomeActions,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showPrayerAlertPrompt: Boolean = false
 ) {
-    val hasError = uiState.prayerCalculationError != null
+    val hasError = !uiState.hasConfirmedLocation || uiState.prayerCalculationError != null
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -208,12 +276,22 @@ internal fun HomeContent(
             if (hasError) {
                 PrayerTimesErrorCard(
                     locationIssue = uiState.locationIssue,
+                    needsLocation = !uiState.hasConfirmedLocation,
                     onRetry = actions.onRetryPrayerTimes,
                     onFixLocation = actions.onFixLocation,
                     onOpenDetails = actions.onOpenPrayerDetails
                 )
             } else {
                 NextPrayerCard(uiState = uiState, onOpenPrayerDetails = actions.onOpenPrayerDetails)
+            }
+        }
+
+        if (showPrayerAlertPrompt) {
+            item(key = "prayer_alert_prompt") {
+                PrayerAlertPromptCard(
+                    onEnable = actions.onEnablePrayerAlerts,
+                    onDismiss = actions.onDismissPrayerAlertPrompt
+                )
             }
         }
 
@@ -324,7 +402,7 @@ private fun HomeHeader(uiState: MainUiState, onFixLocation: () -> Unit) {
 private fun LocationChip(uiState: MainUiState, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val issue = uiState.locationIssue
     val shape = RoundedCornerShape(50)
-    val label = when (issue) {
+    val label = if (!uiState.hasConfirmedLocation) "Choose city" else when (issue) {
         LocationIssue.PERMISSION_DENIED -> "Allow location"
         LocationIssue.SERVICES_OFF -> "Turn on location"
         else -> uiState.selectedCity.name
@@ -333,7 +411,7 @@ private fun LocationChip(uiState: MainUiState, onClick: () -> Unit, modifier: Mo
         modifier = modifier
             .widthIn(max = 260.dp)
             // Only tappable when location needs fixing, which is when it needs a full touch target.
-            .heightIn(min = if (issue != null) 48.dp else 36.dp)
+            .heightIn(min = if (issue != null || !uiState.hasConfirmedLocation) 48.dp else 36.dp)
             .clip(shape)
             .background(
                 if (issue != null) MaterialTheme.colorScheme.errorContainer
@@ -345,7 +423,7 @@ private fun LocationChip(uiState: MainUiState, onClick: () -> Unit, modifier: Mo
                 else MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
                 shape = shape
             )
-            .clickable(enabled = issue != null, role = Role.Button, onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 6.dp)
             .testTag("city_selector_button"),
         verticalAlignment = Alignment.CenterVertically
@@ -740,6 +818,7 @@ private fun previewState(): MainUiState {
     val today = Calendar.getInstance(TimeZone.getTimeZone(city.timeZoneId))
     val tomorrow = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) }
     return state.copy(
+        hasConfirmedLocation = true,
         rawPrayerTimes = AstronomicalPrayerCalculator.calculateTimes(today, city.latitude, city.longitude, state.prayerConfig),
         tomorrowPrayerTimes = AstronomicalPrayerCalculator.calculateTimes(tomorrow, city.latitude, city.longitude, state.prayerConfig),
         currentPrayer = PrayerType.DHUHR,
@@ -782,3 +861,68 @@ private fun HomeContentErrorPreview() {
 }
 
 // endregion
+
+private const val ALERT_PROMPT_DISMISSED_KEY = "home_prayer_alert_prompt_dismissed"
+
+/** Invites users to turn on prayer alerts from Home; otherwise they live only in More > Settings. */
+@Composable
+private fun PrayerAlertPromptCard(onEnable: () -> Unit, onDismiss: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .testTag("prayer_alert_prompt"),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
+            Icon(
+                Icons.Filled.NotificationsActive, contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.padding(top = 2.dp)
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                LocalizedText(
+                    "Get prayer time alerts",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                LocalizedText(
+                    "A gentle notification when each prayer time begins.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onEnable, modifier = Modifier.testTag("prayer_alert_prompt_enable")) {
+                        LocalizedText("Turn on alerts")
+                    }
+                    TextButton(onClick = onDismiss) { LocalizedText("Not now") }
+                }
+            }
+        }
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+/** After a second denial Android stops showing the dialog; only system settings can grant it then. */
+internal fun notificationPermissionPermanentlyDenied(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false
+    val activity = context.findActivity() ?: return false
+    return ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+        !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.POST_NOTIFICATIONS)
+}
+
+internal fun openAppNotificationSettings(context: Context) {
+    val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    } else {
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+    }
+    runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}

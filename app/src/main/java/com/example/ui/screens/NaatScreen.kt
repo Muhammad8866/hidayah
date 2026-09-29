@@ -72,6 +72,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -416,7 +417,7 @@ private fun TrackRow(
         border = if (isActive) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
-            Modifier.clickable(onClick = onPlay).padding(start = 8.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+            Modifier.clickable(role = Role.Button, onClick = onPlay).padding(start = 8.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {

@@ -30,6 +30,8 @@
 
     <application
         android:allowBackup="true"
+        android:backupAgent=".prayer.PrayerBackupAgent"
+        android:fullBackupOnly="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -62,6 +64,16 @@
 
         <service
             android:name=".quran.QuranAudioService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <service
+            android:name=".quran.TafsirAudioService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <service
+            android:name=".naat.NaatAudioService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 

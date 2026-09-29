@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -167,7 +168,7 @@ private fun FestivalCard(festival: IslamicFestival) {
         ),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = aamal.isNotEmpty() || cautions.isNotEmpty()) { expanded = !expanded }
+            .clickable(role = Role.Button, enabled = aamal.isNotEmpty() || cautions.isNotEmpty()) { expanded = !expanded }
             .testTag("festival_card_${def.id}")
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -227,11 +228,10 @@ private fun FestivalCard(festival: IslamicFestival) {
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            LocalizedPhraseText(
-                text = def.description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            val description = localizePhrase(def.description, language)
+            if (description == def.description && language != "en") FallbackLanguageLabel("English")
+            Text(description, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (aamal.isNotEmpty() || cautions.isNotEmpty()) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -252,14 +252,22 @@ private fun FestivalCard(festival: IslamicFestival) {
                 AnimatedVisibility(visible = expanded) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 8.dp)) {
                         LocalizedText("What to do", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                        val aamalText = aamal.map { item ->
+                        val aamalDraft = aamal.map { item ->
                             Triple(
                                 bilingualContent(item.title, item.englishTitle, language),
                                 bilingualContent(item.detail, item.englishDetail, language),
                                 bilingualContent(item.source, item.englishSource, language).text
                             )
                         }
-                        aamalText.firstNotNullOfOrNull { it.second.fallbackLanguage }?.let { FallbackLanguageLabel(it) }
+                        val guidanceLanguage = if (aamalDraft.any { it.first.fallbackLanguage != null || it.second.fallbackLanguage != null }) {
+                            if (language in setOf("hi", "ur", "hinglish")) "hinglish" else "en"
+                        } else language
+                        val aamalText = if (guidanceLanguage == language) aamalDraft else aamal.map { item ->
+                            Triple(bilingualContent(item.title, item.englishTitle, guidanceLanguage),
+                                bilingualContent(item.detail, item.englishDetail, guidanceLanguage),
+                                bilingualContent(item.source, item.englishSource, guidanceLanguage).text)
+                        }
+                        if (guidanceLanguage != language) FallbackLanguageLabel(if (guidanceLanguage == "en") "English" else "Hinglish (Roman Hindi)")
                         aamalText.forEachIndexed { index, (title, detail, source) ->
                             Column {
                                 Row {
@@ -277,11 +285,18 @@ private fun FestivalCard(festival: IslamicFestival) {
                         if (cautions.isNotEmpty()) {
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                             LocalizedText("What to avoid", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                            val cautionText = cautions.map { caution ->
+                            val cautionDraft = cautions.map { caution ->
                                 bilingualContent(caution.advice, caution.englishAdvice, language) to
                                     bilingualContent(caution.source, caution.englishSource, language).text
                             }
-                            cautionText.firstNotNullOfOrNull { it.first.fallbackLanguage }?.let { FallbackLanguageLabel(it) }
+                            val cautionLanguage = if (cautionDraft.any { it.first.fallbackLanguage != null }) {
+                                if (language in setOf("hi", "ur", "hinglish")) "hinglish" else "en"
+                            } else language
+                            val cautionText = if (cautionLanguage == language) cautionDraft else cautions.map { caution ->
+                                bilingualContent(caution.advice, caution.englishAdvice, cautionLanguage) to
+                                    bilingualContent(caution.source, caution.englishSource, cautionLanguage).text
+                            }
+                            if (cautionLanguage != language) FallbackLanguageLabel(if (cautionLanguage == "en") "English" else "Hinglish (Roman Hindi)")
                             cautionText.forEach { (advice, source) ->
                                 Column {
                                     Row {

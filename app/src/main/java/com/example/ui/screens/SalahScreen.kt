@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -37,7 +38,7 @@ fun SalahScreen(onBack: () -> Unit, onOpenQibla: () -> Unit, modifier: Modifier 
     val prefs = remember(context) { PrayerSettingsStore.prefs(context) }
     var madhhabName by rememberSaveable { mutableStateOf(SalahSettingsStore.load(prefs).name) }
     val madhhab = Madhhab.entries.firstOrNull { it.name == madhhabName } ?: Madhhab.HANAFI
-    var showSchoolPicker by remember { mutableStateOf(false) }
+    var showSchoolPicker by rememberSaveable { mutableStateOf(false) }
     var tabName by rememberSaveable { mutableStateOf(SalahTab.DAILY.name) }
     val tab = SalahTab.entries.firstOrNull { it.name == tabName } ?: SalahTab.DAILY
     var selectedPrayerId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -66,7 +67,7 @@ fun SalahScreen(onBack: () -> Unit, onOpenQibla: () -> Unit, modifier: Modifier 
             Column {
                 Madhhab.entries.forEach { school ->
                     Row(
-                        Modifier.fillMaxWidth().clickable {
+                        Modifier.fillMaxWidth().clickable(role = Role.Button) {
                             madhhabName = school.name
                             SalahSettingsStore.save(prefs, school)
                             showSchoolPicker = false

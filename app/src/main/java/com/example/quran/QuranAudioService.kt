@@ -11,7 +11,11 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import android.media.session.MediaSession
+import com.example.naat.createPlaybackSession
+import com.example.naat.publish
 import com.example.MainActivity
 import com.example.R
 import com.example.ui.localization.localizeUiText
@@ -26,6 +30,24 @@ class QuranAudioService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onCreate() {
+        super.onCreate()
+        session = createPlaybackSession(
+            this, "quran",
+            isPlaying = { QuranAudioManager.state.value.isPlaying },
+            onToggle = QuranAudioManager::toggle,
+            onNext = QuranAudioManager::next,
+            onPrevious = QuranAudioManager::previous,
+            onStop = QuranAudioManager::stop
+        )
+    }
+
+    override fun onDestroy() {
+        session?.release()
+        session = null
+        super.onDestroy()
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_TOGGLE -> QuranAudioManager.toggle()
@@ -33,8 +55,15 @@ class QuranAudioService : Service() {
             ACTION_PREVIOUS -> QuranAudioManager.previous()
             ACTION_STOP -> { QuranAudioManager.stop(); return START_NOT_STICKY }
         }
+        // startForegroundService() requires startForeground() even when there is nothing to show.
         startForegroundCompat()
-        return START_STICKY
+        // Restarted after the process died, or a stale notification tap: nothing is loaded, so
+        // leave instead of showing an empty player.
+        if (QuranAudioManager.state.value.playingSurah == null) {
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            stopSelf(startId)
+        }
+        return START_NOT_STICKY
     }
 
     private fun startForegroundCompat() {
@@ -47,6 +76,7 @@ class QuranAudioService : Service() {
     }
 
     companion object {
+        @Volatile private var session: MediaSession? = null
         private const val CHANNEL_ID = "quran_audio_playback"
         private const val NOTIFICATION_ID = 4101
         private const val ACTION_TOGGLE = "com.example.quran.TOGGLE"
@@ -83,10 +113,11 @@ class QuranAudioService : Service() {
                 Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
+            session?.publish(state.isPlaying, QuranAudioManager.nowPlayingTitle(), "Mishary Rashid Alafasy")
             return NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(QuranAudioManager.nowPlayingTitle())
-                .setContentText("Mishary Rashid Alafasy")
+                .setContentText(localizeUiText("Mishary Rashid Alafasy", language))
                 .setContentIntent(contentIntent)
                 .setOngoing(state.isPlaying)
                 .setOnlyAlertOnce(true)

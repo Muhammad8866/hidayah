@@ -28,6 +28,11 @@ import java.util.TimeZone
 class PrayerNotificationReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
+        val prefs = PrayerSettingsStore.prefs(context)
+        if (!PrayerSettingsStore.notificationsEnabled(prefs) || !PrayerSettingsStore.hasSavedCity(prefs)) {
+            cancelPrayerAlerts(context)
+            return
+        }
         val prayerName = intent.getStringExtra(EXTRA_PRAYER_NAME) ?: "Prayer"
         val prayerArabic = intent.getStringExtra(EXTRA_PRAYER_ARABIC) ?: ""
         val prayerTime = intent.getStringExtra(EXTRA_PRAYER_TIME) ?: ""
@@ -93,18 +98,18 @@ class PrayerNotificationReceiver : BroadcastReceiver() {
             )
 
             val displayPrayer = if (isRtlAppLanguage(language) && prayerArabic.isNotBlank()) prayerArabic else prayerName
-            val title = localizeUiText(
-                if (prayerArabic.isNotBlank() && !isRtlAppLanguage(language)) {
-                    "Time for $displayPrayer ($prayerArabic)"
-                } else "Time for $displayPrayer",
-                language
-            )
+            fun tr(text: String) = localizeUiText(text, language)
+            // Only fixed copy is translated; city names like "New Delhi" must never be rewritten.
+            val prayerLabel = if (displayPrayer == prayerArabic) displayPrayer else tr(displayPrayer)
+            val title = if (prayerArabic.isNotBlank() && !isRtlAppLanguage(language)) {
+                "${tr("Time for")} $prayerLabel ($prayerArabic)"
+            } else "${tr("Time for")} $prayerLabel"
 
-            val content = localizeUiText(if (location.isNotBlank()) {
-                "Salah has commenced for $location at $prayerTime • $hijriDate"
+            val content = if (location.isNotBlank()) {
+                "${tr("Salah has commenced for")} $location ${tr("at")} $prayerTime • $hijriDate"
             } else {
-                "Salah time has commenced at $prayerTime • $hijriDate"
-            }, language)
+                "${tr("Salah time has commenced at")} $prayerTime • $hijriDate"
+            }
 
             val verse = localizeUiText(
                 "Indeed, prayer has been decreed upon the believers a decree of specified times. [Quran 4:103]",
@@ -112,7 +117,7 @@ class PrayerNotificationReceiver : BroadcastReceiver() {
             )
 
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(title)
                 .setContentText(content)
                 .setStyle(NotificationCompat.BigTextStyle().bigText("$content\n\n$verse"))
@@ -136,6 +141,10 @@ class PrayerNotificationReceiver : BroadcastReceiver() {
         fun rescheduleFromPreferences(context: Context) {
             val prefs = PrayerSettingsStore.prefs(context)
             if (!PrayerSettingsStore.notificationsEnabled(prefs)) {
+                cancelPrayerAlerts(context)
+                return
+            }
+            if (!PrayerSettingsStore.hasSavedCity(prefs)) {
                 cancelPrayerAlerts(context)
                 return
             }

@@ -225,11 +225,15 @@ object NaatAudioManager {
     }
 
     private fun start(track: NaatTrack, remember: Boolean = true) {
+        // Only one of Naat, Quran and Tafseer plays at a time.
+        com.example.quran.QuranAudioManager.stop()
+        com.example.quran.TafsirAudioManager.stop()
         _state.value.activeId?.takeIf { remember && it != track.id }?.let { history.addLast(it); if (history.size > 50) history.removeFirst() }
         releasePlayer()
         _state.update { it.copy(activeId = track.id, playing = false, buffering = true, error = null) }
         _position.value = NaatPosition(durationMs = 0)
         refreshHasNext()
+        NaatAudioService.start(context)
         try {
             player = MediaPlayer().apply {
                 setAudioAttributes(attributes)
@@ -254,11 +258,13 @@ object NaatAudioManager {
                         _state.update { it.copy(playing = false) }
                         _position.update { it.copy(positionMs = 0) }
                         releasePlayer()
+                        NaatAudioService.update(context)
                     }
                 }
                 setOnErrorListener { _, _, _ ->
                     releasePlayer()
                     _state.update { it.copy(playing = false, buffering = false, error = PLAY_ERROR) }
+                    NaatAudioService.update(context)
                     true
                 }
                 prepareAsync()
@@ -280,6 +286,7 @@ object NaatAudioManager {
             noisyRegistered = true
         }
         _state.update { it.copy(playing = true) }
+        NaatAudioService.update(context)
         ticker?.cancel()
         ticker = scope.launch {
             while (isActive) {
@@ -294,15 +301,21 @@ object NaatAudioManager {
         ticker?.cancel()
         unregisterNoisy()
         _state.update { it.copy(playing = false) }
+        if (::context.isInitialized) NaatAudioService.update(context)
     }
 
     fun stop() {
+        if (!::context.isInitialized) return
         releasePlayer()
         queue = emptyList()
         history.clear()
         _state.update { it.copy(activeId = null, playing = false, buffering = false, hasNext = false) }
         _position.value = NaatPosition()
+        NaatAudioService.stop(context)
     }
+
+    /** Title and toggle for the playback notification and media session. */
+    internal fun activeTitle(): String? = activeTrack()?.title
 
     private fun releasePlayer() {
         ticker?.cancel()
@@ -356,6 +369,7 @@ object NaatAudioManager {
             client.newCall(Request.Builder().url(track.url).build()).execute().use { response ->
                 if (!response.isSuccessful) error("HTTP ${response.code}")
                 val body = response.body ?: error("Empty audio")
+                if (body.contentType()?.type.equals("text", ignoreCase = true)) error("Source returned a web page instead of audio")
                 val total = body.contentLength()
                 var copied = 0L
                 var shown = -1

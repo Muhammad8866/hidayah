@@ -11,6 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -133,7 +134,7 @@ fun IslamicCalendarScreen(uiState: MainUiState, onBack: () -> Unit) {
                                     val isToday = monthOffset == 0 && day == todayHijri.day
                                     val isSelected = day == currentSelectedDay
                                     Surface(
-                                        modifier = Modifier.weight(1f).height(62.dp).padding(2.dp).clickable { selectedDay = day },
+                                        modifier = Modifier.weight(1f).height(62.dp).padding(2.dp).clickable(role = Role.Button) { selectedDay = day },
                                         shape = RoundedCornerShape(14.dp),
                                         color = if (isSelected) primary else if (isToday) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                                         border = if (isToday && !isSelected) BorderStroke(1.dp, primary) else null

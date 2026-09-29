@@ -21,7 +21,7 @@ object LearningDatasetRepository {
             durationMinutes = 3,
             overview = "Understand the 4 Quranic obligations of Wudu and common authentic prophetic sunnahs.",
             contentMarkdown = """
-                Wudu is the spiritual and physical purification required before standing in prayer. 
+                Wudu is the spiritual and physical purification required before standing in prayer.
                 
                 The Quran establishes four obligatory pillars (Fara'id) in Surah Al-Ma'idah (5:6):
                 1. Washing the face from forehead to chin and ear to ear.

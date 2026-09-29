@@ -9,6 +9,12 @@ import org.junit.Test
 
 class AppLocalizationTest {
     @Test
+    fun `long form content uses one language when translation is incomplete`() {
+        assertEquals("gu", completeContentLanguage("gu", listOf("Morning Remembrance")))
+        assertEquals("en", completeContentLanguage("gu", listOf("Morning Remembrance", "Untranslated lesson body")))
+    }
+
+    @Test
     fun `every supported language localizes primary navigation`() {
         AppLanguage.supported.filterNot { it.code == "en" }.forEach { language ->
             assertNotEquals(language.code, "Duas", localizeUiText("Duas", language.code))

@@ -138,6 +138,10 @@ object HadithPdfStore {
                         }
                         if (!response.isSuccessful) throw IOException("PDF HTTP ${response.code}")
                         val body = response.body ?: throw IOException("Empty PDF response")
+                        // Google Drive answers quota/virus-scan interstitials with 200 + an HTML page.
+                        if (body.contentType()?.subtype.equals("html", ignoreCase = true)) {
+                            throw IOException("Source returned a web page instead of the PDF")
+                        }
                         val resumed = response.code == 206 &&
                             response.header("Content-Range")?.startsWith("bytes $offset-") == true
                         val start = if (resumed) offset else 0L
@@ -168,6 +172,8 @@ object HadithPdfStore {
                 } catch (error: IOException) {
                     lastError = error
                 }
+                // A partial file that does not start as a PDF can never be resumed into one.
+                if (!complete && part.length() >= 5L && !hasPdfHeader(part)) part.delete()
                 }
                 if (complete) break
             }
@@ -191,19 +197,20 @@ object HadithPdfStore {
 
     private fun isRenderablePdf(file: File): Boolean {
         if (!file.isFile || file.length() <= 5L) return false
-        val hasHeader = runCatching {
-            file.inputStream().buffered().use { input ->
-                val header = ByteArray(5)
-                input.read(header) == 5 && header.contentEquals("%PDF-".toByteArray(Charsets.US_ASCII))
-            }
-        }.getOrDefault(false)
-        if (!hasHeader) return false
+        if (!hasPdfHeader(file)) return false
         return runCatching {
             ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
                 PdfRenderer(descriptor).use { renderer -> renderer.pageCount > 0 }
             }
         }.getOrDefault(false)
     }
+
+    private fun hasPdfHeader(file: File): Boolean = runCatching {
+        file.inputStream().buffered().use { input ->
+            val header = ByteArray(5)
+            input.read(header) == 5 && header.contentEquals("%PDF-".toByteArray(Charsets.US_ASCII))
+        }
+    }.getOrDefault(false)
 
     private fun markVerified(file: File) = verifiedMarker(file).writeText(file.length().toString())
 
@@ -229,11 +236,10 @@ object HadithPdfStore {
         val pageCount: Int = renderer.pageCount
         private val lock = Mutex()
         @Volatile private var closed = false
-        private val memory = object : LruCache<Pair<Int, Int>, Bitmap>((Runtime.getRuntime().maxMemory() / 5).toInt()) {
-            override fun sizeOf(key: Pair<Int, Int>, value: Bitmap): Int = value.byteCount
-        }
+        /** Unique per opened document, so entries in the store-wide [PageCache] never collide. */
+        private val cacheId = PageCache.nextId()
 
-        fun cached(index: Int, width: Int): Bitmap? = memory.get(index to width)
+        fun cached(index: Int, width: Int): Bitmap? = PageCache.get(cacheId, index, width)
 
         suspend fun render(index: Int, width: Int): Bitmap? {
             cached(index, width)?.let { return it }
@@ -248,17 +254,33 @@ object HadithPdfStore {
                                 page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                             }
                         }
-                    }.getOrNull()?.also { memory.put(index to width, it) }
+                    }.getOrNull()?.also { PageCache.put(cacheId, index, width, it) }
                 }
             }
         }
 
         internal fun close() {
             closed = true
-            memory.evictAll()
+            PageCache.evict(cacheId)
             runCatching(renderer::close)
             runCatching(descriptor::close)
         }
+    }
+
+    /**
+     * One bounded bitmap cache shared by every open document. Each book used to keep its own
+     * cache of up to a fifth of the heap, so opening a few books could exhaust memory.
+     */
+    private object PageCache {
+        private var counter = 0L
+        private val memory = object : LruCache<Triple<Long, Int, Int>, Bitmap>((Runtime.getRuntime().maxMemory() / 6).toInt()) {
+            override fun sizeOf(key: Triple<Long, Int, Int>, value: Bitmap): Int = value.byteCount
+        }
+
+        @Synchronized fun nextId(): Long = ++counter
+        fun get(id: Long, index: Int, width: Int): Bitmap? = memory.get(Triple(id, index, width))
+        fun put(id: Long, index: Int, width: Int, bitmap: Bitmap) { memory.put(Triple(id, index, width), bitmap) }
+        fun evict(id: Long) = memory.snapshot().keys.filter { it.first == id }.forEach { memory.remove(it) }
     }
 
     private object Documents {

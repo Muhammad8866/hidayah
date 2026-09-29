@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import com.example.ui.localization.localizeUiText
+import com.example.ui.localization.persistedAppLanguage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -118,8 +120,10 @@ object WbwAudioDownloads {
         call.execute().use { response ->
             if (!response.isSuccessful) error("HTTP ${response.code}")
             val body = response.body ?: error("Empty response")
+            if (body.contentType()?.type.equals("text", ignoreCase = true)) error("Source returned a web page instead of audio")
             val total = body.contentLength().takeIf { it > 0 } ?: expectedBytes
             val temp = file(surah, ".part")
+            try {
             var copied = 0L
             var lastPublished = 0f
             body.byteStream().use { input ->
@@ -140,6 +144,9 @@ object WbwAudioDownloads {
             }
             if (copied < total) error("Incomplete download")
             if (!temp.renameTo(file(surah))) error("Could not save audio")
+            } finally {
+                temp.delete()
+            }
         }
     }
 
@@ -160,5 +167,8 @@ object WbwAudioDownloads {
 
     private fun file(surah: Int, suffix: String = ".mp3") = File(dir, "%03d%s".format(surah, suffix))
 
-    private fun toast(message: String) = main.post { Toast.makeText(appContext, message, Toast.LENGTH_LONG).show() }
+    private fun toast(message: String) = main.post {
+        val text = localizeUiText(message, persistedAppLanguage(appContext))
+        Toast.makeText(appContext, text, Toast.LENGTH_LONG).show()
+    }
 }

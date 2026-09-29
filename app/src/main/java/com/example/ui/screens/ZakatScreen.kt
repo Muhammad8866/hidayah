@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -125,14 +126,14 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
     var ratesDate by remember { mutableStateOf(prefs.getString("zakat_rates_date", null)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }) }
     var showMoreAssets by remember { mutableStateOf(form.investments.isNotBlank() || form.otherAssets.isNotBlank()) }
     var showMoreLiabilities by remember { mutableStateOf(form.bills.isNotBlank() || form.installments.isNotBlank()) }
-    var confirmClear by remember { mutableStateOf(false) }
+    var confirmClear by rememberSaveable { mutableStateOf(false) }
 
     var rateSource by remember { mutableStateOf(prefs.enumValue("zakat_rate_source", ZakatRateSource.LIVE)) }
     var liveRates by remember { mutableStateOf(ZakatMetalRates.load(prefs)) }
     var rateFetch by remember { mutableStateOf(RateFetch.IDLE) }
     var retry by remember { mutableIntStateOf(0) }
     var hawlStart by remember { mutableStateOf(HijriDay.parse(prefs.getString("zakat_hawl_start", null))) }
-    var pickHawlDate by remember { mutableStateOf(false) }
+    var pickHawlDate by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(form) { prefs.saveZakatInput(form) }
     LaunchedEffect(currency) { prefs.edit().putString("zakat_currency", currency).apply() }
@@ -636,7 +637,7 @@ private fun ExpandToggle(expanded: Boolean, showLabel: String, hideLabel: String
 
 @Composable
 private fun CurrencyPicker(currency: String, onSelect: (String) -> Unit, modifier: Modifier) {
-    var open by remember { mutableStateOf(false) }
+    var open by rememberSaveable { mutableStateOf(false) }
     Box(modifier) {
         OutlinedButton(
             onClick = { open = true },

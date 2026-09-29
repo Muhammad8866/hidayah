@@ -1,6 +1,9 @@
 package com.example.quran
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -9,6 +12,7 @@ import android.os.Build
 import android.os.PowerManager
 import com.example.core.audio.PlaybackSpeed
 import com.example.core.audio.applySpeed
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,6 +22,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -64,7 +70,16 @@ object QuranAudioManager {
     private var pendingSeekMs = 0
     private var ticker: Job? = null
     private var focusRequest: AudioFocusRequest? = null
+    private var noisyRegistered = false
+    // Unplugged headphones or a dropped Bluetooth link must not move the recitation to the speaker.
+    private val noisyReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) pause()
+        }
+    }
     private val downloadJobs = mutableMapOf<Int, Job>()
+    // A whole Para queues dozens of chapters; only a few download at once.
+    private val downloadSlots = Semaphore(3)
     private val _state = MutableStateFlow(QuranAudioState())
     val state: StateFlow<QuranAudioState> = _state.asStateFlow()
 
@@ -100,6 +115,8 @@ object QuranAudioManager {
     fun playQueue(surahs: List<Int>, startPositionMs: Int = 0) {
         queue = surahs.distinct().filter { it in 1..114 }
         if (queue.isEmpty()) return
+        TafsirAudioManager.stop()
+        com.example.naat.NaatAudioManager.stop()
         queueIndex = 0
         prepare(queue.first(), startPositionMs)
     }
@@ -207,6 +224,7 @@ object QuranAudioManager {
 
     private fun startTicker() {
         stopTicker()
+        registerNoisy()
         ticker = scope.launch {
             while (true) {
                 val current = player ?: break
@@ -221,7 +239,20 @@ object QuranAudioManager {
         }
     }
 
-    private fun stopTicker() { ticker?.cancel(); ticker = null }
+    private fun stopTicker() { ticker?.cancel(); ticker = null; unregisterNoisy() }
+
+    /** Registered only while playing, alongside the position ticker. */
+    private fun registerNoisy() {
+        if (noisyRegistered || !::appContext.isInitialized) return
+        ContextCompat.registerReceiver(appContext, noisyReceiver,
+            IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY), ContextCompat.RECEIVER_NOT_EXPORTED)
+        noisyRegistered = true
+    }
+
+    private fun unregisterNoisy() {
+        if (noisyRegistered) runCatching { appContext.unregisterReceiver(noisyReceiver) }
+        noisyRegistered = false
+    }
 
     private fun rememberPosition(positionMs: Int = _state.value.positionMs) {
         val surah = _state.value.playingSurah ?: return
@@ -281,7 +312,7 @@ object QuranAudioManager {
         if (audioFile(surah).exists() || downloadJobs.containsKey(surah)) return
         downloadJobs[surah] = scope.launch {
             _state.value = _state.value.copy(downloading = _state.value.downloading + surah, error = null)
-            val result = withContext(Dispatchers.IO) {
+            val result = downloadSlots.withPermit { withContext(Dispatchers.IO) {
                 runCatching {
                     val request = Request.Builder().url(audioUrl(surah)).build()
                     client.newCall(request).execute().use { response ->
@@ -290,17 +321,21 @@ object QuranAudioManager {
                         val temp = File(audioDir, "%03d.part".format(surah))
                         val total = body.contentLength()
                         body.byteStream().use { input -> temp.outputStream().use { output ->
-                            val buffer = ByteArray(DEFAULT_BUFFER_SIZE); var copied = 0L
+                            val buffer = ByteArray(DEFAULT_BUFFER_SIZE); var copied = 0L; var shown = -1
                             while (true) {
                                 val count = input.read(buffer); if (count < 0) break
                                 output.write(buffer, 0, count); copied += count
-                                if (total > 0) _state.value = _state.value.copy(progress = _state.value.progress + (surah to (copied * 100 / total).toInt()))
+                                val percent = if (total > 0) (copied * 100 / total).toInt() else -1
+                                if (percent >= 0 && percent != shown) {
+                                    shown = percent
+                                    _state.value = _state.value.copy(progress = _state.value.progress + (surah to percent))
+                                }
                             }
                         } }
                         if (!temp.renameTo(audioFile(surah))) error("Could not save audio")
                     }
                 }
-            }
+            } }
             downloadJobs.remove(surah)
             _state.value = if (result.isSuccess) _state.value.copy(
                 downloading = _state.value.downloading - surah,
