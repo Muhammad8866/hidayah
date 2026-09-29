@@ -110,7 +110,227 @@ private val hindiPhrases = linkedMapOf(
     "Salah time has commenced at" to "नमाज़ का समय शुरू हो गया:",
     "Indeed, prayer has been decreed upon the believers a decree of specified times." to "निस्संदेह, ईमान वालों पर नमाज़ निश्चित समय पर फ़र्ज़ की गई है।",
     "The selected language applies across the app." to "चुनी हुई भाषा पूरे ऐप में लागू होती है।",
-    "Retry" to "फिर से कोशिश करें"
+    "Retry" to "फिर से कोशिश करें",
+    "The Essentials of Wudu (Ablution)" to "वुज़ू (अब्लूशन) के मूल तत्व",
+    "Understand the 4 Quranic obligations of Wudu and common authentic prophetic sunnahs." to "वुज़ू के चार क़ुरानी अनिवार्यताओं और आम प्रामाणिक पैग़ंबरी सुन्नतों को समझें।",
+    """
+                Wudu is the spiritual and physical purification required before standing in prayer.
+
+                The Quran establishes four obligatory pillars (Fara'id) in Surah Al-Ma'idah (5:6):
+                1. Washing the face from forehead to chin and ear to ear.
+                2. Washing both arms including the elbows.
+                3. Wiping at least a quarter of the head with wet hands (Hanafi; Sunnat is wiping the whole head).
+                4. Washing both feet up to and including the ankles.
+
+                Prophetic Sunnahs (Recommended Practices):
+                - Starting with Bismillah and intention (Niyyah) in the heart.
+                - Washing the hands thrice up to wrists.
+                - Rinsing the mouth (Madmadah) and cleaning the nose (Istinshaq) thrice.
+                - Running wet fingers through the beard and between fingers and toes (Takhlil).
+                - Maintaining sequential order (Tartib) without prolonged interruption (Muwalat).
+            """.trimIndent() to
+        "वुज़ू नमाज़ के लिए आवश्यक आध्यात्मिक और शारीरिक शुद्धि है।\n\nक़ुरान ने सूरह अल-माएदा (5:6) में चार अनिवार्य स्तंभ (फराएद) स्थापित किए हैं:\n1. माथे से ठोड़ी तक और कान से कान तक चेहरा धोना।\n2. दोनों बाहें कोहनी सहित धोना।\n3. गीले हाथों से कम से कम सिर के एक चौथाई हिस्से को पोंछना (हनफ़ी; सुन्नत पूरे सिर को पोंछना है)।\n4. दोनों पैर टखनों सहित धोना।\n\nमुस्तहब सुन्नतें (सुझाई गई प्रथाएं):\n- बिस्मिल्लाह और दिल में नीयत (इरादा) के साथ शुरू करना।\n- हाथों को कलाई तक तीन बार धोना।\n- कुल्ली करना (मदमादह) और नाक साफ़ करना (इस्तिनशाक़) तीन बार।\n- दाढ़ी और उंगलियों व पैर की उंगलियों के बीच गीली उंगलियां चलाना (तख़लील)।\n- क्रमिक क्रम (तर्तीब) बनाए रखना बिना लंबे रुकावट (मुवालात) के।",
+    "Do not waste water even if by a flowing stream." to "बहती नदी के पास भी पानी बर्बाद न करें।",
+    "Ensure dry spots on heels and elbows are reached." to "सुनिश्चित करें कि एड़ियों और कोहनियों के सूखे स्थान तक पानी पहुँचे।",
+    "Recite the Kalimah Shahadah and supplication after finishing." to "वुज़ू पूरा करने के बाद कलिमा शहादत और दुआ पढ़ें।",
+    "Attaining Khushu' (Tranquility) in Prayer" to "नमाज़ में ख़ुशू (शांति) प्राप्त करना",
+    "How to calm a wandering mind and feel divine connection during your daily prayers." to "रोज़ मर्रा की नमाज़ों में भटकते हुए मन को शांत करके अल्लाह से जुड़ाव कैसे महसूस करें।",
+    """
+                Khushu' is inner humility, stillness of the limbs, and attentive contemplation of what one is reciting.
+
+                Practical Anchors for Khushu':
+                - Prepare before the Takbir: Perform wudu mindfully, arrive before iqamah, and eliminate immediate physical distractions.
+                - Contemplate the Words: Recite slowly (Tartil). When saying 'Al-Hamdu lillahi Rabbil-Alameen', remember Allah responds directly: 'My servant has praised Me' (Sahih Muslim 395).
+                - Fix the Gaze: Direct your gaze respectfully at the place of prostration (Sujud), rather than looking around.
+                - Remember the Final Prayer: The Prophet (peace be upon him) advised: 'Pray as if it were your farewell prayer' (Sunan Ibn Majah 4171).
+            """.trimIndent() to
+        "ख़ुशू अंतरंग विनम्रता, अंगों की स्थिरता और जो पढ़ा जा रहा है उसके प्रति सावधान चिंतन है।\n\nख़ुशू के लिए व्यावहारिक आधार:\n- तकबीर से पहले तैयारी: ध्यान से वुज़ू करें, इक़ामत से पहले पहुंचें और तत्काल शारीरिक व्यस्तताओं को दूर करें।\n- शब्दों पर चिंतन: धीरे-धीरे पढ़ें (तर्तील)। 'अल-हम्दु लिल्लाहि रब्बिल-अलमीन' कहते समय याद रखें कि अल्लाह सीधे जवाब देते हैं: 'मेरे बंदे ने मेरी प्रशंसा की' (सही मुस्लिम 395)।\n- दृष्टि को स्थिर करें: सम्मान से सजदे की जगह पर अपनी दृष्टि रखें, चारों ओर न देखें।\n- अंतिम नमाज़ को याद रखें: पैग़ंबर (शांति उनके ऊपर हो) ने सलाह दी: 'ऐसे नमाज़ पढ़ो जैसे यह तुम्हारी आखिरी नमाज़ हो' (सुनन इब्न माजह 4171)।",
+    "Pause for 2 seconds after each ayah before reciting the next." to "हर आयत के बाद अगली आयत पढ़ने से पहले 2 सेकंड रुकें।",
+    "Vary the short surahs recited in Salah to prevent mechanical repetition." to "नमाज़ में पढ़ी जाने वाली छोटी सूरों को यांत्रिक दोहराव से बचने के लिए बदलते रहें।",
+    "Take a deep breath and consciously let go of worldly tasks before saying 'Allahu Akbar'." to "'अल्लाहु अकबर' कहने से पहले गहरी सांस लें और सांसारिक कामों को जागरूकता से छोड़ दें।",
+    "Rights of Neighbors in Islam" to "इस्लाम में पड़ोसियों के अधिकार",
+    "The high ethical status of neighbors regardless of their faith or background." to "पड़ोसी की उच्च नैतिक स्थिति, उनके धर्म या पृष्ठभूमि की परवाह किए बिना।",
+    """
+                The Prophet Muhammad (peace be upon him) said: 'Jibril kept enjoining good treatment of the neighbor upon me until I thought he would assign him a share of inheritance.' (Sahih al-Bukhari 6014).
+
+                Islamic teachings identify three classes of neighbors:
+                1. A neighbor who is a relative and Muslim: has three rights (kinship, Islam, neighborhood).
+                2. A neighbor who is Muslim: has two rights (Islam and neighborhood).
+                3. A neighbor of different faith: has the sacred right of good neighborhood and kindness.
+
+                Harm to neighbors is strictly condemned: 'By Allah he does not believe... whose neighbor is not safe from his harm.' (Sahih al-Bukhari 6016).
+            """.trimIndent() to
+        "पैग़ंबर मुहम्मद (शांति उनके ऊपर हो) ने कहा: 'जिब्रील मुझे पड़ोसी के साथ अच्छा व्यवहार करने की निरंतर सलाह देते रहे यहां तक कि मैंने सोचा कि वे उसे विरासत में हिस्सा दे देंगे।' (सही अल-बुख़ारी 6014)।\n\nइस्लामी शिक्षाएं पड़ोसियों के तीन वर्गों को चिह्नित करती हैं:\n1. एक पड़ोसी जो रिश्तेदार और मुसलमान है: के तीन अधिकार (रिश्तेदारी, इस्लाम, पड़ोस)।\n2. एक पड़ोसी जो मुसलमान है: के दो अधिकार (इस्लाम और पड़ोस)।\n3. भिन्न धर्म का एक पड़ोसी: अच्छे पड़ोस और दया का पवित्र अधिकार है।\n\nपड़ोसियों को नुकसान पहुंचाना कड़ाई से निंदित है: 'अल्लाह की कसम, वह ईमान नहीं रखता... जिसका पड़ोसी उसके नुकसान से सुरक्षित नहीं है।' (सही अल-बुख़ारी 6016)।",
+    "Share homemade food or fruit occasionally." to "कभी-कभार घर का बना खाना या फल पड़ोसियों के साथ शेयर करें।",
+    "Keep noise levels respectful during late night and early mornings." to "रात को देर से और सुबह जल्दी शोर के स्तर को सम्मानजनक रखें।",
+    "Help senior neighbors with groceries or physical tasks." to "बुज़ुर्ग पड़ोसियों को किराने की दुकान या शारीरिक कामों में मदद करें।",
+    "The Noble Quran, Surah Al-Ma'idah (5:6)" to "महान क़ुरान, सूरह अल-माएदा (5:6)",
+    "Sahih al-Bukhari 159 (Hadith of Uthman describing Prophet's wudu)" to "सही अल-बुख़ारी 159 (हज़रत उस्मान (रज़ि.) की रिवायत जिसमें पैग़ंबर के वुज़ू का वर्णन है)",
+    "Al-Hidaya, Kitab al-Taharah (Imam Marghinani, Hanafi)" to "अल-हिदायह, किताब अत-तहारह (इमाम मार्गिनानी, हनफ़ी)",
+    "Surah Al-Mu'minun (23:1-2): 'Successful indeed are the believers who are humble in their prayers.'" to "सूरह अल-मोमिनून (23:1-2): 'निस्संदेह, सफल हैं ईमानवाले जो अपनी नमाज़ों में विनम्र हैं।'",
+    "Ihya Ulum al-Din, Kitab Asrar al-Salah (Imam Ghazali)" to "इह्या उलूम अद-दीन, किताब असरार अस-सलाह (इमाम ग़ज़ाली)",
+    "Sahih Muslim 395 (Hadith Qudsi on Surat al-Fatihah)" to "सही मुस्लिम 395 (सूरह अल-फातिहा के बारे में हदीस क़ुद्सी)",
+    "Sahih al-Bukhari 6014, 6016" to "सही अल-बुख़ारी 6014, 6016",
+    "Sahih Muslim 2625 (Abu Dharr on adding water to broth to share with neighbors)" to "सही मुस्लिम 2625 (हज़रत अबूधर (रज़ि.) का वाक़िया शोरबे में पानी मिलाकर पड़ोसियों को देने का)",
+    "Adab al-Mufrad (Imam al-Bukhari)" to "अदाब अल-मुफ़रद (इमाम अल-बुख़ारी)",
+    "Islamic jurisprudence regarding marital dissolution (talaq), complex inheritance, and personal legal verdicts requires direct review of both parties' detailed circumstances by a qualified local mufti or Islamic scholar." to "तलाक़, जटिल विरासत और व्यक्तिगत शरई फैसलों के संबंध में इस्लामी न्यायशास्त्र को एक योग्य स्थानीय मुफ़्ती या इस्लामी विद्वान द्वारा दोनों पक्षों की विस्तृत परिस्थितियों की सीधी समीक्षा की आवश्यकता है।",
+    "Legal verdicts in personal disputes cannot be issued by automated systems or general textbooks, as individual statements, intentions, and local contracts directly impact the legal validity." to "व्यक्तिगत विवादों में शरई फैसले स्वचालित प्रणालियों या सामान्य पाठ्यपुस्तकों द्वारा जारी नहीं किए जा सकते, क्योंकि व्यक्तिगत बयान, इरादे और स्थानीय अनुबंध शरई वैधता को सीधे प्रभावित करते हैं।",
+    "In Islam, patience (Sabr) is coupled directly with prayer (Salah) as the believers' active fortress in moments of hardship. Rather than passive endurance, Sabr means emotional resilience, avoiding panic, and maintaining trust in Allah's wisdom." to "इस्लाम में, धैर्य (सब्र) को नमाज़ (सलाह) के साथ सीधे जोड़ा गया है, मुसलमानों का सक्रिय क़िला कठिन समय में। सब्र निष्क्रिय सहन करना नहीं बल्कि भावनात्मक लचीलापन, घबराहट से बचना और अल्लाह की बुद्धिमत्ता पर विश्वास बनाए रखना है।",
+    "Ibn Kathir notes in his Tafsir: When heavy trials occur, two aids support the human being: restraining the soul from forbidden despair (patience) and turning to the coolness of the eyes in prayer." to "इब्न कसीर अपनी तफ़सीर में नोट करते हैं: जब भारी परीक्षाएं आती हैं, तो दो चीज़ें मनुष्य का सहारा देती हैं: नफ़्स को हराम नाउम्मीदी से रोकना (धैर्य) और नमाज़ में आंखों की ठंडक की ओर मुड़ना।",
+    "Scholars emphasize three types of Sabr: patience upon acts of obedience, patience against committing sins, and patience with painful decrees." to "विद्वान सब्र की तीन किस्मों पर जोर देते हैं: आज्ञाकारिता के कार्यों पर धैर्य, गुनाहों से बचने पर धैर्य, और दुःखद फैसलों पर धैर्य।",
+    "Kindness and continuous prayer for parents (Birr al-Walidayn) holds the highest priority in Islamic ethics, placed directly next to the monotheistic worship of Allah." to "माता-पिता के प्रति दया और निरंतर प्रार्थना (बर्र अल-वालिदैन) इस्लामी नैतिकता में सर्वोच्च प्राथमिकता रखती है, जो अल्लाह की एकेश्वरवादी पूजा के सीधे बाद आती है।",
+    "Al-Qurtubi explains that filial piety remains obligatory even if parents are of another faith, provided they do not command disobedience to God." to "अल-क़ुरतुबी समझाते हैं कि माता-पिता की सेवा अनिवार्य रहती है भले ही वे दूसरे धर्म के हों, बशर्ते वे अल्लाह की नाफरमानी का आदेश न दें।",
+    "Wudu is the ritual purification obligatory for Salah. Its core Quranic requirements are washing the face, arms including elbows, wiping the head, and washing feet to the ankles." to "वुज़ू नमाज़ के लिए अनिवार्य अनुष्ठान शुद्धि है। इसकी मूल क़ुरानी आवश्यकताएं चेहरा धोना, कोहनी सहित बाहें धोना, सिर पोंछना और पैर टखनों तक धोना हैं।",
+    "All recognized schools agree on the 4 pillars mentioned in the Quranic verse, with differences regarding whether rubbing (Dalk) and uninterrupted continuity (Muwalat) are obligatory or recommended." to "सभी मान्यता प्राप्त मज़हब क़ुरानी आयत में उल्लिखित 4 स्तंभों पर सहमत हैं, लेकिन इस बारे में अंतर हैं कि रगड़ (दलक़) और निरंतरता (मुवालात) अनिवार्य हैं या सुझाव के रूप में।",
+    "Hanafi school considers wiping a quarter of the head sufficient; Shafi'i considers wiping any portion of hair sufficient; Maliki and Hanbali mandate wiping the entire head." to "हनफ़ी मज़हब सिर के एक चौथाई भाग को पोंछना पर्याप्त मानता है; शाफ़िई बालों के किसी भी भाग को पोंछना पर्याप्त मानता है; मालिकी और हनबली पूरे सिर को पोंछना अनिवार्य करते हैं।",
+    "According to authentic Quranic and Prophetic sources, believers are instructed to build their daily life upon constant mindfulness of Allah (Taqwa), establishing prayer, speaking truth, and upholding righteous character." to "प्रामाणिक क़ुरानी और पैग़ंबरी स्रोतों के अनुसार, मुसलमानों को अपने दैनिक जीवन को अल्लाह के निरंतर सचेतन (तक़वा), नमाज़ की स्थापना, सच बोलने और धार्मिक चरित्र पर आधारित करने का निर्देश दिया गया है।",
+    "Classical commentators emphasize that Islamic practice balances personal spiritual duties (Ibadah) with exemplary social ethics (Mu'amalat)." to "शास्त्रीय व्याख्याकार इस बात पर जोर देते हैं कि इस्लामी प्रथा व्यक्तिगत आध्यात्मिक कर्तव्यों (इबादत) को अनुकरणीय सामाजिक नैतिकता (मुआमलात) के साथ संतुलित करती है।",
+    "High-stakes personal fiqh questions require in-person consultation with a qualified local Islamic scholar." to "उच्च-दांव व्यक्तिगत फिक़्ह प्रश्नों के लिए एक योग्य स्थानीय इस्लामी विद्वान से व्यक्तिगत परामर्श की आवश्यकता होती है।",
+    // Festival guidance (Aamal titles/details, Cautions, festival names/descriptions) — real Hindi
+    // script, replacing any fallback.
+    "Naye chaand ki dua" to "नए चाँद की दुआ",
+    "Chaand dekh kar padhein: اللّٰهُمَّ أَهِلَّهُ عَلَيْنَا بِالْأَمْنِ وَالْإِيمَانِ وَالسَّلَامَةِ وَالْإِسْلَامِ رَبِّي وَرَبُّكَ اللّٰهُ" to "चाँद देखकर पढ़ें: اللّٰهُمَّ أَهِلَّهُ عَلَيْنَا بِالْأَمْنِ وَالْإِيمَانِ وَالسَّلَامَةِ وَالْإِسْلَامِ رَبِّي وَرَبُّكَ اللّٰهُ",
+    "Muharram ke roze" to "मुहर्रम के रोज़े",
+    "Ramzan ke baad sabse afzal roze Allah ke mahine Muharram ke hain — is mahine zyada nafl roze rakhein." to "रमज़ान के बाद सबसे बेहतर रोज़े अल्लाह के महीने मुहर्रम के हैं — इस महीने अधिक नफ़्ल रोज़े रखें।",
+    "Tauba aur istighfar" to "तौबा और इस्तिग़फ़ार",
+    "Guzre saal ke gunahon se tauba karein aur naye saal ke liye neki ka irada karein." to "गुज़रे साल के गुनाहों से तौबा करें और नए साल के लिए नेकी का इरादा करें।",
+    "Hurmat wale mahine ka lihaaz" to "हुरमत वाले महीने का लिहाज़",
+    "Muharram chaar hurmat wale mahinon mein se hai — in mein apne upar zulm (gunah) se bachein." to "मुहर्रम चार हुरमत वाले महीनों में से है — इन में अपने ऊपर ज़ुल्म (गुनाह) से बचें।",
+    "Ashura ka roza (9 + 10 ya 10 + 11)" to "आशूरा का रोज़ा (9 + 10 या 10 + 11)",
+    "10 Muharram ka roza pichle ek saal ke gunahon ka kaffara hai. Yahood ki mushabahat se bachne ke liye saath mein 9 (ya 11) ka roza bhi rakhein." to "10 मुहर्रम का रोज़ा पिछले एक साल के गुनाहों का कफ़्फ़ारा है। यहूदियों की मुशाबहत से बचने के लिए साथ में 9 (या 11) का रोज़ा भी रखें।",
+    "Ghar walon par kushadagi" to "घर वालों पर कुशादगी",
+    "Ashura ke din ghar walon par khane-peene mein wus'at karein — Allah saal bhar rizq mein barkat deta hai." to "आशूरा के दिन घर वालों पर खाने-पीने में कुशादगी करें — अल्लाह साल भर रिज़क़ में बरकत देता है।",
+    "Nafl namaz (Ashura ki namaz)" to "नफ़्ल नमाज़ (आशूरा की नमाज़)",
+    "Chasht ya kisi bhi makrooh waqt ke alawa 2-2 rakat nafl padhein; har rakat mein Fatiha ke baad Surah Ikhlas padh sakte hain." to "चाश्त या किसी भी मकरूह वक़्त के अलावा 2-2 रकात नफ़्ल पढ़ें; हर रकात में फातिहा के बाद सूरह इख़लास पढ़ सकते हैं।",
+    "Zikr-e-Imam Husain (RA) aur Esaal-e-Sawab" to "ज़िक्रे इमाम हुसैन (रज़ि.) और ईसाले सवाब",
+    "Shuhada-e-Karbala ke liye Quran khwani, Fatiha aur sadqa karke sawab pahunchayein. Matam, nauha aur seena-kobi shariat mein mana hai." to "शहीदे कर्बला के लिए क़ुरान ख़वानी, फातिहा और सदक़ा करके सवाब पहुँचाएं। मातम, नौहा और सीना कूबी शरीयत में ممनूअ है।",
+    "Sadqa aur yateem par shafqat" to "सदक़ा और यतीम पर शफ़क़त",
+    "Is din ghareebon ko khana khilayein aur sadqa karein." to "इस दिन ग़रीबों को खाना खिलाएं और सदक़ा करें।",
+    "Durood Shareef ki kasrat" to "दरूद शरीफ़ की कसरत",
+    "Kam az kam 100 martaba Durood-e-Ibrahimi ya koi bhi durood padhein. Ek durood par Allah 10 rehmatein bhejta hai." to "कम से कम 100 बार दरूदे इब्राहीमी या कोई भी दरूद पढ़ें। एक दरूद पर अल्लाह 10 रहमतें भेजता है।",
+    "Peer ka roza" to "पीर का रोज़ा",
+    "Nabi ﷺ se Peer ke roze ke baare mein poocha gaya to farmaya: 'Is din meri wiladat hui.' — Peer (Monday) ka roza rakhein." to "नबी ﷺ से पीर के रोज़े के बारे में पूछा गया तो फ़रमाया: 'इस दिन मेरी विलादत हुई।' — पीर का रोज़ा रखें।",
+    "Seerat-un-Nabi ﷺ ka mutala'a" to "सीरते नबी ﷺ का मुतालआ",
+    "Seerat parhein/sunein, Naat aur Mehfil-e-Milad mein shirkat karein, bachon ko Nabi ﷺ ki zindagi sunayein." to "सीरत पढ़ें/सुनें, नात और महफ़िले मीलाद में शरकत करें, बच्चों को नबी ﷺ की जिंदगी सुनाएं।",
+    "Surah aur tilawat" to "सूरह और तिलावत",
+    "Surah Al-Ahzab ki ayat 56, Surah Al-Fath aur Surah Yaseen ki tilawat karein." to "सूरह अल-अहज़ाब की आयत 56, सूरह अल-फ़तह और सूरह यासीन की तिलावत करें।",
+    "Sadqa aur khana khilana" to "सदक़ा और खाना खिलाना",
+    "Khushi ke izhaar mein ghareebon ko khana khilayein; fuzool-kharchi aur gair-shar'i kaamon se bachein." to "खुशी के इज़हार में ग़रीबों को खाना खिलाएं; फ़ुज़ूल ख़र्ची और गैर शरई कामों से बचें।",
+    "Esaal-e-Sawab" to "ईसाले सवाब",
+    "Quran khwani (Fatiha, Surah Ikhlas 3 baar, Ayat-ul-Kursi) karke Huzoor Ghaus-e-Azam Shaykh Abdul Qadir Jilani (RA) ko sawab pahunchayein." to "क़ुरान ख़वानी (फातिहा, सूरह इख़लास 3 बार, आयत अल-कुर्सी) करके हज़रत ग़ौसे आज़म शेख़ अब्दुल क़ादिर जीलानी (रह.) को सवाब पहुँचाएं।",
+    "Niyaz / khana khilana" to "नियाज़ / खाना खिलाना",
+    "Allah ke liye khana pakakar ghareebon aur logon ko khilayein, sawab buzurg ko pahunchayein." to "अल्लाह के लिए खाना पकाकर ग़रीबों और लोगों को खिलाएं, सवाब बुज़ुर्गों को पहुँचाएं।",
+    "Seerat-e-Ghaus-e-Azam ka mutala'a" to "सीरते ग़ौसे आज़म का मुतालआ",
+    "Unki kitab 'Futuh al-Ghaib' / 'Ghunyat-ut-Talibeen' se naseehatein parhein aur un par amal karein." to "उनकी किताब 'फुतूह अल-ग़ैब' / 'ग़ुन्यतु अत-तालिबीन' से नसीहतें पढ़ें और उन पर अमल करें।",
+    "Rajab ki dua" to "रजब की दुआ",
+    "اللّٰهُمَّ بَارِكْ لَنَا فِي رَجَبٍ وَشَعْبَانَ وَبَلِّغْنَا رَمَضَانَ — Aye Allah! Rajab aur Sha'ban mein barkat de aur hamein Ramzan tak pahuncha." to "اللّٰهُمَّ بَارِكْ لَنَا فِي رَجَبٍ وَشَعْبَانَ وَبَلِّغْنَا رَمَضَانَ — ऐ अल्लाह! रजब और शाबान में बरकत दे और हमें रमज़ान तक पहुँचा।",
+    "Nafl roze" to "नफ़्ल रोज़े",
+    "Rajab hurmat wala mahina hai — is mein nafl roze (khaas kar Peer/Jumeraat aur Ayyam-e-Beez 13-14-15) rakhein." to "रजब हुरमत वाला महीना है — इस में नफ़्ल रोज़े (खासकर पीर/जुमरात और ईयामे बीज़ 13-14-15) रखें।",
+    "Tauba aur Ramzan ki tayyari" to "तौबा और रमज़ान की तैयारी",
+    "Qaza namazein/roze poore karne ki shuruaat karein aur istighfar ki kasrat karein." to "क़ज़ा नमाज़ें/रोज़े पूरे करने की शुरुआत करें और इस्तिग़फ़ार की कसरत करें।",
+    "Namaz ki pabandi" to "नमाज़ की पाबंदी",
+    "Isi raat paanch waqt ki namaz farz hui — is raat se namaz ki pakki pabandi ka ahd karein." to "इसी रात पाँच वक़्त की नमाज़ फ़र्ज़ हुई — इस रात से नमाज़ की पक्की पाबंदी का अहद करें।",
+    "Waqia-e-Me'raj ka zikr" to "वाक़िए मिराज का ज़िक्र",
+    "Surah Bani Israel (Al-Isra) ki pehli ayat aur Surah An-Najm (ayat 1-18) ki tilawat karein aur waqia-e-Me'raj sunein/sunayein." to "सूरह बनी इस्राईल (अल-इसरा) की पहली आयत और सूरह अन-नजम (आयत 1-18) की तिलावत करें और वाक़िए मिराज सुनें/सुनाएं।",
+    "Nafl ibadat aur durood" to "नफ़्ल इबादत और दरूद",
+    "Isha ke baad nafl namaz, tilawat, durood aur dua mein waqt guzarein." to "इशा के बाद नफ़्ल नमाज़, तिलावत, दरूद और दुआ में वक़्त गुज़ारें।",
+    "27 Rajab ka roza" to "27 रजब का रोज़ा",
+    "Kuch buzurg is din nafl roza rakhte hain; niyyat aam nafl roze ki rakhein." to "कुछ बुज़ुर्ग इस दिन नफ़्ल रोज़ा रखते हैं; नीयत आम नफ़्ल रोज़े की रखें।",
+    "Tauba aur maghfirat ki dua" to "तौबा और मग़फ़िरत की दुआ",
+    "Is raat Allah apni makhlooq ki taraf tawajjuh farmata hai aur mushrik aur keena rakhne wale ke siwa sab ki maghfirat karta hai — dil saaf karke tauba karein." to "इस रात अल्लाह अपनी मख़लूक़ की तरफ़ तवज्जुह फ़रमाता है और मुशरिक और कीना रखने वाले के सिवा सब की मग़फ़िरत करता है — दिल साफ़ करके तौबा करें।",
+    "Raat mein nafl ibadat" to "रात में नफ़्ल इबादत",
+    "Raat mein nafl namaz, tilawat (Surah Yaseen, Surah Mulk, Surah Dukhan) aur zikr karein. Kuch buzurg 6 rakat nafl Maghrib ke baad aur Salat-ut-Tasbeeh padhte hain." to "रात में नफ़्ल नमाज़, तिलावत (सूरह यासीन, सूरह मुलक, सूरह दुख़ान) और ज़िक्र करें। कुछ बुज़ुर्ग 6 रकात नफ़्ल मग़रिब के बाद और सलात अत-तसबीह पढ़ते हैं।",
+    "Qabristan ki ziyarat" to "क़ब्रिस्तान की ज़ियारत",
+    "Nabi ﷺ is raat Jannat-ul-Baqee tashreef le gaye aur ahl-e-qubur ke liye dua ki — marhoomeen ke liye dua aur Fatiha padhein." to "नबी ﷺ इस रात जन्नतुल बक़ी तशरीफ़ ले गए और अहले क़ुबूर के लिए दुआ की — मरहूमीन के लिए दुआ और फातिहा पढ़ें।",
+    "15 Sha'ban ka roza" to "15 शाबान का रोज़ा",
+    "Agle din (15 Sha'ban) ka roza rakhein." to "अगले दिन (15 शाबान) का रोज़ा रखें।",
+    "Aatish-baazi aur fuzooliyat se parhez" to "आतिशबाज़ी और फ़ुज़ूलियत से परहेज़",
+    "Patakhe, chiraghaan aur halwe ko zaruri samajhna shariat se sabit nahi — waqt ibadat mein lagayein." to "पटाखे, चिराग़ां और हलवे को ज़रूरी समझना शरीयत से साबित नहीं — वक़्त इबादत में लगाएं।",
+    "Roza aur Sehri" to "रोज़ा और सहरी",
+    "Sehri zaroor karein, isme barkat hai. Roze ki niyyat: وَبِصَوْمِ غَدٍ نَوَيْتُ مِنْ شَهْرِ رَمَضَانَ" to "सहरी ज़रूर करें, इस में बरकत है। रोज़े की नीयत: وَبِصَوْمِ غَدٍ نَوَيْتُ مِنْ شَهْرِ رَمَضَانَ",
+    "Iftar ki dua" to "इफ़्तार की दुआ",
+    "ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الْأَجْرُ إِنْ شَاءَ اللّٰهُ — Khajoor ya paani se iftar karein." to "ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الْأَجْرُ إِنْ شَاءَ اللّٰهُ — खजूर या पानी से इफ़्तार करें।",
+    "Taraweeh" to "तरावीह",
+    "Isha ke baad 20 rakat Taraweeh (Sunnat-e-Mu'akkadah) jama'at ke saath padhein." to "इशा के बाद 20 रकात तरावीह (सुन्नत मुअक्कदह) जमाअत के साथ पढ़ें।",
+    "Quran ki tilawat" to "क़ुरान की तिलावत",
+    "Ramzan Quran ka mahina hai — kam az kam ek Quran khatam karne ki koshish karein." to "रमज़ान क़ुरान का महीना है — कम से कम एक क़ुरान ख़तम करने की कोशिश करें।",
+    "Sadqa aur iftar karana" to "सदक़ा और इफ़्तार कराना",
+    "Kisi roze-daar ko iftar karane par us jitna sawab milta hai." to "किसी रोज़ेदार को इफ़्तार कराने पर उस जितना सवाब मिलता है।",
+    "Shab-e-Qadr ki dua" to "शबे क़द्र की दुआ",
+    "اللّٰهُمَّ إِنَّكَ عَفُوٌّ تُحِبُّ الْعَفْوَ فَاعْفُ عَنِّي — Aye Allah! Tu maaf karne wala hai, maafi ko pasand karta hai, mujhe maaf kar de." to "اللّٰهُمَّ إِنَّكَ عَفُوٌّ تُحِبُّ الْعَفْوَ فَاعْفُ عَنِّي — ऐ अल्लाह! तू माफ़ करने वाला है, माफ़ी को पसंद करता है, मुझे माफ़ कर दे।",
+    "Qiyam-ul-Lail" to "क़ियामुल लैल",
+    "Imaan aur sawab ki niyyat se is raat qiyam karne wale ke pichle gunah maaf kar diye jaate hain. Nafl namaz, Salat-ut-Tasbeeh padhein." to "ईमान और सवाब की नीयत से इस रात क़ियाम करने वाले के पिछले गुनाह माफ़ कर दिए जाते हैं। नफ़्ल नमाज़, सलात अत-तसबीह पढ़ें।",
+    "Surah Al-Qadr aur tilawat" to "सूरह अल-क़द्र और तिलावत",
+    "Surah Al-Qadr, Surah Yaseen, Surah Mulk aur jitna ho sake Quran padhein." to "सूरह अल-क़द्र, सूरह यासीन, सूरह मुलक और जितना हो सके क़ुरान पढ़ें।",
+    "Aakhri ashre ki taaq raatein" to "आखरी अशरे की ताक़ रातें",
+    "Shab-e-Qadr ko 21, 23, 25, 27, 29 ki raaton mein talash karein. Aitikaf Sunnat-e-Mu'akkadah alal kifaya hai." to "शबे क़द्र को 21, 23, 25, 27, 29 की रातों में तलाश करें। अतिकाफ़ सुन्नत मुअक्कदह अलल किफ़ाया है।",
+    "Sadqa-e-Fitr" to "सदक़े फ़ित्र",
+    "Eid ki namaz se pehle har ghar ke fard ki taraf se Sadqa-e-Fitr ada karein (wajib)." to "ईद की नमाज़ से पहले हर घर के फ़र्द की तरफ़ से सदक़े फ़ित्र अदा करें (वाजिब)।",
+    "Eid ki Sunnatein" to "ईद की सुन्नतें",
+    "Ghusl, miswak, achhe kapde, khushbu, namaz se pehle taaq khajoorein khana, ek raaste se jaana doosre se aana." to "ग़ुस्ल, मिसवाक़, अच्छे कपड़े, खुशबू, नमाज़ से पहले ताक़ खजूरें खाना, एक रास्ते से जाना दूसरे से आना।",
+    "Takbeer" to "तकबीर",
+    "Eidgah jaate hue aahista takbeer: اللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ لَا إِلٰهَ إِلَّا اللّٰهُ وَاللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ وَلِلّٰهِ الْحَمْدُ" to "ईदगाह जाते हुए आहिस्ता तकबीर: اللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ لَا إِلٰهَ إِلَّا اللّٰهُ وَاللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ وَلِلّٰهِ الْحَمْدُ",
+    "Eid ki namaz" to "ईद की नमाज़",
+    "2 rakat wajib, 6 zaid takbeeron ke saath (Hanafi), phir khutba sunein." to "2 रकात वाजिब, 6 ज़ायद तकबीरों के साथ (हनफ़ी), फिर खुत्बा सुनें।",
+    "Shawwal ke 6 roze" to "शव्वाल के 6 रोज़े",
+    "Ramzan ke baad Shawwal ke 6 roze rakhne wala goya poore saal roze rakhta hai." to "रमज़ान के बाद शव्वाल के 6 रोज़े रखने वाला गोया पूरे साल रोज़े रखता है।",
+    "Arafah ka roza" to "अरफ़ा का रोज़ा",
+    "Ghair-haji ke liye 9 Zil-Hijjah ka roza pichle aur agle saal ke gunahon ka kaffara hai." to "ग़ैर हाजी के लिए 9 ज़िलहज के रोज़े पिछले और अगले साल के गुनाहों का कफ़्फ़ारा है।",
+    "Arafah ki behtareen dua" to "अरफ़ा की बेहतरीन दुआ",
+    "Takbeer-e-Tashreeq" to "तकबीरे तशरीक़",
+    "9 Zil-Hijjah ki Fajr se 13 ki Asr tak har farz namaz ke baad ek baar: اللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ لَا إِلٰهَ إِلَّا اللّٰهُ وَاللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ وَلِلّٰهِ الْحَمْدُ (wajib)" to "9 ज़िलहज की फ़ज्र से 13 की अस्र तक हर फ़र्ज़ नमाज़ के बाद एक बार: اللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ لَا إِلٰهَ إِلَّا اللّٰهُ وَاللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ وَلِلّٰهِ الْحَمْدُ (वाजिब)",
+    "Zil-Hijjah ke pehle 10 din" to "ज़िलहज के पहले 10 दिन",
+    "In dinon ke nek amal Allah ko sabse zyada mehboob hain — zikr, tahleel, takbeer aur tahmeed ki kasrat karein." to "इन दिनों के नेक अमल अल्लाह को सबसे ज़्यादा महबूब हैं — ज़िक्र, तहलील, तकबीर और तहमीद की कसरत करें।",
+    "Baal-nakhun na katna" to "बाल-नाख़ून न काटना",
+    "Qurbani karne wala 1 Zil-Hijjah se qurbani tak baal aur nakhun na kaate (mustahab)." to "क़ुर्बानी करने वाला 1 ज़िलहज से क़ुर्बानी तक बाल और नाख़ून न काटे (मुस्तहब)।",
+    "Qurbani" to "क़ुर्बानी",
+    "Sahib-e-nisaab par qurbani wajib hai (10–12 Zil-Hijjah). Zibah ke waqt: بِسْمِ اللّٰهِ اللّٰهُ أَكْبَرُ" to "साहिब-ए-निसाब पर क़ुर्बानी वाजिब है (10–12 ज़िलहज)। ज़िबह के वक़्त: بِسْمِ اللّٰهِ اللّٰهُ أَكْبَرُ",
+    "Ghusl, achhe kapde, khushbu; namaz se pehle kuch na khana (qurbani ke gosht se khana mustahab), raaste mein buland awaaz se takbeer." to "ग़ुस्ल, अच्छे कपड़े, खुशबू; नमाज़ से पहले कुछ न खाना (क़ुर्बानी के गोश्त से खाना मुस्तहब है), रास्ते में बुलंद आवाज़ से तकबीर।",
+    "Eid-ul-Adha ki namaz" to "ईद-उल-अज़हा की नमाज़",
+    "2 rakat wajib, 6 zaid takbeeron ke saath (Hanafi), phir khutba." to "2 रकात वाजिब, 6 ज़ायद तकबीरों के साथ (हनफ़ी), फिर खुत्बा।",
+    "Gosht ki taqseem" to "गोश्त की तक़सीम",
+    "Mustahab hai ki gosht ke 3 hisse karein: ghar, rishtedaar aur ghareeb." to "मुस्तहब है कि गोश्त के 3 हिस्से करें: घर, रिश्तेदार और ग़रीब।",
+    "Takbeer-e-Tashreeq jaari rakhein" to "तकबीरे तशरीक़ जारी रखें",
+    "13 Zil-Hijjah ki Asr tak har farz namaz ke baad takbeer padhein. 11–13 Ayyam-e-Tashreeq mein roza mana hai." to "13 ज़िलहज की अस्र तक हर फ़र्ज़ नमाज़ के बाद तकबीर पढ़ें। 11–13 ईयामे तशरीक़ में रोज़ा ममनूअ है।",
+    // Festival cautions
+    "Muharram ko sog ka mahina samajh kar nikah, safar ya khushi ke jaiz kaam manhoos na samjhein." to "मुहर्रम को सोग का महीना समझकर निकाह, सफ़र या खुशी के जायज़ काम मनहूस न समझें।",
+    "Raaij taziye na banayein, na unki ta'zeem ya unse muraad maangein." to "राइज तज़िए न बनाएं, न उनकी तअज़ीम करें न उनसे मुराद मांगें।",
+    "Matam, seena-kobi, nauha aur apne jism ko nuqsan pahunchane se bachein." to "मातम, सीना कूबी, नौहा और अपने जिस्म को नुक़सान पहुँचाने से बचें।",
+    "Milad ki mehfil ya juloos mein gaane-bajane, be-pardagi, namaz chhorne aur fuzool-kharchi se bachein." to "मीलाद की महफ़िल या जुलूस में गाने-बजाने, बे-पर्दगी, नमाज़ छोड़ने और फ़ुज़ूल ख़र्ची से बचें।",
+    "Niyaz Allah ke naam par karein; Ghaus-e-Azam ko Allah ke barabar ya mustaqil madadgar na samjhein. Kisi khaas tareekh ko farz na samjhein." to "नियाज़ अल्लाह के नाम पर करें; ग़ौसे आज़म को अल्लाह के बराबर या मुस्तक़िल मददगार न समझें। किसी खास तारीख़ को फ़र्ज़ न समझें।",
+    "Rajab ke kisi khaas roze ya namaz ko farz ya lazmi Sunnat na batayein." to "रजब के किसी खास रोज़े या नमाज़ को फ़र्ज़ या लाज़मी सुन्नत न बताएं।",
+    "27 Rajab ko Me'raj ki qat'i tareekh ya kisi khaas namaz/roze ko lazmi Sunnat na samjhein." to "27 रजब को मिराज की क़त्अी तारीख़ या किसी खास नमाज़/रोज़े को लाज़मी सुन्नत न समझें।",
+    "Patakhe, aatish-bazi, logon ko takleef aur halwe ko zaruri rasm samajhne se bachein." to "पटाखे, आतिशबाज़ी, लोगों को तकलीफ़ और हलवे को ज़रूरी रस्म समझने से बचें।",
+    "Roze mein jhoot, gheebat, jhagra aur namaz ki kotahi se bachein." to "रोज़े में झूठ, ग़ीबत, झगड़ा और नमाज़ की कोताही से बचें।",
+    "Sirf 27vin raat par bharosa karke aakhri ashre ki baqi taaq raatein na chhorein." to "सिर्फ़ 27वीं रात पर भरोसा करके आखरी अशरे की बाक़ी ताक़ रातें न छोड़ें।",
+    "Eid ke din roza na rakhein; namaz aur Sadqa-e-Fitr mein kotahi na karein." to "ईद के दिन रोज़ा न रखें; नमाज़ और सदक़े फ़ित्र में कोताही न करें।",
+    "Hajj mein wuquf-e-Arafat karne wale par ghair-haji ke roze ki naseehat na thopein." to "हज़ में वुक़ूफ़े अरफ़ात करने वाले पर ग़ैर हाजी के रोज़े की नसीहत न थोपें।",
+    "Qurbani ko numaaish ya riya na banayein; safai aur janwaron ke saath narmi ka khayal rakhein." to "क़ुर्बानी को नुमाइश या रिया न बनाएं; सफ़ाई और जानवरों के साथ नर्मी का खयाल रखें।",
+    // Festival names/descriptions
+    "Hijri Naya Saal" to "हिजरी नया साल",
+    "First day of Muharram and the start of the new Hijri year." to "मुहर्रम का पहला दिन और नए हिजरी साल की ابتداء।",
+    "Youm-e-Ashura" to "यौम-ए-आशूरा",
+    "10th Muharram. Sunnah fast (with 9th or 11th); remembrance of Imam Husain (RA) and Karbala." to "10 मुहर्रम। सुन्नत रोज़ा (9 या 11 के साथ); इमाम हुसैन (रज़ि.) और कर्बला की यादा।",
+    "Eid Milad-un-Nabi ﷺ" to "ईद मिलाद-उन-नबी ﷺ",
+    "12th Rabi' al-Awwal, commemoration of the birth of the Prophet Muhammad ﷺ." to "12 रबीअुल-अव्वल, पैग़ंबर मुहम्मद ﷺ की जन्म की यादा।",
+    "Giyarhvi Sharif" to "गियारहवीं शरीफ़",
+    "11th Rabi' al-Thani, remembrance of Shaykh Abdul Qadir Jilani (RA)." to "11 रबीअुस-सानी, शेख़ अब्दुल क़ादिर जीलानी (रह.) की यादा।",
+    "Rajab ka Aaghaz" to "रजब का आग़ाज़",
+    "Beginning of Rajab, one of the four sacred months." to "रजब की शुरुआत, चार हुरमत वाले महीनों में से एक।",
+    "Shab-e-Meraj" to "शबे मिराज",
+    "Night of the Prophet's ﷺ night journey and ascension (27th Rajab)." to "नबी ﷺ की रात की यात्रा और मिराज की रात (27 रजब)।",
+    "Shab-e-Baraat" to "शबे बरात",
+    "Night of 15th Sha'ban, a night of forgiveness and worship." to "15 शाबान की रात, मग़फ़िरत और इबादत की रात।",
+    "Ramzan ka Pehla Roza" to "रमज़ान का पहला रोज़ा",
+    "First fast of Ramadan. Taraweeh begins the night before." to "रमज़ान का पहला रोज़ा। तरावीह पहले वाली रात से शुरू हो।",
+    "Shab-e-Qadr" to "शबे क़द्र",
+    "Commonly observed on the 27th night; seek it in the odd nights of the last ten." to "आमतौर पर 27वीं रात को मनाया जाता है; आखरी अशरे की ताक़ रातों में इसे तलाश करें।",
+    "Eid-ul-Fitr" to "ईद-उल-फ़ित्र",
+    "1st Shawwal. Pay Sadaqat al-Fitr before the Eid prayer." to "1 शव्वाल। ईद की नमाज़ से पहले सदक़े फ़ित्र अदा करें।",
+    "Youm-e-Arafah" to "यौम-ए-अरफ़ा",
+    "9th Dhu al-Hijjah. Fasting expiates sins of two years (Sahih Muslim)." to "9 ज़िलहज। रोज़ा दो साल के गुनाहों का कफ़्फ़ारा है (सही मुस्लिम)।",
+    "Eid-ul-Adha (Bakra Eid)" to "ईद-उल-अज़हा (बक़रा ईद)",
+    "10th Dhu al-Hijjah. Qurbani from the 10th to the 12th." to "10 ज़िलहज। क़ुर्बानी 10 से 12 तारीख़ तक होती है।"
 )
 
 private val urduPhrases = linkedMapOf(
