@@ -68,7 +68,8 @@ fun FestivalsScreen(
                         fontWeight = FontWeight.Bold
                     )
                     LocalizedText(
-                        text = "Today: ${formatHijriDate(uiState.hijriDate, uiState.languageCode)} • ${uiState.selectedCity.name}",
+                        text = if (uiState.languageCode == "hi") "आज: ${formatHijriDate(uiState.hijriDate, "hi")} • ${uiState.selectedCity.name}"
+                            else "Today: ${formatHijriDate(uiState.hijriDate, uiState.languageCode)} • ${uiState.selectedCity.name}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -107,7 +108,11 @@ fun FestivalsScreen(
             item {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        LocalizedText("${schedule.festivals.size} occasions throughout the year", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        LocalizedText(
+                            if (uiState.languageCode == "hi") "साल भर में ${schedule.festivals.size} इस्लामी अवसर"
+                            else "${schedule.festivals.size} occasions throughout the year",
+                            style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold
+                        )
                         LocalizedText("Tap a card for practices and things to avoid", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     FilterChip(selected = upcomingOnly, onClick = { upcomingOnly = !upcomingOnly }, label = { LocalizedText(if (upcomingOnly) "Upcoming" else "All year") })
@@ -191,7 +196,7 @@ private fun FestivalCard(festival: IslamicFestival) {
                         0 -> "Today"
                         1 -> "Tomorrow"
                         in Int.MIN_VALUE..-1 -> "Passed"
-                        else -> "${festival.daysRemaining} days remaining"
+                        else -> if (language == "hi") "${festival.daysRemaining} दिन शेष" else "${festival.daysRemaining} days remaining"
                     },
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
