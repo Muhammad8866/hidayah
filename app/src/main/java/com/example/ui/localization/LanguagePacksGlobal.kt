@@ -50,7 +50,69 @@ internal val arabicPack = UiLanguagePack(
         "Count your daily dhikr peacefully without competitive point scores" to "احسب أذكارك اليومية بهدوء دون تنافس على النقاط",
         "Reset" to "إعادة تعيين", "Count" to "العدد",
         "Quick access" to "وصول سريع", "Qibla" to "القبلة", "Hadith" to "الحديث", "Calendar" to "التقويم",
-        "Naat" to "النعت", "Zakat" to "الزكاة", "Salah" to "الصلاة"
+        "Naat" to "النعت", "Zakat" to "الزكاة", "Salah" to "الصلاة",
+        "The Essentials of Wudu (Ablution)" to "أساسيات الوضوء",
+        "Understand the 4 Quranic obligations of Wudu and common authentic prophetic sunnahs." to "تعرف على الفرائض الأربعة للوضوء في القرآن والسنن النبوية الصحيحة الشائعة.",
+        """
+                Wudu is the spiritual and physical purification required before standing in prayer.
+
+                The Quran establishes four obligatory pillars (Fara'id) in Surah Al-Ma'idah (5:6):
+                1. Washing the face from forehead to chin and ear to ear.
+                2. Washing both arms including the elbows.
+                3. Wiping at least a quarter of the head with wet hands (Hanafi; Sunnat is wiping the whole head).
+                4. Washing both feet up to and including the ankles.
+
+                Prophetic Sunnahs (Recommended Practices):
+                - Starting with Bismillah and intention (Niyyah) in the heart.
+                - Washing the hands thrice up to wrists.
+                - Rinsing the mouth (Madmadah) and cleaning the nose (Istinshaq) thrice.
+                - Running wet fingers through the beard and between fingers and toes (Takhlil).
+                - Maintaining sequential order (Tartib) without prolonged interruption (Muwalat).
+            """.trimIndent() to
+            "الوضوء هو الطهارة الروحية والبدنية اللازمة قبل الوقوف في الصلاة.\n\nحدد القرآن أربعة فرائض في سورة المائدة (٥:٦):\n١. غسل الوجه من منبت الشعر إلى الذقن ومن الأذن إلى الأذن.\n٢. غسل اليدين إلى المرفقين.\n٣. مسح ربع الرأس على الأقل بيد مبللة (عند الأحناف؛ والسنة مسح الرأس كله).\n٤. غسل الرجلين إلى الكعبين وما فوقهما.\n\nسنن الوضوء المستحبة:\n- البدء بالبسملة والنية في القلب.\n- غسل اليدين ثلاثًا إلى الرسغين.\n- المضمضة والاستنشاق ثلاث مرات.\n- تخليل اللحية وأصابع اليدين والقدمين.\n- المحافظة على الترتيب والموالاة دون فاصل طويل.",
+        "Do not waste water even if by a flowing stream." to "لا تُسرف في الماء ولو كنت على نهر جارٍ.",
+        "Ensure dry spots on heels and elbows are reached." to "تأكد من وصول الماء إلى الكعبين والمرفقين ولا تترك بقعة جافة.",
+        "Recite the Kalimah Shahadah and supplication after finishing." to "اقرأ الشهادة والدعاء المأثور بعد الانتهاء من الوضوء.",
+        "Attaining Khushu' (Tranquility) in Prayer" to "تحصيل الخشوع في الصلاة",
+        "How to calm a wandering mind and feel divine connection during your daily prayers." to "كيف تهدئ الفكر الشارد وتشعر بالصلة الإلهية أثناء صلواتك اليومية.",
+        """
+                Khushu' is inner humility, stillness of the limbs, and attentive contemplation of what one is reciting.
+
+                Practical Anchors for Khushu':
+                - Prepare before the Takbir: Perform wudu mindfully, arrive before iqamah, and eliminate immediate physical distractions.
+                - Contemplate the Words: Recite slowly (Tartil). When saying 'Al-Hamdu lillahi Rabbil-Alameen', remember Allah responds directly: 'My servant has praised Me' (Sahih Muslim 395).
+                - Fix the Gaze: Direct your gaze respectfully at the place of prostration (Sujud), rather than looking around.
+                - Remember the Final Prayer: The Prophet (peace be upon him) advised: 'Pray as if it were your farewell prayer' (Sunan Ibn Majah 4171).
+            """.trimIndent() to
+            "الخشوع هو الخضوع الباطني وسكون الجوارح والتدبر فيما يُقرأ.\n\nمرتكزات عملية للخشوع:\n- التهيؤ قبل التكبير: توضأ بخشوع، واحضر قبل الإقامة، وابتعد عن مشتتات الانتباه.\n- تدبر الكلمات: اقرأ بترتيل. وعند قول 'الحمد لله رب العالمين' تذكر أن الله يجيب مباشرة: 'حمدني عبدي' (صحيح مسلم ٣٩٥).\n- تثبيت النظر: وجّه نظرك بأدب إلى موضع السجود بدل التلفت.\n- تذكر آخر صلاة: أوصى النبي ﷺ: 'صلِّ صلاة مودع' (سنن ابن ماجه ٤١٧١).",
+        "Pause for 2 seconds after each ayah before reciting the next." to "توقف ثانيتين بعد كل آية قبل قراءة التالية.",
+        "Vary the short surahs recited in Salah to prevent mechanical repetition." to "نوّع السور القصيرة في الصلاة لتجنب التكرار الآلي.",
+        "Take a deep breath and consciously let go of worldly tasks before saying 'Allahu Akbar'." to "خذ نفسًا عميقًا واترك هموم الدنيا بوعي قبل قول 'الله أكبر'.",
+        "Rights of Neighbors in Islam" to "حقوق الجار في الإسلام",
+        "The high ethical status of neighbors regardless of their faith or background." to "المكانة الأخلاقية الرفيعة للجار بصرف النظر عن دينه أو خلفيته.",
+        """
+                The Prophet Muhammad (peace be upon him) said: 'Jibril kept enjoining good treatment of the neighbor upon me until I thought he would assign him a share of inheritance.' (Sahih al-Bukhari 6014).
+
+                Islamic teachings identify three classes of neighbors:
+                1. A neighbor who is a relative and Muslim: has three rights (kinship, Islam, neighborhood).
+                2. A neighbor who is Muslim: has two rights (Islam and neighborhood).
+                3. A neighbor of different faith: has the sacred right of good neighborhood and kindness.
+
+                Harm to neighbors is strictly condemned: 'By Allah he does not believe... whose neighbor is not safe from his harm.' (Sahih al-Bukhari 6016).
+            """.trimIndent() to
+            "قال النبي ﷺ: 'ما زال جبريل يوصيني بالجار حتى ظننت أنه سيورثه' (صحيح البخاري ٦٠١٤).\n\nحدد الإسلام ثلاث مراتب للجار:\n١. الجار القريب المسلم: له ثلاثة حقوق (القرابة والإسلام والجوار).\n٢. الجار المسلم: له حقان (الإسلام والجوار).\n٣. الجار من غير المسلمين: له حق الجوار وحسن المعاملة.\n\nوقد شُدد في تحريم أذية الجار: 'والله لا يؤمن... من لا يأمن جاره بوائقه' (صحيح البخاري ٦٠١٦).",
+        "Share homemade food or fruit occasionally." to "شارك جيرانك أحيانًا بطعام منزلي أو فاكهة.",
+        "Keep noise levels respectful during late night and early mornings." to "خفّض الضوضاء احترامًا لجيرانك في آخر الليل وأول النهار.",
+        "Help senior neighbors with groceries or physical tasks." to "ساعد كبار السن من الجيران في التسوق أو الأعمال البدنية.",
+        "The Noble Quran, Surah Al-Ma'idah (5:6)" to "القرآن الكريم، سورة المائدة (٥:٦)",
+        "Sahih al-Bukhari 159 (Hadith of Uthman describing Prophet's wudu)" to "صحيح البخاري ١٥٩ (حديث عثمان في صفة وضوء النبي ﷺ)",
+        "Al-Hidaya, Kitab al-Taharah (Imam Marghinani, Hanafi)" to "الهداية، كتاب الطهارة (الإمام المرغيناني، حنفي)",
+        "Surah Al-Mu'minun (23:1-2): 'Successful indeed are the believers who are humble in their prayers.'" to "سورة المؤمنون (٢٣:١-٢): 'قد أفلح المؤمنون الذين هم في صلاتهم خاشعون'.",
+        "Ihya Ulum al-Din, Kitab Asrar al-Salah (Imam Ghazali)" to "إحياء علوم الدين، كتاب أسرار الصلاة (الإمام الغزالي)",
+        "Sahih Muslim 395 (Hadith Qudsi on Surat al-Fatihah)" to "صحيح مسلم ٣٩٥ (حديث قدسي حول سورة الفاتحة)",
+        "Sahih al-Bukhari 6014, 6016" to "صحيح البخاري ٦٠١٤، ٦٠١٦",
+        "Sahih Muslim 2625 (Abu Dharr on adding water to broth to share with neighbors)" to "صحيح مسلم ٢٦٢٥ (أبو ذر في إضافة الماء إلى المرق لمشاركة الجيران)",
+        "Adab al-Mufrad (Imam al-Bukhari)" to "الأدب المفرد (الإمام البخاري)"
     ),
     words = mapOf(
         "Prayer" to "الصلاة", "Schedule" to "الجدول", "Location" to "الموقع", "Language" to "اللغة",

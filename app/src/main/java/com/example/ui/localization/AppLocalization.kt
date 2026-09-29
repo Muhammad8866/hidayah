@@ -144,7 +144,69 @@ private val urduPhrases = linkedMapOf(
     "Salah time has commenced at" to "نماز کا وقت شروع ہو گیا:",
     "Indeed, prayer has been decreed upon the believers a decree of specified times." to "بے شک نماز مومنوں پر مقررہ وقتوں میں فرض کی گئی ہے۔",
     "The selected language applies across the app." to "منتخب زبان پوری ایپ پر لاگو ہوتی ہے۔",
-    "Retry" to "دوبارہ کوشش کریں"
+    "Retry" to "دوبارہ کوشش کریں",
+    "The Essentials of Wudu (Ablution)" to "وضو کے بنیادی ارکان",
+    "Understand the 4 Quranic obligations of Wudu and common authentic prophetic sunnahs." to "وضو کے چار قرآنی فرائض اور مشہور صحیح نبوی سنتوں کو سمجھیں۔",
+    """
+                Wudu is the spiritual and physical purification required before standing in prayer.
+
+                The Quran establishes four obligatory pillars (Fara'id) in Surah Al-Ma'idah (5:6):
+                1. Washing the face from forehead to chin and ear to ear.
+                2. Washing both arms including the elbows.
+                3. Wiping at least a quarter of the head with wet hands (Hanafi; Sunnat is wiping the whole head).
+                4. Washing both feet up to and including the ankles.
+
+                Prophetic Sunnahs (Recommended Practices):
+                - Starting with Bismillah and intention (Niyyah) in the heart.
+                - Washing the hands thrice up to wrists.
+                - Rinsing the mouth (Madmadah) and cleaning the nose (Istinshaq) thrice.
+                - Running wet fingers through the beard and between fingers and toes (Takhlil).
+                - Maintaining sequential order (Tartib) without prolonged interruption (Muwalat).
+            """.trimIndent() to
+        "وضو نماز میں کھڑے ہونے سے پہلے درکار روحانی اور جسمانی طہارت ہے۔\n\nقرآن نے سورۃ المائدہ (٥:٦) میں چار فرائض بیان فرمائے ہیں:\n١. پیشانی سے ٹھوڑی تک اور کان سے کان تک چہرہ دھونا۔\n٢. دونوں بازو کہنیوں سمیت دھونا۔\n٣. گیلے ہاتھوں سے کم از کم سر کے چوتھائی حصے کا مسح کرنا (احناف کے نزدیک؛ سنت پورے سر کا مسح ہے)۔\n٤. دونوں پاؤں ٹخنوں سمیت دھونا۔\n\nمستحب نبوی سنتیں:\n- بسم اللہ اور دل میں نیت سے شروع کرنا۔\n- ہاتھوں کو کلائی تک تین بار دھونا۔\n- کلی کرنا اور ناک صاف کرنا تین تین بار۔\n- داڑھی اور انگلیوں کا خلال کرنا۔\n- ترتیب اور موالات کو بغیر طویل وقفے کے برقرار رکھنا۔",
+    "Do not waste water even if by a flowing stream." to "بہتی ندی پر ہونے کے باوجود پانی ضائع نہ کریں۔",
+    "Ensure dry spots on heels and elbows are reached." to "ایڑیوں اور کہنیوں پر خشک جگہ باقی نہ رہنے دیں۔",
+    "Recite the Kalimah Shahadah and supplication after finishing." to "وضو مکمل کرنے کے بعد کلمہ شہادت اور دعا پڑھیں۔",
+    "Attaining Khushu' (Tranquility) in Prayer" to "نماز میں خشوع حاصل کرنا",
+    "How to calm a wandering mind and feel divine connection during your daily prayers." to "روزمرہ کی نمازوں میں بھٹکتے ذہن کو پرسکون کر کے اللہ سے تعلق کیسے محسوس کریں۔",
+    """
+                Khushu' is inner humility, stillness of the limbs, and attentive contemplation of what one is reciting.
+
+                Practical Anchors for Khushu':
+                - Prepare before the Takbir: Perform wudu mindfully, arrive before iqamah, and eliminate immediate physical distractions.
+                - Contemplate the Words: Recite slowly (Tartil). When saying 'Al-Hamdu lillahi Rabbil-Alameen', remember Allah responds directly: 'My servant has praised Me' (Sahih Muslim 395).
+                - Fix the Gaze: Direct your gaze respectfully at the place of prostration (Sujud), rather than looking around.
+                - Remember the Final Prayer: The Prophet (peace be upon him) advised: 'Pray as if it were your farewell prayer' (Sunan Ibn Majah 4171).
+            """.trimIndent() to
+        "خشوع دل کی عاجزی، اعضاء کا سکون اور جو پڑھا جا رہا ہے اس میں غور و فکر ہے۔\n\nخشوع کے عملی نکات:\n- تکبیر سے پہلے تیاری: توجہ سے وضو کریں، اقامت سے پہلے پہنچیں اور فوری مشغولیات دور کریں۔\n- الفاظ میں غور: ٹھہر ٹھہر کر (ترتیل) پڑھیں۔ 'الحمد للہ رب العالمین' کہتے وقت یاد رکھیں کہ اللہ فوراً جواب دیتا ہے: 'میرے بندے نے میری تعریف کی' (صحیح مسلم ٣٩٥)۔\n- نظر کا تعین: ادب سے سجدے کی جگہ پر نظر رکھیں، ادھر ادھر نہ دیکھیں۔\n- آخری نماز کی یاد: نبی ﷺ نے فرمایا: 'ایسے نماز پڑھو جیسے یہ تمہاری آخری نماز ہو' (سنن ابن ماجہ ٤١٧١)۔",
+    "Pause for 2 seconds after each ayah before reciting the next." to "ہر آیت کے بعد اگلی آیت پڑھنے سے پہلے دو سیکنڈ رکیں۔",
+    "Vary the short surahs recited in Salah to prevent mechanical repetition." to "میکانکی تکرار سے بچنے کے لیے نماز میں مختلف چھوٹی سورتیں پڑھیں۔",
+    "Take a deep breath and consciously let go of worldly tasks before saying 'Allahu Akbar'." to "'اللہ اکبر' کہنے سے پہلے گہرا سانس لیں اور دنیاوی کاموں کو شعوری طور پر چھوڑ دیں۔",
+    "Rights of Neighbors in Islam" to "اسلام میں پڑوسیوں کے حقوق",
+    "The high ethical status of neighbors regardless of their faith or background." to "پڑوسی کا اعلیٰ اخلاقی مقام، چاہے اس کا مذہب یا پس منظر کچھ بھی ہو۔",
+    """
+                The Prophet Muhammad (peace be upon him) said: 'Jibril kept enjoining good treatment of the neighbor upon me until I thought he would assign him a share of inheritance.' (Sahih al-Bukhari 6014).
+
+                Islamic teachings identify three classes of neighbors:
+                1. A neighbor who is a relative and Muslim: has three rights (kinship, Islam, neighborhood).
+                2. A neighbor who is Muslim: has two rights (Islam and neighborhood).
+                3. A neighbor of different faith: has the sacred right of good neighborhood and kindness.
+
+                Harm to neighbors is strictly condemned: 'By Allah he does not believe... whose neighbor is not safe from his harm.' (Sahih al-Bukhari 6016).
+            """.trimIndent() to
+        "نبی کریم ﷺ نے فرمایا: 'جبریل مجھے پڑوسی کے ساتھ بھلائی کی اتنی تاکید کرتے رہے کہ میں نے گمان کیا کہ وہ اسے وارث بنا دیں گے' (صحیح البخاری ٦٠١٤)۔\n\nاسلامی تعلیمات میں پڑوسی تین قسم کے ہیں:\n١. رشتہ دار اور مسلمان پڑوسی: اس کے تین حق ہیں (قرابت، اسلام، ہمسائیگی)۔\n٢. مسلمان پڑوسی: اس کے دو حق ہیں (اسلام اور ہمسائیگی)۔\n٣. غیر مسلم پڑوسی: اس کا حسنِ ہمسائیگی اور بھلائی کا مقدس حق ہے۔\n\nپڑوسی کو تکلیف دینے کی سخت مذمت کی گئی ہے: 'اللہ کی قسم وہ ایمان نہیں رکھتا... جس کا پڑوسی اس کی ایذا سے محفوظ نہ ہو' (صحیح البخاری ٦٠١٦)۔",
+    "Share homemade food or fruit occasionally." to "کبھی کبھار گھر کا کھانا یا پھل پڑوسیوں سے شیئر کریں۔",
+    "Keep noise levels respectful during late night and early mornings." to "رات گئے اور صبح سویرے شور کو مناسب سطح پر رکھیں۔",
+    "Help senior neighbors with groceries or physical tasks." to "بزرگ پڑوسیوں کی سودا سلف یا جسمانی کاموں میں مدد کریں۔",
+    "The Noble Quran, Surah Al-Ma'idah (5:6)" to "قرآن کریم، سورۃ المائدہ (٥:٦)",
+    "Sahih al-Bukhari 159 (Hadith of Uthman describing Prophet's wudu)" to "صحیح البخاری ١٥٩ (حضرت عثمان رضی اللہ عنہ کی روایت میں نبی ﷺ کے وضو کی صفت)",
+    "Al-Hidaya, Kitab al-Taharah (Imam Marghinani, Hanafi)" to "الہدایہ، کتاب الطہارہ (امام مرغینانی، حنفی)",
+    "Surah Al-Mu'minun (23:1-2): 'Successful indeed are the believers who are humble in their prayers.'" to "سورۃ المؤمنون (٢٣:١-٢): 'بے شک ایمان والے کامیاب ہو گئے جو اپنی نماز میں خشوع اختیار کرتے ہیں'۔",
+    "Ihya Ulum al-Din, Kitab Asrar al-Salah (Imam Ghazali)" to "احیاء علوم الدین، کتاب اسرار الصلاۃ (امام غزالی)",
+    "Sahih Muslim 395 (Hadith Qudsi on Surat al-Fatihah)" to "صحیح مسلم ٣٩٥ (سورۃ الفاتحہ کے بارے میں حدیث قدسی)",
+    "Sahih al-Bukhari 6014, 6016" to "صحیح البخاری ٦٠١٤، ٦٠١٦",
+    "Sahih Muslim 2625 (Abu Dharr on adding water to broth to share with neighbors)" to "صحیح مسلم ٢٦٢٥ (حضرت ابوذر رضی اللہ عنہ کا شوربے میں پانی بڑھا کر پڑوسیوں کو دینے کا واقعہ)",
+    "Adab al-Mufrad (Imam al-Bukhari)" to "الادب المفرد (امام بخاری)"
 )
 
 private val hindiWords = mapOf(
