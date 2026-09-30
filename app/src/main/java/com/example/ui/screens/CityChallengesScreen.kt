@@ -169,7 +169,7 @@ fun CityChallengesScreen(onBack: () -> Unit, uiState: MainUiState?, modifier: Mo
             }
         }
         item(key = "actions") {
-            val invite = localizedUiText("Join me in the weekly city challenge on HIDAYAH!")
+            val invite = localizedUiText("Join me in the weekly city challenge on Hidayah!")
             ToolCard {
                 ActionRow(Icons.Default.Share, "Invite your neighbours", "More people from your area, more points for your area.") {
                     val place = listOf(p.areaName, p.cityName).filter { it.isNotBlank() }.joinToString(", ")

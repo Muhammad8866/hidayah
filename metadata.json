@@ -1,5 +1,5 @@
 {
-  "name": "HIDAYAH",
+  "name": "Hidayah",
   "description": "Private, trusted daily Islamic companion for accurate prayer times, verified mosque jamaat schedules, offline Quran, source-backed Duas and learning.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

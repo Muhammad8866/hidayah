@@ -328,7 +328,7 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     LocalizedText(
-                        text = "Every ayah, hadith, dua, and lesson in HIDAYAH links to canonical sources with authenticated revision histories.",
+                        text = "Every ayah, hadith, dua, and lesson in Hidayah links to canonical sources with authenticated revision histories.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

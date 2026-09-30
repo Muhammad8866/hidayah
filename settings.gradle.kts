@@ -22,7 +22,7 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "HIDAYAH"
+rootProject.name = "Hidayah"
 
 include(":app")
 include(":hindi_quran_pdf")
