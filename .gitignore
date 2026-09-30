@@ -25,3 +25,4 @@ replay_pid*.log
 /tmp
 /hadith-release-assets
 /build
+hindi_quran_pdf/build/
