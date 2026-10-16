@@ -181,6 +181,10 @@ object AstronomicalPrayerCalculator {
         return result
     }
 
+    /** Mirrors the device's 12/24-hour setting; set by each Android entry point before formatting. */
+    @Volatile
+    var use24HourClock: Boolean = false
+
     fun formatHoursToAmPm(hours: Double, locale: Locale = Locale.getDefault()): String {
         require(hours.isFinite()) { "Time must be finite." }
         val totalMinutes = (hours * 60.0).roundToInt()
@@ -191,7 +195,8 @@ object AstronomicalPrayerCalculator {
             set(Calendar.HOUR_OF_DAY, minuteOfDay / 60)
             set(Calendar.MINUTE, minuteOfDay % 60)
         }
-        return SimpleDateFormat("h:mm a", locale).apply { timeZone = utc }.format(calendar.time)
+        val pattern = if (use24HourClock) "HH:mm" else "h:mm a"
+        return SimpleDateFormat(pattern, locale).apply { timeZone = utc }.format(calendar.time)
     }
 
     /** Converts local wall-clock hours to an instant, preserving values outside 0..24. */

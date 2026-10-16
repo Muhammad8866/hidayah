@@ -30,13 +30,41 @@ val LocalAppLocale = compositionLocalOf { appLocale("en") }
  * Converts the app's persisted language id to a real BCP-47 locale.
  * `hinglish` is an app-only id, so it must not be passed directly to Android.
  */
-fun appLocale(language: String): Locale = Locale.forLanguageTag(
-    when (language) {
-        "hinglish" -> "hi-Latn-IN"
-        "en" -> "en-IN"
-        else -> "$language-IN"
+fun appLocale(language: String): Locale {
+    val region = deviceRegion()
+    val scripted = when (language) {
+        "hi", "brx", "doi", "kok", "mai", "mr", "ne", "sa" -> "$language-Deva"
+        "as", "bn", "mni" -> "$language-Beng"
+        "gu" -> "gu-Gujr"
+        "kn" -> "kn-Knda"
+        "ks", "sd", "ur" -> "$language-Arab"
+        "ml" -> "ml-Mlym"
+        "or" -> "or-Orya"
+        "pa" -> "pa-Guru"
+        "sat" -> "sat-Olck"
+        "ta" -> "ta-Taml"
+        "te" -> "te-Telu"
+        else -> language
     }
-)
+    return Locale.forLanguageTag(
+        when (language) {
+            // Hinglish is Indian by definition; every other language follows the user's own country.
+            "hinglish" -> "hi-Latn-IN"
+            else -> if (region.isEmpty()) scripted else "$scripted-$region"
+        }
+    )
+}
+
+/**
+ * The country the device is set to, so dates, numbers and the first day of the week follow the
+ * user's region instead of assuming India. System resources are read because the process default
+ * locale is replaced by the per-app language once one is chosen.
+ */
+private fun deviceRegion(): String {
+    val system = runCatching { Resources.getSystem().configuration.locales[0] }.getOrNull()
+    val country = system?.country?.takeIf { it.isNotBlank() } ?: Locale.getDefault().country
+    return country.takeIf { it.length == 2 || it.length == 3 }.orEmpty()
+}
 
 fun isRtlAppLanguage(language: String): Boolean = language in setOf("ur", "ks", "sd", "ar", "fa", "ps", "he")
 
@@ -727,7 +755,10 @@ internal class UiLanguagePack(
     // A single longest-first pass: translated output is never re-translated, and keys only
     // match whole English words, so "Already" or "Masjids" are not broken mid-word.
     private val fragmentPattern: Regex by lazy {
-        val alternatives = (phrases.keys.map { it to false } + words.keys.map { it to true })
+        // Long content is looked up exactly above. Only short phrases can appear inside
+        // dynamic labels, keeping the regex small after regional draft packs are loaded.
+        val alternatives = (phrases.keys.filter { it.length <= 120 && '\n' !in it }.map { it to false } +
+            words.keys.map { it to true })
             .sortedByDescending { it.first.length }
             .joinToString("|") { (key, ignoreCase) ->
                 if (ignoreCase) "(?i:${Regex.escape(key)})" else Regex.escape(key)
@@ -773,7 +804,7 @@ private val communityWords = mapOf(
 private fun regionalPack(code: String, pack: UiLanguagePack): UiLanguagePack = pack
     .withAdditionalWords(controlWordsByLanguage.getValue(code))
     .withAdditionalPhrases(
-        duaScreenPhrases.getValue(code) + mapOf(
+        IndicDraftPhrases.forLanguage(code).filterKeys { (it !in pack.phrases || pack.phrases[it] == it) && it !in duaScreenPhrases.getValue(code) } + duaScreenPhrases.getValue(code) + mapOf(
             "Community Masjid" to "${communityWords.getValue(code)} ${pack.phrases.getValue("Masjid")}"
         )
     )
@@ -781,17 +812,17 @@ private fun regionalPack(code: String, pack: UiLanguagePack): UiLanguagePack = p
 private val languagePacks: Map<String, UiLanguagePack> = mapOf(
     "hinglish" to UiLanguagePack(
         dailyToolPhrases.getValue("hinglish") + quizPhrases.getValue("hinglish") + quizGeneratorPhrases.getValue("hinglish") + hajjUmrahPhrases.getValue("hinglish") + prayerTrackerPhrases.getValue("hinglish") + hinglishPhrases + duaFeaturePhrases.getValue("hinglish") + duaScreenPhrases.getValue("hinglish") +
-            extendedUiPhrases.getValue("hinglish"),
+            extendedUiPhrases.getValue("hinglish") + analyticsPhrases.getValue("hinglish"),
         hinglishWords + controlWordsByLanguage.getValue("hinglish")
     ),
     "hi" to UiLanguagePack(
         dailyToolPhrases.getValue("hi") + quizPhrases.getValue("hi") + quizGeneratorPhrases.getValue("hi") + hajjUmrahPhrases.getValue("hi") + prayerTrackerPhrases.getValue("hi") + hindiPhrases + duaFeaturePhrases.getValue("hi") + duaScreenPhrases.getValue("hi") +
-            extendedUiPhrases.getValue("hi"),
+            extendedUiPhrases.getValue("hi") + analyticsPhrases.getValue("hi"),
         hindiWords + controlWordsByLanguage.getValue("hi")
     ),
     "ur" to UiLanguagePack(
         dailyToolPhrases.getValue("ur") + quizPhrases.getValue("ur") + quizGeneratorPhrases.getValue("ur") + hajjUmrahPhrases.getValue("ur") + prayerTrackerPhrases.getValue("ur") + urduPhrases + duaFeaturePhrases.getValue("ur") + duaScreenPhrases.getValue("ur") +
-            extendedUiPhrases.getValue("ur"),
+            extendedUiPhrases.getValue("ur") + analyticsPhrases.getValue("ur"),
         urduWords + controlWordsByLanguage.getValue("ur")
     ),
     "as" to regionalPack("as", assamesePack),
@@ -896,6 +927,8 @@ fun persistedAppLanguage(context: Context): String {
 }
 
 fun localizeUiText(text: String, language: String): String {
+    recitationCollectionLabel(text, language)?.let { return it }
+    babyNamesUiPhrases[language]?.get(text)?.let { return it }
     if (language == "en" || text.isBlank()) return text
     if (text == "More") return moreNavigationLabels[language] ?: text
     homeExtraTimesLabels[language]?.get(text)?.let { return it }
@@ -905,6 +938,10 @@ fun localizeUiText(text: String, language: String): String {
     widgetLabels[language]?.get(text)?.let { return it }
     auditUiLabels[language]?.get(text)?.let { return it }
     prayerAlertPromptLabels[language]?.get(text)?.let { return it }
+    featureTourLabels[language]?.get(text)?.let { return it }
+    languagePacks[language]?.phrases?.get(text)?.let { return it }
+    AutoTranslationPhrases.lookup(text, language)?.let { return it }
+    WorldDraftPhrases.forLanguage(language)[text]?.let { return it }
     return languagePacks[language]?.localize(text) ?: text
 }
 
@@ -1097,7 +1134,13 @@ private val moreSubtitleKeys = listOf(
     "Estimate your 2.5% Zakat",
     "Step-by-step guide",
     "Private cycle-aware log",
-    "Test your knowledge"
+    "Test your knowledge",
+    "Prayer guide & special prayers",
+    "Asma ul Husna with meanings",
+    "Asma un-Nabi ﷺ with meanings",
+    "Quranic duas with meaning",
+    "Bahar-e-Shariat & more",
+    "Books in every language"
 )
 
 /** Values follow [moreSubtitleKeys] order. Languages missing here show no subtitle. */
@@ -1106,17 +1149,26 @@ private val moreSubtitles: Map<String, List<String>> = mapOf(
         "Sehri aur Iftar ka waqt", "Nabi ﷺ ke irshadaat", "Sirf awaaz, bina music",
         "Islami mauqe aur aamal", "Zabaan, alerts aur namaz ke auqaat",
         "Namaz aur qaza ka hisaab", "Rozana safhe aur khatm", "Apni 2.5% zakat ka andaza",
-        "Qadam ba qadam tareeqa", "Private, cycle ke hisaab se log", "Apni maloomat parkhein"),
+        "Qadam ba qadam tareeqa", "Private, cycle ke hisaab se log", "Apni maloomat parkhein",
+        "Tareeqa, masail aur khaas namazein", "Asma ul Husna maani ke saath",
+        "Asma un-Nabi ﷺ maani ke saath", "Qurani duaein maani ke saath", "Bahar-e-Shariat aur deegar kitabein",
+        "Har zabaan mein kitabein"),
     "hi" to listOf("टूल्स और संसाधन", "काबा की दिशा", "हिजरी तारीख़ें और ख़ास दिन",
         "सहरी और इफ़्तार का समय", "नबी ﷺ के इरशादात", "सिर्फ़ आवाज़, बिना संगीत",
         "इस्लामी मौक़े और आमाल", "भाषा, सूचनाएँ और नमाज़ का समय",
         "नमाज़ और क़ज़ा का हिसाब", "रोज़ के पन्ने और ख़त्म", "अपनी 2.5% ज़कात का अनुमान",
-        "क़दम-ब-क़दम तरीक़ा", "निजी, माहवारी के हिसाब से लॉग", "अपनी जानकारी परखें"),
+        "क़दम-ब-क़दम तरीक़ा", "निजी, माहवारी के हिसाब से लॉग", "अपनी जानकारी परखें",
+        "तरीक़ा, मसाइल और ख़ास नमाज़ें", "अस्मा-उल-हुस्ना मआनी के साथ",
+        "अस्मा-उन-नबी ﷺ मआनी के साथ", "क़ुरआनी दुआएँ मआनी के साथ", "बहारे शरीअत और दीगर किताबें",
+        "हर ज़बान में किताबें"),
     "ur" to listOf("ٹولز اور وسائل", "کعبہ کی سمت", "ہجری تاریخیں اور خاص دن",
         "سحری اور افطار کے اوقات", "نبی ﷺ کے ارشادات", "صرف آواز، بغیر موسیقی",
         "اسلامی مواقع اور اعمال", "زبان، اطلاعات اور نماز کے اوقات",
         "نماز اور قضا کا حساب", "روزانہ صفحات اور ختم", "اپنی ڈھائی فیصد زکوٰۃ کا اندازہ",
-        "قدم بہ قدم طریقہ", "نجی، ایام کے حساب سے ریکارڈ", "اپنی معلومات پرکھیں"),
+        "قدم بہ قدم طریقہ", "نجی، ایام کے حساب سے ریکارڈ", "اپنی معلومات پرکھیں",
+        "طریقہ، مسائل اور خاص نمازیں", "اسماء الحسنیٰ معانی کے ساتھ",
+        "اسماء النبی ﷺ معانی کے ساتھ", "قرآنی دعائیں معانی کے ساتھ", "بہارِ شریعت اور دیگر کتابیں",
+        "ہر زبان میں کتابیں"),
     "as" to listOf("সঁজুলি আৰু সম্পদ", "কাবাৰ দিশ", "হিজৰী তাৰিখ আৰু বিশেষ দিন",
         "ছেহৰী আৰু ইফতাৰৰ সময়", "নবী ﷺৰ বাণী", "কেৱল কণ্ঠ, বাদ্যযন্ত্ৰ নোহোৱাকৈ",
         "ইছলামী উপলক্ষ আৰু আমল", "ভাষা, সতৰ্কবাণী আৰু নামাজৰ সময়"),
@@ -1160,9 +1212,12 @@ private val moreSubtitles: Map<String, List<String>> = mapOf(
  * so the screen can hide the line rather than mix English into a localized layout.
  */
 fun localizedMoreSubtitle(text: String, language: String): String? {
+    babyNamesUiPhrases[language]?.get(text)?.let { return it }
     if (language == "en") return text
     val index = moreSubtitleKeys.indexOf(text).takeIf { it >= 0 } ?: return null
     return moreSubtitles[language]?.getOrNull(index)
+        ?: IndicDraftPhrases.forLanguage(language)[text]
+        ?: WorldDraftPhrases.forLanguage(language)[text]
 }
 
 private val homeDashboardLabels = mapOf(
@@ -1222,7 +1277,17 @@ private val homeShortcutLabels = mapOf(
  */
 fun localizePhrase(text: String, language: String): String {
     if (language == "en" || text.isBlank()) return text
-    return languagePacks[language]?.phrases?.get(text) ?: text
+    return languagePacks[language]?.phrases?.get(text)
+        ?: AutoTranslationPhrases.lookup(text, language)
+        ?: WorldDraftPhrases.forLanguage(language)[text] ?: text
+}
+
+/** Translate a stable whole sentence before inserting runtime values. */
+fun localizeUiTemplate(template: String, language: String, values: Map<String, String>): String {
+    val translated = localizeUiText(template, language)
+    return Regex("\\{([A-Za-z0-9_]+)\\}").replace(translated) { match ->
+        values[match.groupValues[1]] ?: match.value
+    }
 }
 
 /** Display reviewed whole-content translations without substituting isolated UI words. */

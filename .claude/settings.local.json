@@ -1,5 +1,13 @@
 {
   "permissions": {
-    "allow": []
+    "allow": [
+      "PowerShell(git add *)",
+      "PowerShell(git commit *)",
+      "PowerShell(cd \"C:\\\\Users\\\\Lenovo\\\\Downloads\\\\deen-companion\"; \\(Get-Content app/src/main/java/com/example/ui/localization/LanguagePacksGlobal.kt | Select-String -Pattern \"val frenchPack|^    \\\\\\)\" -Context 0,300 | select -First 50\\) -join \"`n\")",
+      "Bash(python *)",
+      "Bash(./gradlew :app:compileDebugKotlin -q)",
+      "Bash(python -)",
+      "Bash(sed *)"
+    ]
   }
 }

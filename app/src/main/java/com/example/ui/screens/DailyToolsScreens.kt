@@ -2,9 +2,11 @@
 
 package com.example.ui.screens
 
+import com.example.ui.components.ScreenHeader
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,8 +35,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -43,7 +49,9 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.ui.components.AppCard
 import com.example.ui.components.BackIconButton
+import com.example.ui.components.islamicPattern
 import com.example.ui.components.ProvenanceCard
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.LocalAppLocale
@@ -70,8 +78,12 @@ enum class DailyTool(
 ) {
     SALAH("Namaz / Salah", "Prayer guide & special prayers", Icons.Default.Mosque, Color(0xFF237A63), "salah"),
     PRAYER_TRACKER("Prayer tracker", "Log salah & Qaza balance", Icons.Default.TaskAlt, Color(0xFF237A63), "prayer_tracker"),
+    ROZA_TRACKER("Roza tracker", "Log fasts & Qaza roza balance", Icons.Default.NightsStay, Color(0xFF237A63), "roza_tracker"),
+    TALLY_COUNTER("Tally counter", "Tap to count", Icons.Default.TouchApp, Color(0xFF237A63), "tally_counter"),
     QURAN_GOAL("Quran goal", "Daily pages & khatm", Icons.Default.LocalLibrary, Color(0xFF3C6FA8), "quran_goal"),
+    QAIDA_TAJWEED("Noorani Qaida / Tajweed", "Learn Arabic reading & recitation", Icons.Default.School, Color(0xFF237A63), "qaida_tajweed"),
     ZAKAT("Zakat calculator", "Estimate your 2.5% Zakat", Icons.Default.VolunteerActivism, Color(0xFFA9812A), "zakat"),
+    MIRATH("Wirasat (Mirath) calculator", "Inheritance shares for your family", Icons.Default.AccountBalance, Color(0xFF3C6FA8), "mirath"),
     HAJJ_UMRAH("Hajj & Umrah", "Step-by-step guide", Icons.Default.Luggage, Color(0xFF8A5A3C), "hajj_umrah"),
     MUSLIMAH("Muslimah mode", "Private cycle-aware log", Icons.Default.Spa, Color(0xFFB0507A), "muslimah"),
     QUIZ("Islamic quiz", "Test your knowledge", Icons.Default.Quiz, Color(0xFF6B5BAE), "quiz"),
@@ -91,11 +103,16 @@ fun DailyToolScreen(
     onOpenQibla: () -> Unit = {},
     uiState: MainUiState? = null
 ) {
+
     when (tool) {
         DailyTool.SALAH -> SalahScreen(onBack, onOpenQibla, modifier)
         DailyTool.PRAYER_TRACKER -> PrayerTrackerScreen(onBack, modifier)
+        DailyTool.ROZA_TRACKER -> RozaTrackerScreen(onBack, modifier)
+        DailyTool.TALLY_COUNTER -> TallyCounterScreen(onBack, modifier)
         DailyTool.QURAN_GOAL -> QuranGoalScreen(onBack, onOpenQuran, modifier)
+        DailyTool.QAIDA_TAJWEED -> QaidaTajweedScreen(onBack, onOpenQuran, modifier)
         DailyTool.ZAKAT -> ZakatScreen(onBack, modifier)
+        DailyTool.MIRATH -> MirathScreen(onBack, modifier)
         DailyTool.HAJJ_UMRAH -> HajjUmrahScreen(onBack, modifier)
         DailyTool.MUSLIMAH -> MuslimahScreen(onBack, modifier)
         DailyTool.QUIZ -> QuizScreen(onBack, modifier)
@@ -103,108 +120,12 @@ fun DailyToolScreen(
     }
 }
 
-// ---------------------------------------------------------------- Muslimah mode
-
-@Composable
-private fun MuslimahScreen(onBack: () -> Unit, modifier: Modifier) {
-    val prefs = rememberToolPrefs()
-    val today = remember { LocalDate.now() }
-    var enabled by remember { mutableStateOf(prefs.getBoolean("muslimah_mode", false)) }
-    var excused by remember { mutableStateOf(prefs.getBoolean("cycle_$today", false)) }
-    var fastsToMakeUp by remember { mutableIntStateOf(prefs.getInt("roza_qaza", 0)) }
-    val excusedThisMonth = remember(excused) {
-        (1..today.dayOfMonth).count { prefs.getBoolean("cycle_${today.withDayOfMonth(it)}", false) }
-    }
-
-    ToolScreen(DailyTool.MUSLIMAH, onBack, modifier) { accent ->
-        item {
-            HeroCard(accent) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconBadge(Icons.Default.Lock, accent, 44.dp)
-                    Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
-                        LocalizedText("Private & on-device", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        LocalizedText(
-                            "Nothing here leaves your phone or syncs anywhere.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-        item {
-            ToolCard {
-                SwitchRow(
-                    title = "Enable Muslimah mode",
-                    description = "Mark days when you are excused from salah.",
-                    checked = enabled,
-                    onCheckedChange = { enabled = it; prefs.edit().putBoolean("muslimah_mode", it).apply() }
-                )
-            }
-        }
-        item {
-            AnimatedVisibility(visible = enabled) {
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    ToolCard {
-                        SwitchRow(
-                            title = "Excused from salah today",
-                            description = "The prayer tracker will show today as excused.",
-                            checked = excused,
-                            onCheckedChange = { excused = it; prefs.edit().putBoolean("cycle_$today", it).apply() }
-                        )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            LocalizedText("Excused days this month", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                            Text("$excusedThisMonth", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = accent)
-                        }
-                    }
-                    ToolCard {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                LocalizedText("Fasts to make up", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                LocalizedText(
-                                    "Missed Ramadan fasts are made up later.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Stepper(
-                                value = fastsToMakeUp,
-                                onDecrement = { fastsToMakeUp = max(0, fastsToMakeUp - 1); prefs.edit().putInt("roza_qaza", fastsToMakeUp).apply() },
-                                onIncrement = { fastsToMakeUp += 1; prefs.edit().putInt("roza_qaza", fastsToMakeUp).apply() }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        item {
-            ProvenanceCard(
-                sourceText = "We were commanded to make up the fasts, but not the prayers.",
-                collectionOrReference = "Sahih Muslim 335 · Aisha (RA)"
-            )
-        }
-        item { InfoNote("For your own situation, ask a qualified scholar or a trusted mufti.") }
-    }
-}
-
-@Composable
-private fun SwitchRow(title: String, description: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            LocalizedText(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            LocalizedText(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Spacer(Modifier.width(12.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}
-
 // ---------------------------------------------------------------- Quiz
 
 @Composable
 private fun QuizScreen(onBack: () -> Unit, modifier: Modifier) {
+    com.example.core.analytics.AnalyticsScreen("quiz_screen")
+
     val prefs = rememberToolPrefs()
     var round by rememberSaveable { mutableIntStateOf(0) }
     var index by rememberSaveable { mutableIntStateOf(0) }
@@ -215,7 +136,9 @@ private fun QuizScreen(onBack: () -> Unit, modifier: Modifier) {
     var bestScore by remember { mutableIntStateOf(prefs.getInt("quiz_best", 0)) }
     var roundsPlayed by remember { mutableIntStateOf(prefs.getInt("quiz_rounds", 0)) }
     val listState = rememberLazyListState()
+    com.example.core.analytics.AnalyticsScroll("daily_tools_screens", listState)
     val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
     val language = LocalAppLanguage.current
     // Parsing the bundled Quran and hadith text takes a moment, so it happens off the main thread.
     val engine by produceState<QuizEngine?>(null, language) {
@@ -235,6 +158,7 @@ private fun QuizScreen(onBack: () -> Unit, modifier: Modifier) {
     val total = order.size
     val question = order.getOrNull(index)
     val finished = !loading && question == null
+    LaunchedEffect(finished) { if (finished) com.example.core.analytics.AppAnalytics.milestone("quiz", "round_completed") }
     val currentPick = picked
     val currentScore = score
     val review = wrongPicks.mapNotNull { (id, pick) -> order.firstOrNull { it.id == id }?.let { it to pick } }
@@ -264,6 +188,7 @@ private fun QuizScreen(onBack: () -> Unit, modifier: Modifier) {
         if (picked != null) return
         picked = option
         val correct = option == q.answer
+        haptics.performHapticFeedback(if (correct) HapticFeedbackType.LongPress else HapticFeedbackType.TextHandleMove)
         if (correct) score++ else wrongPicks = LinkedHashMap(wrongPicks).apply { put(q.id, option) }
         engine?.recordAnswer(q, correct)
     }
@@ -290,7 +215,7 @@ private fun QuizScreen(onBack: () -> Unit, modifier: Modifier) {
                         }
                     }
                     Button(
-                        onClick = { if (finished) nextRound() else advance() },
+                        onClick = { com.example.core.analytics.AppAnalytics.interaction("daily_tools_screens", "quiz_next", "tap"); if (finished) nextRound() else advance() },
                         modifier = Modifier.weight(if (finished) 1.4f else 1f).heightIn(min = 48.dp).testTag("quiz_next")
                     ) {
                         LocalizedText(
@@ -381,7 +306,7 @@ private fun LazyListScope.quizQuestion(
                         option == picked -> OptionState.Wrong
                         else -> OptionState.Dimmed
                     },
-                    onClick = { onPick(option) }
+                    onClick = { com.example.core.analytics.AppAnalytics.interaction("daily_tools_screens", "quiz_pick_option", "tap"); onPick(option) }
                 )
             }
         }
@@ -638,39 +563,25 @@ internal fun ToolScreen(
     tool: DailyTool,
     onBack: () -> Unit,
     modifier: Modifier,
-    listState: LazyListState = rememberLazyListState(),
+    listState: LazyListState = com.example.core.analytics.rememberAnalyticsLazyListState("daily_tools_screens"),
     content: LazyListScope.(accent: Color) -> Unit
 ) {
+
     val accent = themedAccent(tool.accent)
     LazyColumn(
-        modifier = modifier.fillMaxSize().testTag("${tool.tag}_screen"),
+        // Keeps the focused field and the buttons under it above the keyboard.
+        modifier = modifier.fillMaxSize().imePadding().testTag("${tool.tag}_screen"),
         state = listState,
         contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item(key = "header") {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                BackIconButton(onBack)
-                Spacer(Modifier.width(4.dp))
-                IconBadge(tool.icon, accent, 44.dp)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    LocalizedText(
-                        tool.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    LocalizedText(
-                        tool.subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
+            ScreenHeader(
+                title = tool.title,
+                subtitle = tool.subtitle,
+                onBack = onBack,
+                leading = { IconBadge(tool.icon, accent, 44.dp) }
+            )
         }
         content(accent)
     }
@@ -678,53 +589,87 @@ internal fun ToolScreen(
 
 @Composable
 internal fun IconBadge(icon: ImageVector, accent: Color, size: Dp) {
-    Surface(shape = RoundedCornerShape(size * 0.3f), color = accent.copy(alpha = 0.15f), modifier = Modifier.size(size)) {
-        Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.padding(size * 0.22f))
+    Box(
+        Modifier.size(size).clip(RoundedCornerShape(size * 0.32f)).background(accent.copy(alpha = 0.14f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(size * 0.55f))
     }
 }
 
+/** Soft accent-tinted header card with the geometric motif; content keeps the normal surface colours. */
 @Composable
 internal fun HeroCard(accent: Color, content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, accent.copy(alpha = 0.25f))
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.22f))
     ) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.20f), accent.copy(alpha = 0.04f))))
+                .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.18f), accent.copy(alpha = 0.03f))))
+                .islamicPattern(accent.copy(alpha = 0.06f), cell = 40.dp)
                 .padding(20.dp),
             content = content
         )
     }
 }
 
+/** The standard daily-tool card: the shared hairline [AppCard] with roomy, evenly spaced content. */
 @Composable
 internal fun ToolCard(
     contentPadding: PaddingValues = PaddingValues(16.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Card(
+    AppCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
-    ) {
-        Column(Modifier.padding(contentPadding), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
-    }
+        contentPadding = contentPadding,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        content = content
+    )
 }
 
 @Composable
 internal fun SectionTitle(text: String) {
-    LocalizedText(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    LocalizedText(
+        text,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.semantics { heading() }
+    )
+}
+
+/**
+ * Numbered step marker shared by the step-by-step guides: tinted by default, filled for the
+ * current step, and a check mark once the step is done.
+ */
+@Composable
+internal fun StepNumberBadge(number: Int, accent: Color, filled: Boolean = false, done: Boolean = false, size: Dp = 32.dp) {
+    val doneColor = themedAccent(SuccessGreen)
+    val container by animateColorAsState(
+        when {
+            done -> doneColor
+            filled -> accent
+            else -> accent.copy(alpha = 0.14f)
+        },
+        label = "numberBadge"
+    )
+    val content = if (done || filled) MaterialTheme.colorScheme.surface else accent
+    Box(Modifier.size(size).clip(CircleShape).background(container), contentAlignment = Alignment.Center) {
+        if (done) {
+            Icon(Icons.Default.Check, contentDescription = localizedUiText("Done"), tint = content, modifier = Modifier.size(size * 0.6f))
+        } else {
+            Text("$number", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = content)
+        }
+    }
 }
 
 @Composable
 internal fun InfoNote(text: String) {
     Surface(
-        shape = RoundedCornerShape(14.dp),
+        shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -765,7 +710,7 @@ internal fun ProgressRing(
 @Composable
 internal fun Stepper(value: Int, onDecrement: () -> Unit, onIncrement: () -> Unit, minimum: Int = 0) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        FilledTonalIconButton(onClick = onDecrement, enabled = value > minimum, modifier = Modifier.size(48.dp)) {
+        FilledTonalIconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("daily_tools_screens", "stepper_decrement", onDecrement), enabled = value > minimum, modifier = Modifier.size(48.dp)) {
             Icon(Icons.Default.Remove, contentDescription = localizedUiText("Decrease"))
         }
         Text(
@@ -775,7 +720,7 @@ internal fun Stepper(value: Int, onDecrement: () -> Unit, onIncrement: () -> Uni
             textAlign = TextAlign.Center,
             modifier = Modifier.widthIn(min = 40.dp)
         )
-        FilledTonalIconButton(onClick = onIncrement, modifier = Modifier.size(48.dp)) {
+        FilledTonalIconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("daily_tools_screens", "stepper_increment", onIncrement), modifier = Modifier.size(48.dp)) {
             Icon(Icons.Default.Add, contentDescription = localizedUiText("Increase"))
         }
     }

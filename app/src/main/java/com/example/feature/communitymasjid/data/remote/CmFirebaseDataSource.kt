@@ -75,18 +75,52 @@ class CmFirebaseDataSource(private val context: Context) {
         return result.user?.uid ?: throw CmCommunityUnavailableException("Anonymous sign-in failed")
     }
 
+    data class SearchReservation(
+        val budget: com.example.feature.communitymasjid.domain.CmSearchBudget,
+        val block: com.example.feature.communitymasjid.domain.CmSearchPolicy.Block? = null
+    )
+
+    suspend fun reserveNearbySearch(location: CmUserLocation, nowMs: Long): SearchReservation {
+        val uid = ensureUid()
+        val ref = firestore.collection("cm_search_quotas").document(uid)
+        return firestore.runTransaction { tx ->
+            val old = tx.get(ref)
+            val budget = if (old.exists()) com.example.feature.communitymasjid.domain.CmSearchBudget(
+                day = old.getLong("day") ?: -1,
+                count = (old.getLong("count") ?: 0).toInt(),
+                lastAtMs = old.getTimestamp("lastSearchAt")?.toDate()?.time ?: 0,
+                latitude = old.getDouble("latitude") ?: 0.0,
+                longitude = old.getDouble("longitude") ?: 0.0
+            ) else null
+            val block = com.example.feature.communitymasjid.domain.CmSearchPolicy.blocked(nowMs, location, budget)
+            if (block != null && budget != null) SearchReservation(budget, block) else {
+                val next = com.example.feature.communitymasjid.domain.CmSearchPolicy.next(nowMs, location, budget)
+                tx.set(ref, mapOf("day" to next.day, "count" to next.count,
+                    "lastSearchAt" to FieldValue.serverTimestamp(), "latitude" to next.latitude, "longitude" to next.longitude))
+                SearchReservation(next)
+            }
+        }.awaitCm()
+    }
+
     /** A moderation report; reports are write-only for clients and reviewed in the Firebase console. */
     suspend fun report(docId: String, target: String, reason: String) {
         val uid = ensureUid()
-        firestore.collection(REPORTS).document().set(
-            mapOf(
-                "mosqueId" to docId,
-                "target" to target,
-                "reason" to reason,
-                "uid" to uid,
-                "createdAt" to FieldValue.serverTimestamp()
+        val reportRef = firestore.collection(REPORTS).document()
+        val userRef = firestore.collection(USERS).document(uid)
+        firestore.runTransaction { tx ->
+            val userSnap = tx.get(userRef)
+            tx.set(
+                reportRef,
+                mapOf(
+                    "mosqueId" to docId,
+                    "target" to target,
+                    "reason" to reason,
+                    "uid" to uid,
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
             )
-        ).awaitCm()
+            writeRateDoc(tx, userRef, userSnap)
+        }.awaitCm()
     }
 
     /** True once the anonymous identity exists; there is nothing to delete before that. */
@@ -122,8 +156,11 @@ class CmFirebaseDataSource(private val context: Context) {
     suspend fun fetchMyVotes(docId: String, currentVersion: Long): CmMyVotes {
         val uid = ensureUid()
         val mosqueRef = mosques().document(docId)
-        val mosqueVote = mosqueRef.collection(MOSQUE_VOTES).document(uid).get().awaitCm()
-        val timingVote = mosqueRef.collection(TIMING_VOTES).document(uid).get().awaitCm()
+        val (mosqueVote, timingVote) = coroutineScope {
+            val mosque = async { mosqueRef.collection(MOSQUE_VOTES).document(uid).get().awaitCm() }
+            val timing = async { mosqueRef.collection(TIMING_VOTES).document(uid).get().awaitCm() }
+            mosque.await() to timing.await()
+        }
         return CmMyVotes(
             mosqueVote = (mosqueVote.getLong("vote") ?: 0L).toInt(),
             timingVote = if (timingVote.getLong("version") == currentVersion) (timingVote.getLong("vote") ?: 0L).toInt() else 0
@@ -226,7 +263,7 @@ class CmFirebaseDataSource(private val context: Context) {
             if (mosqueSnap.exists()) {
                 tx.update(mosqueRef, newState)
             } else {
-                tx.set(mosqueRef, osmIdentity(mosque) + emptyMutableState() + newState)
+                tx.set(mosqueRef, googleIdentity(mosque) + emptyMutableState() + newState)
             }
             tx.set(
                 historyRef,
@@ -361,20 +398,17 @@ class CmFirebaseDataSource(private val context: Context) {
             if (mosqueSnap.exists()) {
                 tx.update(mosqueRef, counters)
             } else {
-                tx.set(mosqueRef, osmIdentity(mosque) + emptyMutableState() + counters)
+                tx.set(mosqueRef, googleIdentity(mosque) + emptyMutableState() + counters)
             }
             writeRateDoc(tx, userRef, userSnap)
             CmWriteOutcome.Voted(up, down, votedDown = CmTimingRules.isVotedDown(up, down))
         }.awaitCm()
     }
 
-    private fun osmIdentity(mosque: CmMosque): Map<String, Any?> = mapOf(
-        "osmId" to mosque.docId,
-        "name" to mosque.name.take(120),
-        "lat" to mosque.latitude,
-        "lon" to mosque.longitude,
-        "createdAt" to FieldValue.serverTimestamp()
-    )
+    private fun googleIdentity(mosque: CmMosque): Map<String, Any?> {
+        require(mosque.docId.startsWith("google_")) { "Only Google places can create a discovered masjid record" }
+        return mapOf("placeId" to mosque.docId.removePrefix("google_"), "createdAt" to FieldValue.serverTimestamp())
+    }
 
     /** Mirrors `defaults()` in firestore.rules. */
     private fun emptyMutableState(): Map<String, Any?> = mapOf(

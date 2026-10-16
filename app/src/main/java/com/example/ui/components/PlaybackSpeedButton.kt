@@ -42,7 +42,7 @@ fun PlaybackSpeedButton(
     val title = localizedUiText("Playback speed")
     Box(modifier) {
         Surface(
-            onClick = { open = true },
+            onClick = { com.example.core.analytics.AppAnalytics.interaction("playback_speed_button", "open_speed_menu", "tap"); open = true },
             shape = CircleShape,
             color = Color.Transparent,
             border = BorderStroke(1.dp, color.copy(alpha = .6f)),
@@ -54,7 +54,7 @@ fun PlaybackSpeedButton(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
             )
         }
-        DropdownMenu(open, onDismissRequest = { open = false }) {
+        DropdownMenu(open, onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("playback_speed_button", "dismiss_speed_menu", "dismiss"); open = false }) {
             Text(
                 title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
@@ -68,7 +68,7 @@ fun PlaybackSpeedButton(
                             fontWeight = if (option == speed) FontWeight.Bold else FontWeight.Normal
                         )
                     },
-                    onClick = { open = false; onSpeedChange(option) },
+                    onClick = { com.example.core.analytics.AppAnalytics.interaction("playback_speed_button", "select_speed", "tap", item = "speed_${PlaybackSpeed.label(option)}"); open = false; onSpeedChange(option) },
                     leadingIcon = { if (option == speed) Icon(Icons.Default.Check, null, Modifier.size(18.dp)) },
                     modifier = Modifier.testTag("playback_speed_${PlaybackSpeed.label(option)}")
                 )

@@ -15,9 +15,11 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -44,7 +46,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -61,14 +67,23 @@ import com.example.domain.model.AdhkarDatasetRepository
 import com.example.domain.model.PrayerType
 import com.example.domain.model.PredefinedLocations
 import com.example.prayer.AstronomicalPrayerCalculator
+import com.example.ui.components.AppCard
+import com.example.ui.components.AppSearchField
+import com.example.ui.components.IconBadge
+import com.example.ui.components.Spacing
+import com.example.ui.components.accentTint
+import com.example.ui.components.pressScale
+import com.example.ui.components.EmptyState
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.LocalAppLocale
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.formatHijriDate
 import com.example.ui.localization.isRtlAppLanguage
+import com.example.ui.localization.localizeUiTemplate
 import com.example.ui.localization.localizeUiText
 import com.example.ui.localization.localizedUiText
 import com.example.ui.theme.ArabicFontFamily
+import com.example.ui.theme.GoldAccent
 import com.example.ui.theme.LiveIndicatorGreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.DuasScreenTab
@@ -129,6 +144,8 @@ fun HomeScreen(
     onNavigateToRamadan: () -> Unit = {},
     onNavigateToNaat: () -> Unit = {}
 ) {
+    com.example.core.analytics.AnalyticsScreen("home_screen")
+
     val context = LocalContext.current
     val language = LocalAppLanguage.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -215,31 +232,57 @@ fun HomeScreen(
         )
     }
     if (showCityPicker) {
+        // Typing filters the long city list; the dialog is also the only route to device location.
+        var cityQuery by rememberSaveable { mutableStateOf("") }
+        val matchingCities = remember(cityQuery) {
+            val needle = cityQuery.trim()
+            if (needle.isEmpty()) PredefinedLocations.CITIES
+            else PredefinedLocations.CITIES.filter {
+                it.name.contains(needle, ignoreCase = true) || it.stateOrCountry.contains(needle, ignoreCase = true)
+            }
+        }
         AlertDialog(
-            onDismissRequest = { showCityPicker = false },
+            onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("home_screen", "dismiss_city_picker", "dismiss"); showCityPicker = false },
             title = { LocalizedText("Choose your city") },
             text = {
-                LazyColumn(Modifier.heightIn(max = 400.dp)) {
-                    items(PredefinedLocations.CITIES.size, key = { i -> PredefinedLocations.CITIES[i].let { "${it.name}|${it.stateOrCountry}" } }) { index ->
-                        val city = PredefinedLocations.CITIES[index]
-                        TextButton(
-                            onClick = {
-                                viewModel.selectCity(city)
-                                showCityPicker = false
-                            },
-                            modifier = Modifier.fillMaxWidth().testTag("city_option_${city.name.lowercase()}")
-                        ) { LocalizedText("${city.name}, ${city.stateOrCountry}") }
+                Column {
+                    AppSearchField(
+                        query = cityQuery,
+                        onQueryChange = { cityQuery = it },
+                        placeholder = "Search",
+                        modifier = Modifier.testTag("city_search_field")
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    if (matchingCities.isEmpty()) {
+                        EmptyState(
+                            title = "No cities found",
+                            icon = Icons.Default.LocationOff,
+                            modifier = Modifier.heightIn(max = 400.dp)
+                        )
+                    } else {
+                        LazyColumn(Modifier.heightIn(max = 400.dp)) {
+                            items(matchingCities.size, key = { i -> matchingCities[i].let { "${it.name}|${it.stateOrCountry}" } }) { index ->
+                                val city = matchingCities[index]
+                                TextButton(
+                                    onClick = { com.example.core.analytics.AppAnalytics.interaction("home_screen", "select_city", "tap");
+                                        viewModel.selectCity(city)
+                                        showCityPicker = false
+                                    },
+                                    modifier = Modifier.fillMaxWidth().testTag("city_option_${city.name.lowercase()}")
+                                ) { LocalizedText("${city.name}, ${city.stateOrCountry}") }
+                            }
+                        }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("home_screen", "city_picker_use_device_location", "tap");
                     showCityPicker = false
                     openLocationSettings(context, uiState.locationIssue)
                 }) { LocalizedText("Use device location") }
             },
             dismissButton = {
-                TextButton(onClick = { showCityPicker = false }) { LocalizedText("Cancel") }
+                TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("home_screen", "cancel_city_picker", "tap"); showCityPicker = false }) { LocalizedText("Cancel") }
             }
         )
     }
@@ -254,21 +297,49 @@ internal fun HomeContent(
     showPrayerAlertPrompt: Boolean = false
 ) {
     val hasError = !uiState.hasConfirmedLocation || uiState.prayerCalculationError != null
+    val language = LocalAppLanguage.current
+    // Minute-aligned clock for everything below the hero (the hero runs its own per-second clock).
+    val now by rememberHomeNow(60_000L)
+    val dayKey = homeDayKey(uiState, now)
+    // Crossing the city's midnight must load the new day's times even if the ViewModel's
+    // Hijri boundary has not moved yet; skip the first composition.
+    var lastDayKey by remember { mutableIntStateOf(dayKey) }
+    LaunchedEffect(dayKey) {
+        if (dayKey != lastDayKey) {
+            lastDayKey = dayKey
+            if (uiState.hasConfirmedLocation) actions.onRetryPrayerTimes()
+        }
+    }
+    val suggestions = remember(uiState.ramadanSchedule, uiState.upcomingRamadan, uiState.festivalSchedule,
+        uiState.rawPrayerTimes, uiState.selectedCity, progress, now, language) {
+        buildHomeSuggestions(uiState, progress, now, language)
+    }
+    val openSuggestion: (SuggestionTarget) -> Unit = remember(actions) {
+        { target ->
+            when (target) {
+                SuggestionTarget.RAMADAN -> actions.onOpenRamadan()
+                SuggestionTarget.CALENDAR -> actions.onOpenCalendar()
+                SuggestionTarget.QURAN -> actions.onContinueQuran()
+                SuggestionTarget.ADHKAR -> actions.onOpenAdhkar()
+                SuggestionTarget.TRACKER -> actions.onOpenPrayerTracker()
+            }
+        }
+    }
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f),
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f),
                         MaterialTheme.colorScheme.background,
                         MaterialTheme.colorScheme.background
                     )
                 )
             )
             .testTag("home_screen_scroll"),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(top = 4.dp, bottom = 24.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.section),
+        contentPadding = PaddingValues(top = Spacing.xs, bottom = Spacing.xxxl)
     ) {
         item(key = "header") { HomeHeader(uiState, onFixLocation = actions.onFixLocation) }
 
@@ -282,7 +353,11 @@ internal fun HomeContent(
                     onOpenDetails = actions.onOpenPrayerDetails
                 )
             } else {
-                NextPrayerCard(uiState = uiState, onOpenPrayerDetails = actions.onOpenPrayerDetails)
+                NextPrayerCard(
+                    uiState = uiState,
+                    onOpenPrayerDetails = actions.onOpenPrayerDetails,
+                    onBoundaryReached = actions.onRetryPrayerTimes
+                )
             }
         }
 
@@ -295,13 +370,18 @@ internal fun HomeContent(
             }
         }
 
-        // Keep the four daily actions close to the next prayer without burying the schedule.
+        // Context first: what matters at this moment (Ramadan, festival, Jumu'ah, adhkar, logging).
+        if (suggestions.isNotEmpty()) {
+            item(key = "suggestions") { HomeSuggestionsSection(suggestions, openSuggestion) }
+        }
+
+        // Every shortcut sits right under the next prayer, so nothing is hidden behind a tap.
         item(key = "quick_actions") { QuickActionsSection(uiState, actions) }
 
         // The error card above already explains missing times, so no second "unavailable" state here.
         val showTimes = !hasError && uiState.rawPrayerTimes != null
         if (showTimes) {
-            item(key = "schedule") { PrayerScheduleCard(uiState, onOpenPrayerDetails = actions.onOpenPrayerDetails) }
+            item(key = "schedule") { PrayerScheduleCard(uiState, onOpenPrayerDetails = actions.onOpenPrayerDetails, nowMillis = now) }
         }
 
         item(key = "progress") {
@@ -327,18 +407,20 @@ private fun HomeHeader(uiState: MainUiState, onFixLocation: () -> Unit) {
     val language = LocalAppLanguage.current
     val rtl = isRtlAppLanguage(language)
     // Gregorian date in the app language; the formatter localizes month and weekday names itself.
-    val gregorianDate = remember(locale, uiState.selectedCity.timeZoneId, uiState.hijriDate) {
+    val now by rememberHomeNow(60_000L)
+    val dayKey = homeDayKey(uiState, now)
+    val gregorianDate = remember(locale, uiState.selectedCity.timeZoneId, dayKey) {
         SimpleDateFormat("EEE, d MMM", locale)
             .apply { timeZone = TimeZone.getTimeZone(uiState.selectedCity.timeZoneId) }
-            .format(Date())
+            .format(Date(now))
     }
     val hijri = formatHijriDate(uiState.hijriDate, language).let { if (rtl) it else ltr(it) }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 16.dp, top = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+            .padding(start = Spacing.xl, end = Spacing.screen, top = Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         // FlowRow lets a long city name drop below the greeting instead of being cut off.
         FlowRow(
@@ -348,7 +430,7 @@ private fun HomeHeader(uiState: MainUiState, onFixLocation: () -> Unit) {
         ) {
             LocalizedText(
                 text = "السَّلَامُ عَلَيْكُمْ",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.headlineSmall,
                 fontFamily = ArabicFontFamily,
                 fontWeight = FontWeight.Normal,
                 color = MaterialTheme.colorScheme.primary,
@@ -364,36 +446,46 @@ private fun HomeHeader(uiState: MainUiState, onFixLocation: () -> Unit) {
             )
         }
 
-        FlowRow {
-            Icon(
-                imageVector = Icons.Outlined.CalendarMonth,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .align(Alignment.CenterVertically)
-                    .padding(end = 6.dp)
-                    .size(16.dp)
-            )
-            LocalizedText(
-                text = hijri,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = "  •  " + ltr(gregorianDate),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        // The Hijri day begins at Maghrib: after sunset show the date that has started for tonight.
-        uiState.hijriDateTonight?.let { tonight ->
-            LocalizedText(
-                text = "Since Maghrib: " + formatHijriDate(tonight, language).let { if (rtl) it else ltr(it) },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 22.dp)
-            )
+        // Hijri and Gregorian dates share one quiet strip under the greeting.
+        Column(
+            modifier = Modifier
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
+                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            FlowRow {
+                Icon(
+                    imageVector = Icons.Outlined.CalendarMonth,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .align(Alignment.CenterVertically)
+                        .padding(end = 8.dp)
+                        .size(16.dp)
+                )
+                LocalizedText(
+                    text = hijri,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "  •  " + ltr(gregorianDate),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // The Hijri day begins at Maghrib: after sunset show the date that has started for tonight.
+            uiState.hijriDateTonight?.let { tonight ->
+                LocalizedText(
+                    text = localizeUiTemplate("Since Maghrib: {date}", language,
+                        mapOf("date" to formatHijriDate(tonight, language).let { if (rtl) it else ltr(it) })),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 24.dp)
+                )
+            }
         }
     }
 }
@@ -407,11 +499,13 @@ private fun LocationChip(uiState: MainUiState, onClick: () -> Unit, modifier: Mo
         LocationIssue.SERVICES_OFF -> "Turn on location"
         else -> uiState.selectedCity.name
     }
+    val interaction = remember { MutableInteractionSource() }
     Row(
         modifier = modifier
             .widthIn(max = 260.dp)
+            .pressScale(interaction)
             // Only tappable when location needs fixing, which is when it needs a full touch target.
-            .heightIn(min = if (issue != null || !uiState.hasConfirmedLocation) 48.dp else 36.dp)
+            .heightIn(min = if (issue != null || !uiState.hasConfirmedLocation) 48.dp else 40.dp)
             .clip(shape)
             .background(
                 if (issue != null) MaterialTheme.colorScheme.errorContainer
@@ -420,10 +514,15 @@ private fun LocationChip(uiState: MainUiState, onClick: () -> Unit, modifier: Mo
             .border(
                 width = 1.dp,
                 color = if (issue != null) MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
-                else MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
+                else MaterialTheme.colorScheme.outlineVariant,
                 shape = shape
             )
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(
+                interactionSource = interaction,
+                indication = LocalIndication.current,
+                role = Role.Button,
+                onClick = com.example.core.analytics.AppAnalytics.trackAction("home_screen", "location_chip", onClick)
+            )
             .padding(horizontal = 14.dp, vertical = 6.dp)
             .testTag("city_selector_button"),
         verticalAlignment = Alignment.CenterVertically
@@ -441,6 +540,7 @@ private fun LocationChip(uiState: MainUiState, onClick: () -> Unit, modifier: Mo
             fontWeight = FontWeight.SemiBold,
             color = if (issue != null) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface,
             maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false)
         )
         if (uiState.isLiveLocation && issue == null) {
@@ -472,10 +572,9 @@ private fun TodayProgressSection(
             .testTag("today_progress"),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        HomeSectionTitle("Today's progress", Modifier.padding(horizontal = 16.dp))
-        // One full-width row per habit: room for plain words instead of three cramped tiles.
-        HomeCard(tag = "today_progress_card") {
-            ProgressRow(
+        HomeSectionTitle("Today's progress", Modifier.padding(horizontal = Spacing.screen))
+        val habits = listOf(
+            HabitProgress(
                 label = "Salah",
                 icon = Icons.Default.Mosque,
                 accent = Color(0xFF237A63),
@@ -484,9 +583,8 @@ private fun TodayProgressSection(
                 fraction = progress.salahPrayed.toFloat() / progress.salahTotal.coerceAtLeast(1),
                 onClick = onOpenSalah,
                 tag = "progress_salah"
-            )
-            ProgressDivider()
-            ProgressRow(
+            ),
+            HabitProgress(
                 label = "Quran",
                 icon = Icons.AutoMirrored.Filled.MenuBook,
                 accent = Color(0xFF3C6FA8),
@@ -495,9 +593,8 @@ private fun TodayProgressSection(
                 fraction = progress.quranPagesRead.toFloat() / progress.quranPagesTarget.coerceAtLeast(1),
                 onClick = onOpenQuran,
                 tag = "progress_quran"
-            )
-            ProgressDivider()
-            ProgressRow(
+            ),
+            HabitProgress(
                 label = "Adhkar",
                 icon = if (progress.adhkarIsMorning) Icons.Default.WbTwilight else Icons.Default.NightsStay,
                 accent = Color(0xFFA9812A),
@@ -507,7 +604,102 @@ private fun TodayProgressSection(
                 onClick = onOpenAdhkar,
                 tag = "progress_adhkar"
             )
+        )
+        HomeCard(tag = "today_progress_card") {
+            if (homeHasRoomForGrid()) {
+                // Three rings side by side show the whole day at a glance.
+                Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+                    habits.forEach { ProgressRing(it, Modifier.weight(1f)) }
+                }
+            } else {
+                // One full-width row per habit: room for plain words at large text sizes.
+                habits.forEachIndexed { index, habit ->
+                    if (index > 0) ProgressDivider()
+                    ProgressRow(
+                        label = habit.label, icon = habit.icon, accent = habit.accent, value = habit.value,
+                        detail = habit.detail, fraction = habit.fraction, onClick = com.example.core.analytics.AppAnalytics.trackItemAction("home_screen", "open_progress_habit", habit.tag, habit.onClick), tag = habit.tag
+                    )
+                }
+            }
         }
+    }
+}
+
+private data class HabitProgress(
+    val label: String,
+    val icon: ImageVector,
+    val accent: Color,
+    val value: String,
+    val detail: String,
+    val fraction: Float,
+    val onClick: () -> Unit,
+    val tag: String
+)
+
+/** Grids need a normal text size and a phone-width screen; otherwise Home falls back to wide rows. */
+@Composable
+internal fun homeHasRoomForGrid(): Boolean =
+    LocalDensity.current.fontScale <= 1.3f && LocalConfiguration.current.screenWidthDp >= 340
+
+@Composable
+private fun ProgressRing(habit: HabitProgress, modifier: Modifier = Modifier) {
+    val done = habit.fraction >= 1f
+    val tint = accentTint(habit.accent)
+    val a11yLabel = listOfNotNull(
+        localizedUiText(habit.label), habit.value, localizedUiText(habit.detail),
+        if (done) localizedUiText("Done") else null
+    ).joinToString(", ")
+    Column(
+        modifier = modifier
+            .clip(MaterialTheme.shapes.medium)
+            .clickable(role = Role.Button, onClick = com.example.core.analytics.AppAnalytics.trackItemAction("home_screen", "open_progress_ring", habit.tag, habit.onClick))
+            .padding(horizontal = 4.dp, vertical = 12.dp)
+            .semantics(mergeDescendants = true) { contentDescription = a11yLabel }
+            .testTag(habit.tag),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(
+                progress = { habit.fraction.coerceIn(0f, 1f) },
+                modifier = Modifier.size(68.dp),
+                color = tint,
+                strokeWidth = 6.dp,
+                trackColor = tint.copy(alpha = 0.15f),
+                strokeCap = StrokeCap.Round,
+                gapSize = 0.dp
+            )
+            Icon(
+                imageVector = if (done) Icons.Default.CheckCircle else habit.icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(26.dp)
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        LocalizedText(
+            text = habit.label,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = ltr(habit.value),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = tint,
+            maxLines = 1
+        )
+        LocalizedText(
+            text = if (done) "Done" else habit.detail,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -531,7 +723,7 @@ private fun ProgressRow(
     tag: String
 ) {
     val done = fraction >= 1f
-    val tint = themedAccent(accent)
+    val tint = accentTint(accent)
     val a11yLabel = listOfNotNull(
         localizedUiText(label), value, localizedUiText(detail), if (done) localizedUiText("Done") else null
     ).joinToString(", ")
@@ -546,20 +738,12 @@ private fun ProgressRow(
             .testTag(tag),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(tint.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = if (done) Icons.Default.CheckCircle else icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(24.dp)
-            )
-        }
+        IconBadge(
+            icon = if (done) Icons.Default.CheckCircle else icon,
+            accent = accent,
+            size = 44.dp,
+            filled = done
+        )
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -640,58 +824,68 @@ private data class HomeShortcut(
 
 @Composable
 private fun QuickActionsSection(uiState: MainUiState, actions: HomeActions) {
-    var showAll by rememberSaveable { mutableStateOf(false) }
     // The reader opens on page 1 for a new user, so only show a page once reading has started.
-    val quranContext = uiState.quranPageNumber.takeIf { it > 1 }?.let { "Page $it" }
-    val dailyShortcuts = listOf(
-        HomeShortcut("Quran", quranContext, Icons.AutoMirrored.Filled.MenuBook, Color(0xFF237A63),
-            "action_continue_quran", actions.onContinueQuran),
+    val language = LocalAppLanguage.current
+    val quranContext = uiState.quranPageNumber.takeIf { it > 1 }
+        ?.let { localizeUiTemplate("Page {page}", language, mapOf("page" to it.toString())) }
+    val quran = HomeShortcut("Quran", quranContext, Icons.AutoMirrored.Filled.MenuBook, Color(0xFF237A63),
+        "action_continue_quran", actions.onContinueQuran)
+    val shortcuts = listOf(
         HomeShortcut("Adhkar", null, Icons.Default.WbTwilight, Color(0xFFA9812A),
             "action_adhkar", actions.onOpenAdhkar),
         HomeShortcut("Qibla", null, Icons.Default.Explore, Color(0xFF2A7FA8), "action_qibla", actions.onOpenQibla),
-        HomeShortcut("Tasbeeh", null, Icons.Default.TouchApp, Color(0xFFB0507A), "action_tasbeeh", actions.onOpenTasbeeh)
-    )
-    val moreShortcuts = listOf(
+        HomeShortcut("Tasbeeh", null, Icons.Default.TouchApp, Color(0xFFB0507A), "action_tasbeeh", actions.onOpenTasbeeh),
         HomeShortcut("Hadith", null, Icons.Default.AutoStories, Color(0xFFB08A2E), "action_hadith", actions.onOpenHadith),
         HomeShortcut("Calendar", null, Icons.Default.CalendarMonth, Color(0xFF3F5FAC), "action_calendar", actions.onOpenCalendar),
         HomeShortcut("Ramzan", null, Icons.Default.NightsStay, Color(0xFF6B5BAE), "action_ramadan", actions.onOpenRamadan),
         HomeShortcut("Naat", null, Icons.Default.Headphones, Color(0xFF2A8C8C), "action_naat", actions.onOpenNaat),
         HomeShortcut("Zakat", null, Icons.Default.VolunteerActivism, Color(0xFFC0664A), "action_zakat", actions.onOpenZakat)
     )
+    // Quran leads as a wide "continue" card; the other eight sit in one 4x2 launcher grid,
+    // or in two columns of wide tiles at large text sizes. Everything stays visible at once.
+    val grid = homeHasRoomForGrid()
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = Spacing.screen)
             .testTag("quick_actions"),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            HomeSectionTitle("Quick access", Modifier.weight(1f))
-            TextButton(
-                onClick = { showAll = !showAll },
-                modifier = Modifier.heightIn(min = 48.dp).testTag("quick_actions_toggle")
+        HomeSectionTitle("Quick access")
+        ContinueQuranCard(quran)
+        if (grid) {
+            AppCard(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
             ) {
-                LocalizedText(if (showAll) "Show less" else "View all", fontWeight = FontWeight.SemiBold)
-                Icon(
-                    imageVector = if (showAll) Icons.Default.ExpandLess else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
+                shortcuts.chunked(4).forEach { row ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min)
+                    ) {
+                        row.forEach { shortcut ->
+                            QuickActionGridTile(shortcut, Modifier.weight(1f).fillMaxHeight())
+                        }
+                        // Keep a short last row aligned to the columns above it.
+                        repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
             }
-        }
-        // Two columns leave enough width for translated labels and large text settings.
-        (dailyShortcuts + if (showAll) moreShortcuts else emptyList()).chunked(2).forEach { row ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (row.size == 1) {
-                    QuickActionTile(row.first(), Modifier.fillMaxWidth())
-                } else {
-                    row.forEach { shortcut ->
-                        QuickActionTile(shortcut, Modifier.weight(1f).fillMaxHeight())
+        } else {
+            shortcuts.chunked(2).forEach { row ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+                ) {
+                    if (row.size == 1) {
+                        QuickActionTile(row.first(), Modifier.fillMaxWidth())
+                    } else {
+                        row.forEach { shortcut ->
+                            QuickActionTile(shortcut, Modifier.weight(1f).fillMaxHeight())
+                        }
                     }
                 }
             }
@@ -699,38 +893,111 @@ private fun QuickActionsSection(uiState: MainUiState, actions: HomeActions) {
     }
 }
 
+/** The most-used shortcut, made wide: picks up the Quran where the reader left off. */
+@Composable
+private fun ContinueQuranCard(shortcut: HomeShortcut) {
+    val haptics = LocalHapticFeedback.current
+    val resuming = shortcut.subtitle != null
+    AppCard(
+        onClick = com.example.core.analytics.AppAnalytics.trackItemAction("home_screen", "open_shortcut_grid", shortcut.tag) {
+            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            shortcut.onClick()
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(shortcut.tag),
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        outlined = false,
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = Spacing.md)
+    ) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconBadge(icon = shortcut.icon, accent = MaterialTheme.colorScheme.primary, size = 48.dp, filled = true)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                LocalizedText(
+                    text = if (resuming) "Continue reading" else shortcut.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (shortcut.subtitle != null) Text(
+                    text = localizedUiText(shortcut.title) + "  •  " + shortcut.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Spacer(Modifier.width(Spacing.sm))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
+
+/** Borderless launcher cell inside the shared Quick access card: badge over a short label. */
+@Composable
+private fun QuickActionGridTile(shortcut: HomeShortcut, modifier: Modifier = Modifier) {
+    val haptics = LocalHapticFeedback.current
+    val interaction = remember { MutableInteractionSource() }
+    Column(
+        modifier = modifier
+            .pressScale(interaction)
+            .clip(MaterialTheme.shapes.medium)
+            .clickable(
+                interactionSource = interaction,
+                indication = LocalIndication.current,
+                role = Role.Button,
+                onClick = com.example.core.analytics.AppAnalytics.trackItemAction("home_screen", "open_shortcut_grid", shortcut.tag) {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    shortcut.onClick()
+                }
+            )
+            .heightIn(min = 84.dp)
+            .padding(horizontal = 2.dp, vertical = 10.dp)
+            .testTag(shortcut.tag),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        IconBadge(icon = shortcut.icon, accent = shortcut.accent, size = 48.dp)
+        LocalizedText(
+            text = shortcut.title,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
 @Composable
 private fun QuickActionTile(shortcut: HomeShortcut, modifier: Modifier = Modifier) {
-    val tint = themedAccent(shortcut.accent)
-    Card(
-        onClick = shortcut.onClick,
+    val haptics = LocalHapticFeedback.current
+    AppCard(
+        onClick = com.example.core.analytics.AppAnalytics.trackItemAction("home_screen", "open_shortcut_tile", shortcut.tag) {
+            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            shortcut.onClick()
+        },
         modifier = modifier
             .heightIn(min = 72.dp)
             .testTag(shortcut.tag),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+        contentPadding = PaddingValues(horizontal = Spacing.md, vertical = 10.dp),
+        verticalArrangement = Arrangement.Center
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(tint.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = shortcut.icon,
-                    contentDescription = null,
-                    tint = tint,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+            IconBadge(icon = shortcut.icon, accent = shortcut.accent, size = 42.dp)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 LocalizedText(
@@ -741,11 +1008,12 @@ private fun QuickActionTile(shortcut: HomeShortcut, modifier: Modifier = Modifie
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (shortcut.subtitle != null) LocalizedText(
+                if (shortcut.subtitle != null) Text(
                     text = shortcut.subtitle,
                     style = MaterialTheme.typography.labelSmall,
-                    color = tint,
-                    maxLines = 1
+                    color = accentTint(shortcut.accent),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -867,38 +1135,44 @@ private const val ALERT_PROMPT_DISMISSED_KEY = "home_prayer_alert_prompt_dismiss
 /** Invites users to turn on prayer alerts from Home; otherwise they live only in More > Settings. */
 @Composable
 private fun PrayerAlertPromptCard(onEnable: () -> Unit, onDismiss: () -> Unit) {
-    Card(
+    AppCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = Spacing.screen)
             .testTag("prayer_alert_prompt"),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+        contentPadding = PaddingValues(start = 14.dp, top = Spacing.md, end = Spacing.sm, bottom = Spacing.xs)
     ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
-            Icon(
-                Icons.Filled.NotificationsActive, contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.padding(top = 2.dp)
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconBadge(icon = Icons.Filled.NotificationsActive, accent = MaterialTheme.colorScheme.tertiary, size = 40.dp, iconSize = 22.dp)
+            Spacer(Modifier.width(Spacing.md))
+            Column(Modifier.weight(1f).padding(end = Spacing.sm)) {
                 LocalizedText(
                     "Get prayer time alerts",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 LocalizedText(
                     "A gentle notification when each prayer time begins.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onEnable, modifier = Modifier.testTag("prayer_alert_prompt_enable")) {
-                        LocalizedText("Turn on alerts")
-                    }
-                    TextButton(onClick = onDismiss) { LocalizedText("Not now") }
-                }
+            }
+        }
+        // FlowRow lets the buttons wrap in long translations; the main action sits at the end.
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End)
+        ) {
+            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("home_screen", "dismiss_prayer_alerts_prompt", onDismiss), modifier = Modifier.heightIn(min = 48.dp)) { LocalizedText("Not now") }
+            FilledTonalButton(
+                onClick = com.example.core.analytics.AppAnalytics.trackAction("home_screen", "enable_prayer_alerts_prompt", onEnable),
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .heightIn(min = 40.dp)
+                    .testTag("prayer_alert_prompt_enable")
+            ) {
+                LocalizedText("Turn on alerts")
             }
         }
     }

@@ -3,9 +3,17 @@
     <cloud-backup>
         <include domain="sharedpref" path="." />
         <include domain="database" path="." />
+        <exclude domain="sharedpref" path="install_state.xml" />
+        <exclude domain="sharedpref" path="analytics_consent.xml" />
+        <exclude domain="sharedpref" path="cm_search_budget.xml" />
+        <exclude domain="database" path="community_masjid.db" />
     </cloud-backup>
     <device-transfer>
         <include domain="sharedpref" path="." />
         <include domain="database" path="." />
+        <exclude domain="sharedpref" path="install_state.xml" />
+        <exclude domain="sharedpref" path="analytics_consent.xml" />
+        <exclude domain="sharedpref" path="cm_search_budget.xml" />
+        <exclude domain="database" path="community_masjid.db" />
     </device-transfer>
 </data-extraction-rules>

@@ -3,6 +3,7 @@ package com.example.ui.screens
 import com.example.domain.model.Dua
 import com.example.domain.model.Surah
 import com.example.domain.model.englishMeaning
+import com.example.domain.model.i18n.textIn
 import com.example.festival.Aamal
 import com.example.festival.FestivalDefinition
 import com.example.ui.localization.bilingualContent
@@ -317,9 +318,9 @@ internal class SurahFactsSource(private val surahs: List<Surah>, private val lan
             4 -> if (n == 1) null else
                 QuizQuestion(id, "Which surah comes before Surah {x}?", name(n - 1), nearby(n, n - 1) ?: return null, reference, promptArg = surah.englishName)
             else -> {
-                // Meanings are English only, and some names (Ya-Sin, Qaf, Luqman) are their own meaning.
+                // Some names (Ya-Sin, Qaf, Luqman) are their own meaning.
                 if (language in setOf("ur", "hi")) return null
-                val meaning = surah.englishMeaning
+                val meaning = localizePhrase(surah.englishMeaning, language)
                 if (lettersOnly(meaning) == lettersOnly(surah.englishName) || surahs.count { it.englishMeaning == meaning } > 1) return null
                 val others = random.distinct(3, { surahs[nextInt(surahs.size)] }) { it.number != n && it.englishMeaning != meaning } ?: return null
                 QuizQuestion(id, "Which surah's name means “{x}”?", surah.englishName, others.map { it.englishName }, reference, promptArg = meaning)
@@ -338,12 +339,12 @@ internal class SurahFactsSource(private val surahs: List<Surah>, private val lan
 internal class DuaSource(duas: List<Dua>, private val language: String) : QuizSource {
     override val key = "du"
     private val duas = duas.distinctBy { arabicLetters(it.arabicText) }.filter { ArabicPassage(it.arabicText).wordCount in 2..40 }
-    private val titles = this.duas.associateWith { localizePhrase(it.title, language) }
+    private val titles = this.duas.associateWith { it.textIn(language)?.title ?: localizePhrase(it.title, language) }
     private val titleCounts = titles.values.groupingBy { it }.eachCount()
     override val size get() = TYPES * duas.size
 
-    private fun meaning(dua: Dua) =
-        if (language == "ur") dua.urduTranslation else bilingualContent(dua.englishTranslation, dua.englishMeaning, language).text
+    private fun meaning(dua: Dua) = dua.textIn(language)?.meaning
+        ?: if (language == "ur") dua.urduTranslation else bilingualContent(dua.englishTranslation, dua.englishMeaning, language).text
 
     private fun uniqueTitle(dua: Dua) = titleCounts[titles.getValue(dua)] == 1
 
@@ -405,7 +406,7 @@ internal class AamalSource(
     override val size get() = deeds.size + dated.size
 
     private fun festivalName(festival: FestivalDefinition) =
-        if (language == "en") festival.name else localizePhrase(festival.localName, language)
+        bilingualContent(festival.localName, festival.name, language).text
 
     private fun date(festival: FestivalDefinition) =
         "${festival.hijriDay} ${(HIJRI_MONTHS[language] ?: HIJRI_MONTHS.getValue("en"))[festival.hijriMonth - 1]}"

@@ -9,6 +9,14 @@ import org.junit.Test
 
 class AppLocalizationTest {
     @Test
+    fun `dynamic templates substitute values once after translation`() {
+        assertEquals("Downloaded 12 pages", localizeUiTemplate("Downloaded {count} pages", "en",
+            mapOf("count" to "12")))
+        assertEquals("{next}", localizeUiTemplate("{count}", "en", mapOf("count" to "{next}", "next" to "wrong")))
+        assertEquals("{missing}", localizeUiTemplate("{missing}", "en", emptyMap()))
+    }
+
+    @Test
     fun `long form content uses one language when translation is incomplete`() {
         assertEquals("gu", completeContentLanguage("gu", listOf("Morning Remembrance")))
         assertEquals("en", completeContentLanguage("gu", listOf("Morning Remembrance", "Untranslated lesson body")))
@@ -68,7 +76,12 @@ class AppLocalizationTest {
         val controls = listOf("Previous", "Play", "Pause", "Stop", "Selected", "Change", "Continue", "Open", "Submit", "Address", "Download", "Refresh", "Hide", "Show", "Delete")
         AppLanguage.supported.filterNot { it.code == "en" }.forEach { language ->
             controls.forEach { control ->
-                assertNotEquals("${language.code}: $control", control, localizeUiText(control, language.code))
+                val translated = localizeUiText(control, language.code)
+                // Explicit shared spellings (e.g. French "Pause") are valid translations.
+                // An unchanged label must be registered, rather than an unknown-key fallback.
+                assertTrue("${language.code}: $control", translated != control ||
+                    controlWordsByLanguage[language.code]?.get(control) == control ||
+                    WorldDraftPhrases.forLanguage(language.code)[control] == control)
             }
         }
     }

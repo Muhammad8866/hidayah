@@ -1,0 +1,231 @@
+# Concept dictionary for the in-book search index.
+#
+# One concept per line:   id: term, term, term
+# Every spelling, language and script a reader may type for the same idea goes on one line. A
+# query word is turned into its concept, and pages are ranked by how often any term of that
+# concept occurs on them, so a Gujarati or Roman Urdu query finds English and Arabic pages.
+# Roman spellings only need one or two common forms: build_index.py and the app also match
+# close variants (namaz / namaaz / nemaz) by sound.
+# After editing, rebuild and re-upload the index; the app picks it up without an update.
+
+# --- Purification ---
+purification: taharat, taharah, tahara, purification, purity, cleanliness, paki, pakeezgi, طهارة, طہارت, پاکی, तहारत, पाकी, તહારત, પાકી
+wudu: wudu, wuzu, wazu, wudhu, ablution, ablutions, وضو, الوضوء, वुज़ू, वज़ू, વુઝૂ, વઝુ
+ghusl: ghusl, gusal, ghusal, bath, bathing, غسل, ग़ुस्ल, गुस्ल, ગુસ્લ
+tayammum: tayammum, tayamum, dry ablution, تيمم, تیمم, तयम्मुम, તયમ્મુમ
+menstruation: haiz, hayz, haidh, menses, menstruation, menstrual, menstruating, periods, حيض, حیض, माहवारी, हैज़, હૈઝ, માસિક
+nifas: nifas, post natal bleeding, postnatal bleeding, نفاس, निफ़ास, નિફાસ
+istinja: istinja, istinjaa, relieving oneself, answering the call of nature, toilet, استنجاء, استنجا, इस्तिंजा, ઇસ્તિંજા
+miswak: miswak, miswaak, siwak, tooth stick, toothstick, مسواك, السواك, मिस्वाक, મિસ્વાક
+najasat: najasat, najasah, impurity, impurities, napaki, najis, نجاسة, نجاست, ناپاکی, नापाकी, નાપાકી
+khuffain: masah, masah alal khuffain, wiping over the socks, leather socks, khuff, khuffain, المسح على الخفين, موزوں پر مسح, मोज़ों पर मसह
+water: water, pani, paani, ماء, المياه, پانی, पानी, પાણી
+
+# --- Salah ---
+salah: namaz, salah, salat, salaah, prayer, prayers, صلاة, نماز, नमाज़, नमाज, નમાઝ, নামাজ
+adhan: azan, adhan, adhaan, azaan, call to prayer, أذان, الأذان, اذان, अज़ान, અઝાન
+iqamah: iqamah, iqamat, aqamat, takbir of iqamah, إقامة, اقامت, इक़ामत, ઇકામત
+prayer_times: prayer times, times of prayer, namaz ka waqt, awqat, مواقيت الصلاة, اوقات نماز, नमाज़ का वक़्त
+fajr: fajr, fajar, subh, dawn prayer, morning prayer, الفجر, الصبح, فجر, फ़ज्र, ફજર
+zuhr: zuhr, zohar, dhuhr, noon prayer, الظهر, ظہر, ज़ुहर, ઝોહર
+asr: asr, asar, afternoon prayer, العصر, عصر, अस्र, અસર
+maghrib: maghrib, magrib, sunset prayer, المغرب, مغرب, मग़रिब, મગરિબ
+isha: isha, esha, ishaa, night prayer of isha, العشاء, عشاء, इशा, ઇશા
+jumuah: juma, jumuah, jummah, jumma, friday, friday prayer, الجمعة, جمعہ, जुमा, જુમા
+witr: witr, vitr, witar, الوتر, وتر, वित्र, વિત્ર
+tahajjud: tahajjud, tahajud, night prayer, qiyam ul layl, qiyam al layl, standing at night, التهجد, قيام الليل, تہجد, तहज्जुद, તહજ્જુદ
+taraweeh: taraweeh, tarawih, taravih, التراويح, تراویح, तरावीह, તરાવીહ
+eid_prayer: eid, eidain, eid prayer, two festivals, two eids, العيدين, عید, عیدین, ईद, ઈદ
+janazah: janaza, janazah, funeral, funerals, funeral prayer, الجنائز, جنازة, جنازہ, जनाज़ा, જનાઝા
+qasr: qasr, kasr, shortening the prayer, shortening prayers, shortened prayer, traveller's prayer, قصر, تقصير الصلاة, صلاة المسافر, क़स्र, કસર
+travel: safar, musafir, travel, travelling, traveling, traveller, journey, سفر, مسافر, सफ़र, मुसाफ़िर, સફર, મુસાફર, મુસાફરી
+istisqa: istisqa, prayer for rain, rain prayer, الاستسقاء, استسقاء, बारिश की नमाज़
+eclipse: eclipse, eclipses, kusoof, kusuf, khusuf, grahan, الكسوف, الخسوف, گرہن, ग्रहण, ગ્રહણ
+fear_prayer: fear prayer, salat ul khauf, salat al khawf, صلاة الخوف
+qiblah: qibla, qiblah, kaaba direction, facing the qiblah, القبلة, قبلہ, क़िबला, કિબ્લા
+sutrah: sutra, sutrah, السترة, سترہ
+ruku: ruku, rukoo, bowing, الركوع, رکوع, रुकू, રુકૂ
+sajdah: sajda, sajdah, sujud, sujood, prostration, prostrations, السجود, سجدة, سجدہ, सज्दा, સજ્દા
+sahw: sajda sahw, sajdah sahw, sahw, forgetfulness in prayer, prostration of forgetfulness, السهو, سجدہ سہو, सज्दा सह्व
+tilawah_sajdah: sajda tilawat, prostration of recitation, prostration during recital, سجود القرآن, سجدہ تلاوت
+tashahhud: tashahhud, attahiyat, at tahiyyat, التشهد, تشہد, التحیات, अत्तहिय्यात
+qiraat: qirat, qiraat, recitation in prayer, reciting in prayer, القراءة, قراءت, क़िराअत
+imamah: imam, imamat, leading the prayer, lead the prayer, الإمامة, امامت, इमामत, ઇમામત
+jamaah: jamaat, jamat, congregation, congregational, prayer in congregation, الجماعة, جماعت, जमाअत, જમાત
+masjid: masjid, mosque, mosques, المسجد, المساجد, مسجد, मस्जिद, મસ્જિદ
+nafl: nafl, nawafil, nafil, sunnah prayers, voluntary prayer, optional prayers, supererogatory, التطوع, النوافل, نفل, नफ़्ल, નફલ
+duha: duha, chasht, ishraq, forenoon prayer, الضحى, چاشت, اشراق, चाश्त, ચાશ્ત
+istikhara: istikhara, istikharah, الاستخارة, استخارہ, इस्तिख़ारा, ઇસ્તિખારા
+qada: qaza, qada, qadha, missed prayer, missed prayers, making up prayers, قضاء, قضا, क़ज़ा, કઝા
+awrah: satar, satr, awrah, covering in prayer, clothing in prayer, ستر العورة, ستر, सतर
+khushu: khushu, khushoo, humility in prayer, concentration in prayer, الخشوع, خشوع
+
+# --- Fasting, Ramadan ---
+fasting: roza, rozah, sawm, saum, siyam, fast, fasts, fasting, الصوم, الصيام, روزہ, रोज़ा, રોઝા, রোজা
+ramadan: ramadan, ramazan, ramzan, ramadhan, رمضان, रमज़ान, રમઝાન
+suhur: sehri, sahri, suhur, suhoor, pre dawn meal, السحور, سحری, सहरी, સહેરી
+iftar: iftar, iftaar, aftar, breaking the fast, break the fast, الإفطار, افطار, इफ़्तार, ઇફ્તાર
+itikaf: itikaf, itekaf, aitekaf, i'tikaf, الاعتكاف, اعتکاف, एतिकाफ़, એતેકાફ
+laylat_qadr: shab e qadr, shabe qadr, laylatul qadr, lailatul qadr, night of qadr, night of power, night of decree, ليلة القدر, شب قدر, शबे क़द्र, શબે કદ્ર
+kaffarah: kaffara, kaffarah, expiation, expiations, الكفارة, الكفارات, کفارہ, कफ़्फ़ारा, કફ્ફારા
+ashura: ashura, ashoora, aashura, tenth of muharram, muharram, عاشوراء, عاشورہ, محرم, आशूरा, मुहर्रम, આશૂરા, મોહર્રમ
+moon_sighting: chand, moon sighting, sighting the moon, crescent, new moon, hilal, رؤية الهلال, الهلال, چاند, चाँद, ચાંદ
+
+# --- Zakat, charity ---
+zakat: zakat, zakaat, zakah, alms, الزكاة, زکوٰۃ, زکات, ज़कात, ઝકાત
+sadaqah: sadqa, sadaqah, sadaqa, charity, charitable, khairat, الصدقة, صدقہ, خیرات, सदक़ा, ख़ैरात, સદકો, ખૈરાત
+fitrah: fitra, fitrana, sadaqatul fitr, zakat ul fitr, zakat al fitr, صدقة الفطر, زكاة الفطر, فطرہ, फ़ित्रा, ફિત્રા
+ushr: ushr, ushar, tithe, العشر, عشر
+nisab: nisab, nisaab, نصاب, निसाब, નિસાબ
+
+# --- Hajj ---
+hajj: hajj, haj, pilgrimage, pilgrim, pilgrims, الحج, المناسك, حج, हज, હજ
+umrah: umrah, umra, العمرة, عمرہ, उमरा, ઉમરા
+ihram: ihram, ehram, الإحرام, احرام, एहराम, એહરામ
+tawaf: tawaf, tawaaf, circumambulation, الطواف, طواف, तवाफ़, તવાફ
+sai: sai, saee, safa and marwah, safa marwa, السعي, الصفا والمروة, سعی, सई
+arafat: arafat, arafah, arafa, عرفة, عرفات, अरफ़ात, અરફાત
+mina: mina, muzdalifah, muzdalifa, jamarat, stoning, rami, منى, مزدلفة, الجمار, منیٰ, मिना
+qurbani: qurbani, kurbani, udhiyah, udhiya, sacrifice, sacrificial, sacrifices, slaughtering, الأضاحي, الأضحية, قربانی, क़ुर्बानी, કુરબાની
+madinah: madina, madinah, medina, virtues of madinah, المدينة, مدینہ, मदीना, મદીના
+makkah: makka, makkah, mecca, kaaba, kaba, kabah, haram, مكة, الكعبة, مکہ, کعبہ, मक्का, काबा, મક્કા, કાબા
+zamzam: zamzam, zam zam, زمزم, ज़मज़म, ઝમઝમ
+
+# --- Family ---
+nikah: nikah, nikkah, marriage, marry, married, wedding, shadi, shaadi, النكاح, نکاح, شادی, निकाह, शादी, નિકાહ, લગ્ન
+mahr: mahr, mehr, mehar, dowry, dower, الصداق, المهر, مہر, महर, મહેર
+talaq: talaq, talaaq, divorce, divorced, الطلاق, طلاق, तलाक़, તલાક
+khula: khula, khul, الخلع, خلع, ख़ुला
+iddah: iddat, iddah, waiting period, العدة, عدت, इद्दत, ઇદ્દત
+breastfeeding: razaat, radaa, rada, breastfeeding, suckling, foster, fosterage, الرضاع, رضاعت, दूध पिलाना
+spouse_rights: husband, wife, wives, spouse, shohar, biwi, rights of husband, rights of wife, الزوج, الزوجة, شوہر, بیوی, शौहर, बीवी, પતિ, પત્ની
+parents: parents, mother, father, walidain, maa baap, kindness to parents, dutiful to parents, بر الوالدين, الوالدين, والدین, ماں باپ, माँ बाप, वालिदैन, માતા પિતા
+children: children, child, aulad, awlad, bachche, upbringing, tarbiyat, الأولاد, اولاد, بچے, औलाद, बच्चे, સંતાન, બાળકો
+aqiqah: aqiqa, aqiqah, aqeeqah, العقيقة, عقیقہ, अक़ीक़ा, અકીકા
+kinship: silah rahmi, sila rehmi, ties of kinship, kinship, relatives, rishtedar, صلة الرحم, صلہ رحمی, रिश्तेदार, સગા સંબંધી
+orphan: yateem, yatim, orphan, orphans, اليتيم, یتیم, यतीम, યતીમ
+neighbour: padosi, parosi, neighbour, neighbor, neighbours, neighbors, الجار, پڑوسی, पड़ोसी, પાડોશી
+maintenance: nafaqah, nafqa, maintenance, supporting the family, spending on family, النفقات, نفقہ, नफ़क़ा
+hijab: hijab, parda, purdah, veil, veiling, الحجاب, پردہ, حجاب, पर्दा, પરદો
+
+# --- Transactions ---
+trade: tijarat, karobar, business, sales, selling, buying, trade, transactions, البيوع, التجارة, تجارت, کاروبار, तिजारत, कारोबार, વેપાર, ધંધો
+riba: sood, sud, riba, interest, usury, الربا, سود, सूद, ब्याज, વ્યાજ
+debt: qarz, karz, debt, debts, loan, loans, borrowing, الدين, القرض, قرض, क़र्ज़, કરજ, દેવું
+inheritance: wirasat, virasat, miras, inheritance, heirs, shares of inheritance, الفرائض, الميراث, وراثت, میراث, विरासत, વારસો
+wasiyyah: wasiyat, wasiyyah, vasiyat, bequest, bequests, wills, testament, الوصايا, وصیت, वसीयत, વસિયત
+waqf: waqf, wakf, endowment, endowments, الوقف, وقف, वक़्फ़, વકફ
+partnership: shirkat, partnership, mudarabah, sharing, الشركة, شراکت, साझेदारी
+hiring: ijarah, ijara, hiring, wages, renting, rent, mazdoori, الإجارة, اجارہ, مزدوری, मज़दूरी, મજૂરી
+agriculture: kheti, farming, agriculture, sharecropping, cultivation, المزارعة, کھیتی, खेती, ખેતી
+gifts: hiba, hibah, gift, gifts, tohfa, الهبة, ہبہ, تحفہ, तोहफ़ा, ભેટ
+pledge: rahn, mortgage, mortgaging, pawn, pledge, girvi, الرهن, رہن, गिरवी, ગીરવી
+lost_property: luqta, luqata, lost property, lost and found, اللقطة, لقطہ
+oaths: qasam, kasam, oath, oaths, swearing, الأيمان, قسم, क़सम, કસમ
+vows: nazar, mannat, nadhr, vow, vows, النذور, نذر, منت, मन्नत, માનતા
+witness: gawahi, gawah, witness, witnesses, testimony, الشهادات, گواہی, गवाही, ગવાહી
+judgment: qaza e qazi, qazi, judge, judges, judgments, judgements, court, الأحكام, الأقضية, قاضی, क़ाज़ी
+halal_earning: halal rozi, halal kamai, lawful earning, lawful earnings, earning, livelihood, rizq, الكسب, الرزق, رزق, حلال کمائی, रिज़्क़, રોઝી
+
+# --- Food, dress, daily life ---
+food: khana, food, eating, meals, الأطعمة, الطعام, کھانا, खाना, ખાવું, ભોજન
+drinks: peena, drink, drinks, drinking, الأشربة, پینا, पीना, પીવું
+alcohol: sharab, khamr, wine, alcohol, intoxicant, intoxicants, nasha, الخمر, شراب, نشہ, शराब, नशा, દારૂ
+halal_haram: halal, haram, lawful, unlawful, forbidden, prohibited, permissible, الحلال, الحرام, حلال, حرام, हलाल, हराम, હલાલ, હરામ
+hunting: shikar, hunting, game, hunted, الصيد, شکار, शिकार, શિકાર
+zabihah: zabiha, zabah, zibah, slaughter, slaughtered animal, الذبائح, ذبح, ذبیحہ, ज़बीहा
+dress: libas, kapde, clothing, clothes, dress, garments, اللباس, لباس, کپڑے, लिबास, कपड़े, કપડાં
+silk_gold: resham, silk, gold, sona, gold and silk, الحرير, الذهب, ریشم, سونا, रेशम, सोना, રેશમ, સોનું
+beard: darhi, dadhi, beard, moustache, اللحية, داڑھی, दाढ़ी, દાઢી
+hair: baal, hair, combing, dyeing, khizab, الشعر, بال, बाल, વાળ
+greeting: salam, salaam, greeting, greetings, السلام, سلام, सलाम, સલામ
+manners: adab, aadab, akhlaq, ikhlaq, manners, good manners, etiquette, character, good character, الأدب, الآداب, الأخلاق, آداب, اخلاق, अदब, अख़्लाक़, આદાબ, અખ્લાક
+permission: ijazat, asking permission, seeking permission, permission to enter, الاستئذان, اجازت, इजाज़त
+sleep: sona, neend, sleep, sleeping, going to bed, النوم, نیند, नींद, ઊંઘ
+dreams: khwab, khawab, sapna, dream, dreams, interpretation of dreams, الرؤيا, التعبير, خواب, ख़्वाब, सपना, સપનું, ખ્વાબ
+medicine: ilaj, dawa, medicine, treatment, cure, remedy, healing, الطب, علاج, دوا, इलाज, दवा, ઇલાજ, દવા
+illness: bimari, beemari, mareez, illness, sickness, sick, patient, patients, disease, المرضى, المرض, بیماری, مریض, बीमारी, मरीज़, બીમારી
+ruqyah: ruqyah, ruqya, dam, taweez, amulet, incantation, evil eye, nazar e bad, الرقى, العين, دم, تعویذ, نظر بد, तावीज़, नज़र, તાવીજ, નઝર
+magic: jadu, jadoo, sihr, magic, sorcery, witchcraft, السحر, جادو, जादू, જાદુ
+animals: janwar, animals, animal, kindness to animals, الحيوان, جانور, जानवर, જાનવર
+music: gana, music, singing, musical instruments, المعازف, الغناء, گانا, موسیقی, गाना, संगीत, સંગીત
+pictures: tasveer, tasweer, pictures, images, image making, التصاوير, الصور, تصویر, तस्वीर, તસવીર
+
+# --- Death, hereafter ---
+death: maut, mout, death, dying, deceased, intiqal, الموت, موت, انتقال, मौत, इंतिक़ाल, મોત, મૃત્યુ
+grave: qabr, kabr, kabar, grave, graves, graveyard, punishment of the grave, visiting graves, القبر, القبور, قبر, قبرستان, क़ब्र, કબર
+shroud: kafan, shroud, shrouding, burial, dafan, الكفن, الدفن, کفن, دفن, कफ़न, દફન, કફન
+esal_sawab: isal e sawab, esal e sawab, fatiha, conveying reward, reward to the deceased, ایصال ثواب, فاتحہ, ईसाले सवाब, फ़ातिहा, ઈસાલે સવાબ
+qiyamah: qayamat, qiyamat, kayamat, day of judgement, day of judgment, resurrection, last day, the hour, القيامة, الساعة, قیامت, क़यामत, કયામત
+signs_hour: signs of the hour, qayamat ki nishaniyan, dajjal, dajjaal, antichrist, mahdi, yajuj majuj, gog and magog, أشراط الساعة, الفتن, الدجال, دجال, दज्जाल, દજ્જાલ
+jannah: jannat, jannah, paradise, heaven, الجنة, جنت, जन्नत, જન્નત
+jahannam: jahannam, dozakh, hell, hellfire, hell fire, the fire, النار, جهنم, جہنم, دوزخ, जहन्नम, दोज़ख़, જહન્નમ, દોઝખ
+intercession: shafaat, shafa'at, shafaah, intercession, intercede, الشفاعة, شفاعت, शफ़ाअत, શફાઅત
+hisab: hisab, hisaab, reckoning, account, scale, mizan, bridge, sirat, الحساب, الميزان, الصراط, حساب, हिसाब, હિસાબ
+
+# --- Belief ---
+iman: iman, imaan, eeman, faith, belief, beliefs, aqeedah, aqida, aqaid, creed, الإيمان, العقيدة, ایمان, عقیدہ, ईमान, अक़ीदा, ઈમાન, અકીદા
+tawhid: tawheed, tauheed, tawhid, oneness of allah, monotheism, التوحيد, توحید, तौहीद, તૌહીદ
+shirk: shirk, polytheism, associating partners, idolatry, الشرك, شرک, शिर्क, શિર્ક
+kufr: kufr, kufar, disbelief, disbeliever, disbelievers, apostasy, apostate, apostates, الكفر, الردة, کفر, कुफ़्र, કુફ્ર
+nifaq: nifaq, munafiq, hypocrisy, hypocrite, hypocrites, النفاق, المنافق, منافق, मुनाफ़िक़, મુનાફિક
+angels: farishte, farishta, malaika, angel, angels, الملائكة, فرشتے, फ़रिश्ते, ફરિશ્તા
+jinn: jinn, jin, jinnat, shaitan, shaytan, satan, devil, devils, iblis, الجن, الشيطان, جنات, شیطان, जिन्न, शैतान, જિન, શૈતાન
+taqdir: taqdeer, taqdir, qadar, destiny, divine decree, divine will, predestination, fate, القدر, تقدیر, तक़दीर, તકદીર
+revelation: wahi, wahy, revelation, divine inspiration, الوحي, وحی, वही
+prophets: nabi, anbiya, ambiya, prophet, prophets, messenger, messengers, rasool, الأنبياء, الرسل, انبیاء, نبی, رسول, नबी, अंबिया, નબી, પયગંબર
+bidah: bidat, bidah, bid'ah, innovation, innovations, البدعة, بدعت, बिदअत, બિદઅત
+sunnah: sunnat, sunnah, following the sunnah, holding fast, السنة, سنت, सुन्नत, સુન્નત
+knowledge: ilm, ilam, knowledge, learning, seeking knowledge, scholars, ulama, العلم, علم, علماء, इल्म, ઇલ્મ, જ્ઞાન
+
+# --- Seerah, virtues ---
+seerah: seerat, sirat un nabi, seerah, biography of the prophet, life of the prophet, السيرة, سیرت, सीरत, સીરત
+miracles: mojza, mojiza, mujizat, miracle, miracles, signs of prophethood, المعجزات, دلائل النبوة, معجزہ, मोजिज़ा, મોઅજિઝા
+miraj: meraj, miraj, mi'raj, isra, night journey, ascension, الإسراء, المعراج, معراج, मेराज, મેઅરાજ
+hijrah: hijrat, hijrah, hijra, migration, emigration, الهجرة, ہجرت, हिजरत, હિજરત
+battles: ghazwa, ghazwat, maghazi, battle, battles, expedition, expeditions, badr, uhud, khandaq, khaybar, المغازي, غزوة, غزوہ, جنگ, ग़ज़वा, जंग, ગઝવો
+jihad: jihad, jehad, fighting in the way of allah, striving, الجهاد, السير, جہاد, जिहाद, જિહાદ
+sahabah: sahaba, sahabah, sahabi, companions, companion, الصحابة, صحابہ, सहाबा, સહાબા
+ahl_bayt: ahle bait, ahl e bait, ahlul bayt, household of the prophet, family of the prophet, أهل البيت, اہل بیت, अहले बैत, એહલે બૈત
+durood: durood, darood, durud, salawat, blessings upon the prophet, sending blessings, الصلاة على النبي, درود, दुरूद, દુરૂદ
+virtues: fazilat, fazail, fazeelat, virtue, virtues, merits, excellence, الفضائل, المناقب, فضیلت, فضائل, फ़ज़ीलत, ફઝીલત
+birth_prophet: milad, meelad, mawlid, wiladat, birth of the prophet, ميلاد, المولد, میلاد, ولادت, मीलाद, મીલાદ
+
+# --- Quran, dhikr, dua ---
+quran: quran, qur'an, koran, quran sharif, recitation, tilawat, tilawah, القرآن, قرآن, تلاوت, क़ुरआन, तिलावत, કુરઆન
+tafsir: tafseer, tafsir, commentary, exegesis, interpretation of the quran, التفسير, تفسیر, तफ़सीर, તફસીર
+dua: dua, duaa, supplication, supplications, invocation, invocations, الدعاء, الدعوات, دعا, दुआ, દુઆ
+dhikr: zikr, dhikr, zikar, remembrance, remembrance of allah, tasbeeh, tasbih, glorification, الذكر, الأذكار, التسبيح, ذکر, تسبیح, ज़िक्र, तस्बीह, ઝિક્ર, તસ્બીહ
+istighfar: istighfar, astaghfar, seeking forgiveness, forgiveness, maghfirat, الاستغفار, المغفرة, استغفار, مغفرت, माफ़ी, मग़फ़िरत, મગફિરત, માફી
+tawbah: tauba, tawba, tawbah, toba, repentance, repent, repenting, التوبة, توبہ, तौबा, તૌબા
+
+# --- Heart, character, sins ---
+sabr: sabr, sabar, patience, patient endurance, perseverance, الصبر, صبر, सब्र, સબર
+shukr: shukr, shukar, gratitude, thankfulness, thankful, الشكر, شکر, शुक्र, શુક્ર
+tawakkul: tawakkul, tawakal, trust in allah, reliance on allah, التوكل, توکل, तवक्कुल, તવક્કુલ
+ikhlas: ikhlas, niyyat, niyat, intention, intentions, sincerity, الإخلاص, النية, نیت, اخلاص, नीयत, નિય્યત
+taqwa: taqwa, taqva, piety, fear of allah, god fearing, parhezgari, التقوى, تقویٰ, پرہیزگاری, तक़वा, તકવા
+zuhd: zuhd, asceticism, softening the heart, heart softening, raqaiq, dunya, worldly life, الزهد, الرقاق, دنیا, दुनिया, દુનિયા
+worry: pareshani, gham, fikr, tension, worry, worries, anxiety, distress, grief, sorrow, sadness, hardship, الكرب, الهم, الحزن, پریشانی, غم, فکر, परेशानी, ग़म, चिंता, फ़िक्र, પરેશાની, ચિંતા, ગમ
+anger: gussa, ghussa, anger, angry, rage, الغضب, غصہ, ग़ुस्सा, ગુસ્સો
+pride: takabbur, ghuroor, pride, arrogance, arrogant, haughtiness, الكبر, تکبر, غرور, घमंड, तकब्बुर, ઘમંડ
+envy: hasad, envy, jealousy, jealous, الحسد, حسد, हसद, जलन, હસદ, ઈર્ષા
+backbiting: gheebat, ghibat, gibat, backbiting, backbite, slander, chughli, tale bearing, الغيبة, النميمة, غیبت, چغلی, ग़ीबत, चुग़ली, ગીબત
+lying: jhoot, jhooth, lie, lies, lying, falsehood, الكذب, جھوٹ, झूठ, જૂઠ
+truthfulness: sach, sachai, truth, truthfulness, honesty, honest, الصدق, سچ, सच, સચ્ચાઈ
+trust: amanat, amanah, trustworthiness, trusts, breach of trust, khiyanat, الأمانة, امانت, خیانت, अमानत, અમાનત
+oppression: zulm, zulam, oppression, injustice, wrongdoing, oppressions, المظالم, الظلم, ظلم, ज़ुल्म, ઝુલ્મ
+justice: insaf, adl, justice, fairness, العدل, انصاف, عدل, इंसाफ़, ઇન્સાફ
+mercy: rahmat, rehmat, reham, mercy, compassion, kindness, الرحمة, رحمت, रहमत, रहम, રહમત
+brotherhood: bhai chara, ukhuwwat, brotherhood, rights of muslims, rights of a muslim, الأخوة, بھائی چارہ, भाईचारा, ભાઈચારો
+modesty: haya, hayaa, sharm, modesty, shyness, bashfulness, الحياء, حیا, شرم, हया, शर्म, હયા
+generosity: sakhawat, generosity, generous, miserliness, bukhl, kanjoosi, الكرم, البخل, سخاوت, بخل, कंजूसी, સખાવત
+zina: zina, adultery, fornication, illegal sexual intercourse, الزنا, زنا, ज़िना, ઝિના
+theft: chori, theft, stealing, thief, السرقة, چوری, चोरी, ચોરી
+murder: qatl, katl, murder, killing, blood money, diyat, qisas, retaliation, القتل, الديات, القصاص, قتل, दियत, क़त्ल, કતલ
+hudud: hudood, hudud, prescribed punishments, punishments, penalties, الحدود, حدود, हुदूद
+major_sins: gunah, gunaah, kabira gunah, sin, sins, major sins, الكبائر, الذنوب, گناہ, گناہ کبیرہ, गुनाह, ગુનાહ
+suicide: khudkushi, suicide, killing oneself, الانتحار, خودکشی, ख़ुदकुशी, આપઘાત
+slaves: ghulam, slave, slaves, manumission, freeing slaves, emancipation, العتق, غلام, ग़ुलाम
+leadership: hukumat, hakim, ruler, rulers, leadership, government, caliphate, khilafat, obedience to the ruler, الإمارة, الخلافة, حکومت, خلافت, हुकूमत, ख़िलाफ़त
+women: aurat, khawateen, women, woman, النساء, عورت, خواتین, औरत, સ્ત્રી, ઔરત

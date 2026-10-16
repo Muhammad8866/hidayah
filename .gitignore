@@ -26,3 +26,11 @@ replay_pid*.log
 /hadith-release-assets
 /build
 hindi_quran_pdf/build/
+
+/tools/quran_reference/
+/quran-reader-features-check*.log
+
+# Local build/test logs and caches
+/*.log
+__pycache__/
+/ramzan_check.png

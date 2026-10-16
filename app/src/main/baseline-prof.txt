@@ -1,0 +1,38 @@
+# Baseline profile for the app's own code; library profiles (Compose, Media3, ...) are merged in
+# by the build. H = hot, S = startup, P = post-startup, L = class loaded at startup.
+
+# Cold start: activity, state holder, theme, language packs and the Home screen.
+HSPLcom/example/MainActivity**;->**(**)**
+HSPLcom/example/AppDestination**;->**(**)**
+HSPLcom/example/viewmodel/**;->**(**)**
+HSPLcom/example/ui/theme/**;->**(**)**
+HSPLcom/example/ui/localization/**;->**(**)**
+HSPLcom/example/ui/components/**;->**(**)**
+HSPLcom/example/ui/screens/HomeScreen**;->**(**)**
+HSPLcom/example/prayer/**;->**(**)**
+HSPLcom/example/core/**;->**(**)**
+HSPLcom/example/data/local/**;->**(**)**
+HSPLcom/example/util/**;->**(**)**
+HSPLcom/example/quran/QuranAudioManager**;->**(**)**
+Lcom/example/MainActivity**;
+Lcom/example/AppDestination**;
+Lcom/example/viewmodel/**;
+Lcom/example/ui/theme/**;
+Lcom/example/ui/localization/**;
+Lcom/example/ui/components/**;
+Lcom/example/ui/screens/HomeScreen**;
+Lcom/example/prayer/**;
+Lcom/example/core/**;
+Lcom/example/data/local/**;
+Lcom/example/util/**;
+
+# Everything reached after startup: the remaining screens and their readers and players.
+HPLcom/example/ui/screens/**;->**(**)**
+HPLcom/example/quran/**;->**(**)**
+HPLcom/example/hadith/**;->**(**)**
+HPLcom/example/azan/**;->**(**)**
+HPLcom/example/naat/**;->**(**)**
+HPLcom/example/salah/**;->**(**)**
+HPLcom/example/festival/**;->**(**)**
+HPLcom/example/names/**;->**(**)**
+HPLcom/example/feature/**;->**(**)**

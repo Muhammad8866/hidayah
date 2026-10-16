@@ -1,0 +1,40 @@
+package com.example.ui.localization
+
+/** Machine draft; review pending. */
+internal object WorldViDraft40 {
+    val MAP: Map<String, String> = mapOf(
+        "This change would remove a missed fast already made up. Update its Qaza entry first." to "Thay đổi này sẽ xóa một ngày chay bỏ lỡ đã được nhịn bù. Hãy cập nhật mục bù (Qaza) của nó trước.",
+        "This clears the counts of every item in this tab." to "Thao tác này xóa số đếm của mọi mục trong thẻ này.",
+        "This date is in Ramadan in your Hijri calendar" to "Ngày này thuộc tháng Ramadan theo lịch Hijri của bạn",
+        "This date is outside Ramadan in your Hijri calendar" to "Ngày này nằm ngoài tháng Ramadan theo lịch Hijri của bạn",
+        "This file is not a valid Roza tracker backup" to "Tệp này không phải là bản sao lưu hợp lệ của trình theo dõi nhịn chay",
+        "This removes your City challenge board entries and deletes your anonymous community account. " to "Thao tác này xóa các mục của bạn trên bảng thử thách thành phố và xóa tài khoản cộng đồng ẩn danh của bạn. ",
+        "This replaces your current fast log, notes and Qaza balance with the backup." to "Thao tác này thay thế nhật ký nhịn chay, ghi chú và số ngày bù (Qaza) hiện tại của bạn bằng bản sao lưu.",
+        "Thursday fast" to "Nhịn chay thứ Năm",
+        "Timings" to "Giờ",
+        "Timings are shared by the community and shown at once. Add and vote only when you are at the masjid " to "Giờ được cộng đồng chia sẻ và hiển thị ngay. Chỉ thêm và bình chọn khi bạn đang ở tại thánh đường ",
+        "To" to "Đến",
+        "Total fasts kept" to "Tổng số ngày đã nhịn chay",
+        "Traditional statements of faith and remembrance, presented for learning. Available offline." to "Những lời tuyên xưng đức tin và tụng niệm truyền thống, được trình bày để học tập. Có thể dùng ngoại tuyến.",
+        "Translation" to "Bản dịch",
+        "Unallocated remainder — scholar review required" to "Phần còn lại chưa phân bổ — cần học giả xem xét",
+        "Upcoming Sunnah fasts" to "Các ngày chay Sunnah sắp tới",
+        "Update" to "Cập nhật",
+        "Update History" to "Lịch sử cập nhật",
+        "Update Timings" to "Cập nhật giờ",
+        "Use this only to fix a count you entered by mistake. To record a Qaza fast you kept, log it on its day instead." to "Chỉ dùng mục này để sửa số bạn đã nhập nhầm. Để ghi một ngày chay bù (Qaza) bạn đã nhịn, hãy ghi vào đúng ngày đó.",
+        "User guide" to "Hướng dẫn sử dụng",
+        "Verify the result with a qualified scholar before distribution." to "Hãy kiểm tra kết quả với một học giả có trình độ trước khi phân chia.",
+        "Volume keys open this menu" to "Phím âm lượng mở trình đơn này",
+        "Weeks needed" to "Số tuần cần thiết",
+        "What is wrong?" to "Có vấn đề gì?",
+        "Wudu is the ritual purification obligatory for Salah. Its core Quranic requirements are washing the face, arms including elbows, wiping the head, and washing feet to the ankles." to "Wudu (tẩy rửa) là sự thanh tẩy theo nghi thức, bắt buộc để dâng lễ nguyện (Salah). Các yêu cầu cốt lõi theo Kinh Qur'an là rửa mặt, rửa hai tay đến hết khuỷu tay, vuốt đầu và rửa hai bàn chân đến mắt cá.",
+        "You can mark up to 60 days at a time." to "Bạn có thể đánh dấu tối đa 60 ngày mỗi lần.",
+        "You set these timings, so you cannot vote on them." to "Bạn đã đặt các giờ này nên không thể bình chọn cho chúng.",
+        "You're offline" to "Bạn đang ngoại tuyến",
+        "Youm-e-Arafah" to "Ngày Arafah",
+        "Youm-e-Ashura" to "Ngày Ashura",
+        "min" to "phút",
+        "{total} rak‘at · {fard} Fard" to "{total} rak‘at · {fard} Fard",
+    )
+}

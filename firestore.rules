@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // Security rules for the Community Masjid and City challenge features.
-// Community Masjid: cm_mosques/{osmId | user_<id>}, .../cm_mosque_votes/{uid}, .../cm_timing_votes/{uid},
+// Community Masjid: cm_mosques/{google_<placeId> | user_<id>}, .../cm_mosque_votes/{uid}, .../cm_timing_votes/{uid},
 // .../cm_history/{id}, cm_users/{uid}.
 // City challenge: cc_cities/{cityId}/cc_weeks/{weekId}/cc_members/{uid}. No other app feature uses Firestore.
 //
@@ -84,7 +84,7 @@ service cloud.firestore {
     match /cm_mosques/{mosqueId} {
       allow read: if signedIn();
 
-      allow create: if signedIn() && (osmCreateValid(mosqueId) || userCreateValid(mosqueId));
+      allow create: if signedIn() && (googleCreateValid(mosqueId) || userCreateValid(mosqueId));
 
       // Exactly one action per write: set a timing, vote on the timing, or vote on the masjid.
       allow update: if signedIn()
@@ -95,20 +95,16 @@ service cloud.firestore {
 
       allow delete: if false;
 
-      // An OSM masjid document appears with its first timing or first vote. Identity fields are immutable.
-      function osmCreateValid(m) {
+      // Only the Google place ID and community contributions are stored.
+      function googleCreateValid(m) {
         let d = request.resource.data;
-        return m.matches('^(node|way|relation)_[0-9]{1,15}$')
-          && d.keys().hasOnly(['osmId', 'name', 'lat', 'lon', 'createdAt'].concat(mutableKeys()))
-          && d.osmId == m
-          && d.name is string && d.name.size() > 0 && d.name.size() <= 120
-          && d.lat is number && math.abs(d.lat) <= 90
-          && d.lon is number && math.abs(d.lon) <= 180
+        return m.matches('^google_[A-Za-z0-9_-]{1,255}$')
+          && d.keys().hasOnly(['placeId', 'createdAt'].concat(mutableKeys()))
+          && m == 'google_' + d.placeId
           && d.createdAt == request.time
           && (timingSetValid(m, defaults(), d) || mosqueVoteValid(m, defaults(), d));
       }
 
-      // A masjid missing from OSM, added by a user standing at it. Visible immediately.
       function userCreateValid(m) {
         let d = request.resource.data;
         return isUserMosque(m)
@@ -299,17 +295,42 @@ service cloud.firestore {
         && d.updatedAt == request.time;
     }
 
+    // Search slots use server time: five/day per UID, fifteen minutes between attempts.
+    // India-day boundaries are fixed so changing the device timezone cannot reset usage.
+    match /cm_search_quotas/{uid} {
+      function today() { return int((request.time.toMillis() + 19800000) / 86400000); }
+      function validSearch() {
+        let d = request.resource.data;
+        return d.keys().hasAll(['day', 'count', 'lastSearchAt', 'latitude', 'longitude'])
+          && d.keys().hasOnly(['day', 'count', 'lastSearchAt', 'latitude', 'longitude'])
+          && d.day is int && d.day == today()
+          && d.count is int && d.count >= 1 && d.count <= 5
+          && d.lastSearchAt == request.time
+          && d.latitude is number && math.abs(d.latitude) <= 90
+          && d.longitude is number && math.abs(d.longitude) <= 180;
+      }
+      allow get: if (signedIn() && me() == uid);
+      allow list, delete: if false;
+      allow create: if (signedIn() && me() == uid) && validSearch() && request.resource.data.count == 1;
+      allow update: if (signedIn() && me() == uid) && validSearch()
+        && request.time >= resource.data.lastSearchAt + duration.value(15, 'm')
+        && ((resource.data.day == today() && request.resource.data.count == resource.data.count + 1)
+          || (resource.data.day < today() && request.resource.data.count == 1));
+    }
+
     // ---------- moderation reports: write-only for clients, reviewed in the Firebase console ----------
+    // Reports share the per-user throttle so they cannot be used to flood the review queue.
     match /cm_reports/{reportId} {
       allow create: if signedIn()
         && request.resource.data.keys().hasAll(['mosqueId', 'target', 'reason', 'uid', 'createdAt'])
         && request.resource.data.keys().hasOnly(['mosqueId', 'target', 'reason', 'uid', 'createdAt'])
         && request.resource.data.mosqueId is string
-        && request.resource.data.mosqueId.matches('^((node|way|relation)_[0-9]{1,15}|user_[A-Za-z0-9]{20})$')
+        && request.resource.data.mosqueId.matches('^(google_[A-Za-z0-9_-]{1,255}|user_[A-Za-z0-9]{20})$')
         && request.resource.data.target in ['mosque', 'timing']
         && request.resource.data.reason in ['wrong_info', 'offensive', 'spam', 'other']
         && request.resource.data.uid == me()
-        && request.resource.data.createdAt == request.time;
+        && request.resource.data.createdAt == request.time
+        && rateTouched();
       allow read, update, delete: if false;
     }
 

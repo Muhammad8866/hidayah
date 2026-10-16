@@ -1,149 +1,270 @@
 package com.example.salah
 
-/** Text is keyed by language so reviewed translations and recitation assets can be added later. */
-data class SalahText(val en: String, val translations: Map<String, String> = emptyMap()) {
-    fun inLanguage(code: String): String = translations[code] ?: en
-}
-
-enum class Madhhab(val label: String) {
-    HANAFI("Hanafi"), SHAFII("Shafi‘i"), MALIKI("Maliki"), HANBALI("Hanbali")
-}
-
-enum class SalahKind(val label: String) {
-    FARD("Fard"), SUNNAH_MUAKKADAH("Sunnah Muakkadah"),
-    SUNNAH_GHAIR_MUAKKADAH("Sunnah Ghair-Muakkadah"), NAFL("Nafl"),
-    WITR("Witr"), WAJIB("Wajib"), FARD_KIFAYAH("Fard Kifayah")
-}
-
-data class Rakats(val count: Int, val kind: SalahKind, val whenPrayed: String, val whenPrayedTranslations: Map<String, String> = emptyMap()) {
-    fun whenPrayedIn(language: String): String = whenPrayedTranslations[language] ?: whenPrayed
-    fun countLabel(madhhab: Madhhab): String =
-        if (kind == SalahKind.WITR && madhhab != Madhhab.HANAFI) "1+ odd" else count.toString()
-}
-data class DailyPrayer(val id: String, val title: String, val units: List<Rakats>, val titleTranslations: Map<String, String> = emptyMap()) {
-    fun titleIn(language: String): String = titleTranslations[language] ?: title
-    val fard: Int get() = units.first { it.kind == SalahKind.FARD }.count
-}
-
-data class Recitation(
-    val id: String,
-    val title: SalahText,
-    val arabic: String,
-    val transliteration: String,
-    val meaning: SalahText,
-    val source: String,
-    val audioAsset: String? = null
-)
-
-data class GuideStep(
-    val id: String,
-    val title: SalahText,
-    val instruction: SalahText,
-    val recitationIds: List<String> = emptyList(),
-    val schoolNotes: Map<Madhhab, String> = emptyMap()
-)
-
-data class TopicTranslation(val title: String, val summary: String, val steps: List<String>)
-
-data class SalahTopic(
-    val id: String,
-    val title: String,
-    val kind: SalahKind?,
-    val summary: String,
-    val steps: List<String>,
-    val schoolNotes: Map<Madhhab, String> = emptyMap(),
-    val source: String,
-    val translations: Map<String, TopicTranslation> = emptyMap(),
-    val kindBySchool: Map<Madhhab, SalahKind> = emptyMap()
-) {
-    fun kindFor(madhhab: Madhhab): SalahKind? = kindBySchool[madhhab] ?: kind
-    fun titleIn(language: String): String = translations[language]?.title ?: title
-    fun summaryIn(language: String): String = translations[language]?.summary ?: summary
-    fun stepsIn(language: String): List<String> = translations[language]?.steps ?: steps
-}
-
-/** Educational content only. Prayer times remain in the existing prayer-time module. */
+/**
+ * Educational content only; prayer times stay in the prayer-time module. The detailed method and
+ * rulings follow Hanafi fiqh (Ahle Sunnat wal Jamaat), with notes where the other schools differ.
+ */
 object SalahContent {
     object Notes {
-        const val DAILY = "The sequence below is a commonly taught Hanafi pattern. Fard is obligatory; optional Sunnah and Nafl practice varies. Witr is wajib in the Hanafi school and Sunnah in the others."
-        const val PRAYER_DETAIL = "This optional-prayer sequence is a Hanafi teaching pattern. Other schools may classify or arrange some Sunnah units differently. Follow your local teacher for detailed practice."
-        const val GUIDE = "This teaches a basic Fard sequence. Details such as recitation behind an imam, hand placement and qunut vary by madhhab. Follow a qualified teacher for your school."
-        const val TOPIC = "Detailed rulings and exceptions depend on your circumstances and school. Ask a qualified local scholar when unsure."
-        const val RECITATION = "Arabic text and English meaning are shown with a learning transliteration. Pronunciation is best learned from a qualified reciter. Audio can be added to each recitation later."
-    }
-    val schoolSummaries = mapOf(
-        Madhhab.HANAFI to "Witr is wajib (three rak‘at); qunut is before ruku‘ in its third rak‘ah. Fajr qunut is not ordinarily read.",
-        Madhhab.SHAFII to "Witr is Sunnah. Qunut is practiced after ruku‘ in the second Fajr rak‘ah; Witr qunut is practiced in the latter half of Ramadan.",
-        Madhhab.MALIKI to "Witr is Sunnah, commonly a single rak‘ah after two shaf‘ rak‘at. Details of Fajr qunut vary within the school.",
-        Madhhab.HANBALI to "Witr is Sunnah and may be offered in an odd number of rak‘at. Qunut in Witr is permitted."
-    )
-    val daily = listOf(
-        DailyPrayer("fajr", "Fajr", listOf(Rakats(2, SalahKind.SUNNAH_MUAKKADAH, "Before Fard"), Rakats(2, SalahKind.FARD, "Dawn"))),
-        DailyPrayer("zuhr", "Zuhr", listOf(Rakats(4, SalahKind.SUNNAH_MUAKKADAH, "Before Fard"), Rakats(4, SalahKind.FARD, "Midday"), Rakats(2, SalahKind.SUNNAH_MUAKKADAH, "After Fard"), Rakats(2, SalahKind.NAFL, "Optional after"))),
-        DailyPrayer("asr", "Asr", listOf(Rakats(4, SalahKind.SUNNAH_GHAIR_MUAKKADAH, "Optional before"), Rakats(4, SalahKind.FARD, "Afternoon"))),
-        DailyPrayer("maghrib", "Maghrib", listOf(Rakats(3, SalahKind.FARD, "Sunset"), Rakats(2, SalahKind.SUNNAH_MUAKKADAH, "After Fard"), Rakats(2, SalahKind.NAFL, "Optional after"))),
-        DailyPrayer("isha", "Isha", listOf(Rakats(4, SalahKind.SUNNAH_GHAIR_MUAKKADAH, "Optional before"), Rakats(4, SalahKind.FARD, "Night"), Rakats(2, SalahKind.SUNNAH_MUAKKADAH, "After Fard"), Rakats(2, SalahKind.NAFL, "Optional after"), Rakats(3, SalahKind.WITR, "After Isha")))
-    )
-
-    val recitations = listOf(
-        Recitation("takbir", SalahText("Opening takbir"), "اللَّهُ أَكْبَرُ", "Allahu akbar", SalahText("Allah is the Greatest."), "Sahih al-Bukhari 757"),
-        Recitation("fatiha", SalahText("Surah al-Fatihah"), "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\nالْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ\nالرَّحْمَٰنِ الرَّحِيمِ\nمَالِكِ يَوْمِ الدِّينِ\nإِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ\nاهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ\nصِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ", "Bismillahir-rahmanir-rahim. Alhamdu lillahi rabbil-'alamin. Ar-rahmanir-rahim. Maliki yawmid-din. Iyyaka na'budu wa iyyaka nasta'in. Ihdinas-siratal-mustaqim. Siratal-ladhina an'amta 'alayhim ghayril-maghdubi 'alayhim wa lad-dallin.", SalahText("In the name of Allah, the Most Merciful, the Especially Merciful. Praise belongs to Allah, Lord of all worlds; the Most Merciful, the Especially Merciful; Master of the Day of Judgment. You alone we worship and You alone we ask for help. Guide us to the straight path: the path of those You have blessed, not those who earned anger or went astray."), "Quran 1:1–7"),
-        Recitation("ikhlas", SalahText("Short surah: al-Ikhlas"), "قُلْ هُوَ اللَّهُ أَحَدٌ\nاللَّهُ الصَّمَدُ\nلَمْ يَلِدْ وَلَمْ يُولَدْ\nوَلَمْ يَكُنْ لَهُ كُفُوًا أَحَدٌ", "Qul huwallahu ahad. Allahus-samad. Lam yalid wa lam yulad. Wa lam yakul-lahu kufuwan ahad.", SalahText("Say: He is Allah, One; Allah, the Eternal Refuge. He neither begets nor is born, and none is comparable to Him."), "Quran 112:1–4"),
-        Recitation("ruku", SalahText("In bowing"), "سُبْحَانَ رَبِّيَ الْعَظِيمِ", "Subhana rabbiyal-'azim", SalahText("Glory be to my Lord, the Magnificent."), "Sunan Abi Dawud 871"),
-        Recitation("rise", SalahText("Rising from bowing"), "سَمِعَ اللَّهُ لِمَنْ حَمِدَهُ\nرَبَّنَا وَلَكَ الْحَمْدُ", "Sami'allahu liman hamidah. Rabbana wa lakal-hamd.", SalahText("Allah hears the one who praises Him. Our Lord, to You belongs all praise."), "Sahih al-Bukhari 795"),
-        Recitation("sujud", SalahText("In prostration"), "سُبْحَانَ رَبِّيَ الْأَعْلَى", "Subhana rabbiyal-a'la", SalahText("Glory be to my Lord, the Most High."), "Sunan Abi Dawud 871"),
-        Recitation("between", SalahText("Between prostrations"), "رَبِّ اغْفِرْ لِي", "Rabbighfir li", SalahText("My Lord, forgive me."), "Sunan Abi Dawud 874"),
-        Recitation("tashahhud", SalahText("Tashahhud"), "التَّحِيَّاتُ لِلَّهِ وَالصَّلَوَاتُ وَالطَّيِّبَاتُ، السَّلَامُ عَلَيْكَ أَيُّهَا النَّبِيُّ وَرَحْمَةُ اللَّهِ وَبَرَكَاتُهُ، السَّلَامُ عَلَيْنَا وَعَلَى عِبَادِ اللَّهِ الصَّالِحِينَ، أَشْهَدُ أَنْ لَا إِلَٰهَ إِلَّا اللَّهُ، وَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ", "At-tahiyyatu lillahi was-salawatu wat-tayyibat. As-salamu 'alayka ayyuhan-nabiyyu wa rahmatullahi wa barakatuh. As-salamu 'alayna wa 'ala 'ibadillahis-salihin. Ashhadu al-la ilaha illallah, wa ashhadu anna Muhammadan 'abduhu wa rasuluh.", SalahText("All greetings, prayers and good words are for Allah. Peace, mercy and blessings be upon you, O Prophet. Peace be upon us and Allah's righteous servants. I bear witness that there is no god but Allah, and Muhammad is His servant and messenger."), "Sahih al-Bukhari 831"),
-        Recitation("salawat", SalahText("Salawat Ibrahimiyyah"), "اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ كَمَا صَلَّيْتَ عَلَى إِبْرَاهِيمَ وَعَلَى آلِ إِبْرَاهِيمَ إِنَّكَ حَمِيدٌ مَجِيدٌ، اللَّهُمَّ بَارِكْ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ كَمَا بَارَكْتَ عَلَى إِبْرَاهِيمَ وَعَلَى آلِ إِبْرَاهِيمَ إِنَّكَ حَمِيدٌ مَجِيدٌ", "Allahumma salli 'ala Muhammadin wa 'ala ali Muhammad kama sallayta 'ala Ibrahima wa 'ala ali Ibrahim innaka hamidum-majid. Allahumma barik 'ala Muhammadin wa 'ala ali Muhammad kama barakta 'ala Ibrahima wa 'ala ali Ibrahim innaka hamidum-majid.", SalahText("O Allah, bless Muhammad and his family as You blessed Ibrahim and his family; You are Praiseworthy and Glorious. O Allah, grant blessing to Muhammad and his family as You granted blessing to Ibrahim and his family; You are Praiseworthy and Glorious."), "Sahih al-Bukhari 3370"),
-        Recitation("salam", SalahText("Ending salams"), "السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللَّهِ", "As-salamu 'alaykum wa rahmatullah", SalahText("Peace and Allah's mercy be upon you."), "Sahih Muslim 582"),
-        Recitation("qunut", SalahText("Witr qunut (one transmitted wording)"), "اللَّهُمَّ اهْدِنِي فِيمَنْ هَدَيْتَ، وَعَافِنِي فِيمَنْ عَافَيْتَ، وَتَوَلَّنِي فِيمَنْ تَوَلَّيْتَ، وَبَارِكْ لِي فِيمَا أَعْطَيْتَ، وَقِنِي شَرَّ مَا قَضَيْتَ، إِنَّكَ تَقْضِي وَلَا يُقْضَى عَلَيْكَ، إِنَّهُ لَا يَذِلُّ مَنْ وَالَيْتَ، تَبَارَكْتَ رَبَّنَا وَتَعَالَيْتَ", "Allahumma-hdini fiman hadayt, wa 'afini fiman 'afayt, wa tawallani fiman tawallayt, wa barik li fima a'tayt, wa qini sharra ma qadayt. Innaka taqdi wa la yuqda 'alayk. Innahu la yadhillu man walayt. Tabarakta rabbana wa ta'alayt.", SalahText("O Allah, guide me among those You have guided; grant me well-being among those You have granted well-being; care for me among those You have cared for; bless what You have given me; and protect me from the harm of what You have decreed. You decree and none decrees over You. Whoever You befriend is not humiliated. Blessed and Exalted are You, our Lord."), "Sunan Abi Dawud 1425")
-    ).associateBy { it.id }
-
-    val wuduSteps = listOf(
-        "Make the intention to purify yourself and say Bismillah.",
-        "Wash both hands up to the wrists, three times.",
-        "Rinse the mouth and clean the nose, three times each.",
-        "Wash the whole face, from hairline to chin and ear to ear, three times.",
-        "Wash each arm including the elbow, right then left, three times.",
-        "Wipe the head with wet hands; wipe the ears. The required extent varies by school.",
-        "Wash both feet including the ankles, right then left, three times."
-    )
-
-    val topics = listOf(
-        SalahTopic("wudu", "Wudu", null, "Purification before Salah", wuduSteps, mapOf(Madhhab.HANAFI to "Wiping at least a quarter of the head is obligatory in Hanafi law.", Madhhab.SHAFII to "Wiping part of the head suffices in Shafi‘i law; intention and sequence are required.", Madhhab.MALIKI to "Wiping the entire head is required in Maliki law.", Madhhab.HANBALI to "Wiping the entire head is required in Hanbali law."), "Quran 5:6"),
-        SalahTopic("jamaat", "Jamaat", null, "Congregational prayer", listOf("Arrive with wudu and join the rows without rushing.", "Make your intention and follow the imam's movements; do not precede the imam.", "If joining late, complete missed rak‘at after the imam's final salam."), source = "Sahih al-Bukhari 636"),
-        SalahTopic("qaza", "Qaza Salah", SalahKind.FARD, "Making up missed obligatory prayers", listOf("Pray a missed Fard as soon as you reasonably can.", "Keep a careful count of missed prayers and make a manageable plan.", "Intend the particular missed prayer; ask a qualified scholar about ordering, travel and special cases."), mapOf(Madhhab.HANAFI to "Hanafi Witr is wajib and is also made up.", Madhhab.SHAFII to "Witr is Sunnah, not a missed Fard obligation.", Madhhab.MALIKI to "Witr is Sunnah, not a missed Fard obligation.", Madhhab.HANBALI to "Witr is Sunnah, not a missed Fard obligation."), "Sahih al-Bukhari 597"),
-        SalahTopic("sahw", "Sajdah Sahw", null, "Prostrations for certain prayer mistakes", listOf("Identify what was omitted or added; an omitted pillar cannot simply be fixed by Sajdah Sahw.", "For a qualifying mistake, perform two prostrations of forgetfulness around the closing of the prayer.", "The timing and what counts as a qualifying mistake depend on your school; check its detailed ruling."), mapOf(Madhhab.HANAFI to "Normally after the final tashahhud and one salam, make two prostrations, sit, then end with salam.", Madhhab.SHAFII to "Normally two prostrations before the closing salam.", Madhhab.MALIKI to "Before or after salam depending on whether the issue was an omission or addition.", Madhhab.HANBALI to "Timing depends on the error; follow the applicable ruling."), "Sahih al-Bukhari 1224"),
-        SalahTopic("jumuah", "Jumu‘ah", SalahKind.FARD, "Friday congregational prayer", listOf("Prepare with ghusl and arrive early if possible.", "Listen attentively to the two khutbahs.", "Pray two Fard rak‘at behind the imam instead of Zuhr when Jumu‘ah applies to you.", "If you miss Jumu‘ah, pray Zuhr; follow local scholarly guidance for individual circumstances."), source = "Quran 62:9"),
-        SalahTopic("eid", "Eid Salah", null, "Two rak‘at in congregation", listOf("Join the Eid congregation at its announced time.", "Follow the imam for two rak‘at and the extra takbirs.", "Listen to the khutbah after the prayer."), mapOf(Madhhab.HANAFI to "Three additional takbirs in each rak‘ah; second set is before ruku‘.", Madhhab.SHAFII to "Seven additional takbirs in the first rak‘ah and five in the second, before recitation.", Madhhab.MALIKI to "The extra takbirs differ from the Hanafi sequence; follow the imam.", Madhhab.HANBALI to "The extra takbirs differ from the Hanafi sequence; follow the imam."), "Sahih al-Bukhari 956", kindBySchool = mapOf(Madhhab.HANAFI to SalahKind.WAJIB, Madhhab.SHAFII to SalahKind.SUNNAH_MUAKKADAH, Madhhab.MALIKI to SalahKind.SUNNAH_MUAKKADAH, Madhhab.HANBALI to SalahKind.FARD_KIFAYAH)),
-        SalahTopic("janazah", "Janazah", SalahKind.FARD_KIFAYAH, "Funeral prayer; no bowing or prostration", listOf("Stand in congregation with the intention for the deceased.", "Follow the imam's takbirs while standing; recite praise, blessings upon the Prophet, and supplication for the deceased as taught in your school.", "End with the imam's salam."), mapOf(Madhhab.HANAFI to "Four takbirs; a common Hanafi order is thana, salawat, dua for the deceased, then salam.", Madhhab.SHAFII to "Al-Fatihah is recited after the first takbir."), "Sahih al-Bukhari 1333"),
-        SalahTopic("tahajjud", "Tahajjud", SalahKind.NAFL, "Optional night prayer", listOf("Pray after Isha and before Fajr, preferably after some sleep.", "Pray voluntary rak‘at, commonly in pairs.", "Make sincere dua; pray Witr last if you have not prayed it already."), source = "Quran 17:79"),
-        SalahTopic("taraweeh", "Taraweeh", SalahKind.SUNNAH_MUAKKADAH, "Ramadan night prayer", listOf("Pray after Isha during Ramadan, usually with a congregation.", "Follow the imam in units of two rak‘at and rest when the congregation rests.", "The total number practiced differs across communities; follow your mosque and school."), source = "Sahih al-Bukhari 2009"),
-        SalahTopic("witr", "Witr", SalahKind.WITR, "Odd-numbered prayer after Isha", listOf("Pray after Isha and before Fajr.", "Learn the number and sequence taught in your school.", "Recite qunut where your school prescribes it; see the dua reference."), mapOf(Madhhab.HANAFI to "Wajib: three rak‘at with one closing salam; qunut in the third before ruku‘.", Madhhab.SHAFII to "Sunnah: at least one odd rak‘ah; qunut in the last rak‘ah in the latter half of Ramadan is a recognized practice.", Madhhab.MALIKI to "Sunnah: commonly one rak‘ah after two rak‘at of shaf‘.", Madhhab.HANBALI to "Sunnah: one or more odd rak‘at; qunut may be recited."), "Sunan Abi Dawud 1425"),
-        SalahTopic("duha", "Duha", SalahKind.NAFL, "Optional forenoon prayer", listOf("Wait until after sunrise when the prohibited time has passed.", "Pray at least two rak‘at before midday.", "Offer additional pairs if you wish."), source = "Sahih Muslim 720"),
-        SalahTopic("istikhara", "Istikhara", SalahKind.NAFL, "Seeking Allah's guidance for a permissible choice", listOf("Pray two voluntary rak‘at outside the prohibited times.", "Make the taught dua of istikhara and name the choice.", "Consult trustworthy people and proceed with the best available judgment."), source = "Sahih al-Bukhari 1166"),
-        SalahTopic("kusuf", "Eclipse prayer", null, "Prayer during a solar or lunar eclipse", listOf("When an eclipse is observed, pray and remember Allah.", "The form of the prayer varies by school; join a knowledgeable congregation where possible."), source = "Sahih al-Bukhari 1041"),
-        SalahTopic("istisqa", "Istisqa", null, "Prayer for rain", listOf("Turn to Allah in repentance and ask for rain.", "Join a community prayer and supplication led by a knowledgeable imam where available."), source = "Sahih al-Bukhari 1013"),
-        SalahTopic("masjid", "Tahiyyatul Masjid", SalahKind.NAFL, "Greeting the mosque", listOf("On entering a mosque, pray two rak‘at before sitting when the time and circumstances allow.", "If the congregation has begun, join the Fard instead."), source = "Sahih al-Bukhari 444")
-    )
-
-    /** Generates each position for a specific Fard length. No UI copy is assembled in composables. */
-    fun prayerSteps(rakats: Int, madhhab: Madhhab): List<GuideStep> {
-        require(rakats in 2..4)
-        val steps = mutableListOf(
-            GuideStep("prepare", SalahText("Prepare"), SalahText("Have wudu, clean clothing and place, cover the awrah, face the Qibla and make the intention for this prayer.")),
-            GuideStep("opening", SalahText("Opening takbir"), SalahText("Stand and say Allahu akbar to begin."), listOf("takbir"))
+        val DAILY = t(
+            "The rak‘at below follow the Hanafi teaching. Fard is obligatory; Sunnah Muakkadah should not be left without an excuse; Sunnah Ghair-Muakkadah and Nafl are optional and rewarded.",
+            "Neeche di gayi rakatein Hanafi ta'leem ke mutabiq hain. Farz laazim hai; Sunnat-e-Muakkada bila uzr na chhodi jaye; Sunnat-e-Ghair Muakkada aur Nafl ikhtiyari hain aur un par sawab hai.",
+            "नीचे दी गई रकअतें हनफ़ी तालीम के मुताबिक़ हैं। फ़र्ज़ लाज़िम है; सुन्नत-ए-मुअक्कदा बिला उज़्र न छोड़ी जाए; सुन्नत-ए-ग़ैर मुअक्कदा और नफ़्ल इख़्तियारी हैं और उन पर सवाब है।",
+            "نیچے دی گئی رکعتیں حنفی تعلیم کے مطابق ہیں۔ فرض لازم ہے؛ سنتِ مؤکدہ بلا عذر نہ چھوڑی جائے؛ سنتِ غیر مؤکدہ اور نفل اختیاری ہیں اور ان پر ثواب ہے۔"
         )
-        (1..rakats).forEach { unit ->
-            val firstTwo = unit <= 2
-            steps += GuideStep("recite_$unit", SalahText("Rak‘ah $unit · recite"), SalahText(if (firstTwo) "While standing, recite al-Fatihah and another surah or verses." else "While standing, recite al-Fatihah. In a Fard prayer, the additional surah is normally in the first two rak‘at."), if (firstTwo) listOf("fatiha", "ikhlas") else listOf("fatiha"), if (unit == 2 && rakats == 2) mapOf(Madhhab.SHAFII to "In Fajr, Shafi‘i practice includes qunut after rising from ruku‘ in this rak‘ah.") else emptyMap())
-            steps += GuideStep("bow_$unit", SalahText("Rak‘ah $unit · bow"), SalahText("Say Allahu akbar, bow with hands on knees, then rise and stand upright."), listOf("ruku", "rise"))
-            steps += GuideStep("prostrate_$unit", SalahText("Rak‘ah $unit · prostrate"), SalahText("Say Allahu akbar, prostrate, sit briefly, then prostrate a second time."), listOf("sujud", "between"))
-            if (unit == 2 && rakats > 2) steps += GuideStep("middle", SalahText("First sitting"), SalahText("After the second rak‘ah, sit and recite the tashahhud, then rise for the next rak‘ah."), listOf("tashahhud"))
-        }
-        steps += GuideStep("final_sitting", SalahText("Final sitting"), SalahText("Sit after the last prostration; recite the tashahhud, blessings on the Prophet, and a personal dua."), listOf("tashahhud", "salawat"))
-        steps += GuideStep("finish", SalahText("Finish with salam"), SalahText("Turn to the right and then left, offering the salam to complete the prayer."), listOf("salam"))
-        // Passing the school here keeps guide generation school-aware as additional reviewed variations are added.
-        return steps.map { step -> if (step.schoolNotes[madhhab] == null) step else step.copy(instruction = SalahText(step.instruction.en + " " + step.schoolNotes.getValue(madhhab))) }
+        val ALOUD = t(
+            "In congregation the imam recites aloud in Fajr, in the first two rak‘at of Maghrib and Isha, and in Jumu‘ah and Eid. Zuhr and Asr are quiet. Praying alone, you may recite quietly in all of them.",
+            "Jamaat mein imam Fajr, Maghrib aur Isha ki pehli do rakaton, Jumu'ah aur Eid mein aawaz se qira'at karta hai. Zuhr aur Asr mein aahista. Akele padhne wala sab mein aahista padh sakta hai.",
+            "जमाअत में इमाम फ़ज्र, मग़रिब और इशा की पहली दो रकअतों, जुमा और ईद में आवाज़ से क़िराअत करता है। ज़ुहर और अस्र में आहिस्ता। अकेले पढ़ने वाला सब में आहिस्ता पढ़ सकता है।",
+            "جماعت میں امام فجر، مغرب اور عشاء کی پہلی دو رکعتوں، جمعہ اور عید میں آواز سے قراءت کرتا ہے۔ ظہر اور عصر میں آہستہ۔ اکیلے پڑھنے والا سب میں آہستہ پڑھ سکتا ہے۔"
+        )
+        val TWELVE_SUNNAH = t(
+            "Whoever prays twelve rak‘at of Sunnah in a day and night, a house is built for him in Paradise.",
+            "Jo din aur raat mein baarah rakat Sunnat padhe, uske liye Jannat mein ek ghar banaya jata hai.",
+            "जो दिन और रात में बारह रकअत सुन्नत पढ़े, उसके लिए जन्नत में एक घर बनाया जाता है।",
+            "جو دن اور رات میں بارہ رکعت سنت پڑھے، اس کے لیے جنت میں ایک گھر بنایا جاتا ہے۔"
+        )
+        const val TWELVE_SUNNAH_SOURCE = "Sahih Muslim 728 · Jami` at-Tirmidhi 415"
+        val TIMES = t(
+            "Prayer times are on Home, and you can log your prayers in the Prayer tracker. This guide does not change your prayer-time calculation.",
+            "Namaz ke auqaat Home par hain, aur apni namazein Namaz tracker mein darj kar sakte hain. Yeh guide namaz ke auqaat ka hisab nahi badalti.",
+            "नमाज़ के औक़ात होम पर हैं, और अपनी नमाज़ें नमाज़ ट्रैकर में दर्ज कर सकते हैं। यह गाइड नमाज़ के औक़ात का हिसाब नहीं बदलती।",
+            "نماز کے اوقات ہوم پر ہیں، اور اپنی نمازیں نماز ٹریکر میں درج کر سکتے ہیں۔ یہ گائیڈ نماز کے اوقات کا حساب نہیں بدلتی۔"
+        )
+        val PRAYER_DETAIL = t(
+            "This sequence of Sunnah and Nafl is the Hanafi teaching. Other schools may classify or arrange some of them differently.",
+            "Sunnat aur Nafl ki yeh tarteeb Hanafi ta'leem hai. Doosre mazahib mein kuch ki haisiyat ya tarteeb mukhtalif ho sakti hai.",
+            "सुन्नत और नफ़्ल की यह तरतीब हनफ़ी तालीम है। दूसरे मज़ाहिब में कुछ की हैसियत या तरतीब मुख़्तलिफ़ हो सकती है।",
+            "سنت اور نفل کی یہ ترتیب حنفی تعلیم ہے۔ دوسرے مذاہب میں کچھ کی حیثیت یا ترتیب مختلف ہو سکتی ہے۔"
+        )
+        val GUIDE = t(
+            "This guide teaches the method; have your recitation and postures checked by a qualified teacher. Rulings follow Hanafi fiqh (Bahar-e-Shariat, Hissa 3).",
+            "Yeh guide tareeqa sikhati hai; qira'at aur arkaan ki durusti kisi mo'tabar ustaad se karwayein. Ahkaam Hanafi fiqh (Bahar-e-Shariat, Hissa 3) ke mutabiq hain.",
+            "यह गाइड तरीक़ा सिखाती है; क़िराअत और अरकान की दुरुस्ती किसी मोतबर उस्ताद से करवाएँ। अहकाम हनफ़ी फ़िक़्ह (बहार-ए-शरीअत, हिस्सा 3) के मुताबिक़ हैं।",
+            "یہ گائیڈ طریقہ سکھاتی ہے؛ قراءت اور ارکان کی درستی کسی معتبر استاد سے کروائیں۔ احکام حنفی فقہ (بہارِ شریعت، حصہ 3) کے مطابق ہیں۔"
+        )
+        val TOPIC = t(
+            "Detailed rulings and exceptions depend on your circumstances and school. Ask a reliable Sunni scholar when unsure.",
+            "Tafseeli ahkaam aur khaas suratein aap ke halaat aur mazhab par munhasir hain. Shak ho to kisi mo'tabar Sunni aalim se poochhein.",
+            "तफ़सीली अहकाम और ख़ास सूरतें आपके हालात और मज़हब पर मुनहसिर हैं। शक हो तो किसी मोतबर सुन्नी आलिम से पूछें।",
+            "تفصیلی احکام اور خاص صورتیں آپ کے حالات اور مذہب پر منحصر ہیں۔ شک ہو تو کسی معتبر سنی عالم سے پوچھیں۔"
+        )
+        val RECITATION = t(
+            "Each recitation is shown in Arabic with a reading aid and its meaning. Learn the correct pronunciation from a qualified reciter.",
+            "Har cheez Arabi mein, padhne ki madad (Roman) aur ma'ne ke saath di gayi hai. Sahih talaffuz kisi qaari ya ustaad se seekhein.",
+            "हर चीज़ अरबी में, पढ़ने की मदद (रोमन) और मानी के साथ दी गई है। सही तलफ़्फ़ुज़ किसी क़ारी या उस्ताद से सीखें।",
+            "ہر چیز عربی میں، پڑھنے کی مدد (رومن) اور معنی کے ساتھ دی گئی ہے۔ صحیح تلفظ کسی قاری یا استاد سے سیکھیں۔"
+        )
+        val RULES = t(
+            "The rulings every worshipper should know. Tap a topic to read it.",
+            "Woh masail jo har namazi ko maloom hone chahiye. Kisi unwan par tap karke padhein.",
+            "वे मसाइल जो हर नमाज़ी को मालूम होने चाहिए। किसी उनवान पर टैप करके पढ़ें।",
+            "وہ مسائل جو ہر نمازی کو معلوم ہونے چاہییں۔ کسی عنوان پر ٹیپ کر کے پڑھیں۔"
+        )
     }
+
+    private val otherSchoolPrefix = t(
+        "The method shown is Hanafi, with notes for your school.",
+        "Dikhaya gaya tareeqa Hanafi hai, aap ke mazhab ke liye notes ke saath.",
+        "दिखाया गया तरीक़ा हनफ़ी है, आपके मज़हब के लिए नोट्स के साथ।",
+        "دکھایا گیا طریقہ حنفی ہے، آپ کے مذہب کے لیے نوٹس کے ساتھ۔"
+    )
+
+    val schoolSummaries: Map<Madhhab, SalahText> = mapOf(
+        Madhhab.HANAFI to t(
+            "The whole guide follows this school. Witr is Wajib (three rak‘at) with Qunut before ruku‘ in the third rak‘ah; Qunut is not ordinarily read in Fajr.",
+            "Poori guide isi mazhab ke mutabiq hai. Witr Wajib hai (teen rakat) aur Qunoot teesri rakat mein ruku se pehle; Fajr mein aam taur par Qunoot nahi padhi jati.",
+            "पूरी गाइड इसी मज़हब के मुताबिक़ है। वित्र वाजिब है (तीन रकअत) और क़ुनूत तीसरी रकअत में रुकू से पहले; फ़ज्र में आम तौर पर क़ुनूत नहीं पढ़ी जाती।",
+            "پوری گائیڈ اسی مذہب کے مطابق ہے۔ وتر واجب ہے (تین رکعت) اور قنوت تیسری رکعت میں رکوع سے پہلے؛ فجر میں عام طور پر قنوت نہیں پڑھی جاتی۔"
+        ),
+        Madhhab.SHAFII to (otherSchoolPrefix then t(
+            "Witr is Sunnah. Qunut is read after ruku‘ in the second rak‘ah of Fajr, and in Witr during the latter half of Ramadan.",
+            "Witr Sunnat hai. Qunoot Fajr ki doosri rakat mein ruku ke baad padhi jati hai, aur Witr mein Ramzan ke aakhri nisf mein.",
+            "वित्र सुन्नत है। क़ुनूत फ़ज्र की दूसरी रकअत में रुकू के बाद पढ़ी जाती है, और वित्र में रमज़ान के आख़िरी निस्फ़ में।",
+            "وتر سنت ہے۔ قنوت فجر کی دوسری رکعت میں رکوع کے بعد پڑھی جاتی ہے، اور وتر میں رمضان کے آخری نصف میں۔"
+        )),
+        Madhhab.MALIKI to (otherSchoolPrefix then t(
+            "Witr is Sunnah, commonly a single rak‘ah after two rak‘at of shaf‘. The details of the Fajr Qunut vary within the school.",
+            "Witr Sunnat hai, aam taur par do rakat shaf' ke baad ek rakat. Fajr ki Qunoot ki tafseel mein mazhab ke andar ikhtilaf hai.",
+            "वित्र सुन्नत है, आम तौर पर दो रकअत शफ़अ के बाद एक रकअत। फ़ज्र की क़ुनूत की तफ़सील में मज़हब के अंदर इख़्तिलाफ़ है।",
+            "وتر سنت ہے، عام طور پر دو رکعت شفع کے بعد ایک رکعت۔ فجر کی قنوت کی تفصیل میں مذہب کے اندر اختلاف ہے۔"
+        )),
+        Madhhab.HANBALI to (otherSchoolPrefix then t(
+            "Witr is Sunnah and may be offered in an odd number of rak‘at. Qunut in Witr is permitted.",
+            "Witr Sunnat hai aur taaq rakaton mein padhi ja sakti hai. Witr mein Qunoot jaiz hai.",
+            "वित्र सुन्नत है और ताक़ रकअतों में पढ़ी जा सकती है। वित्र में क़ुनूत जायज़ है।",
+            "وتر سنت ہے اور طاق رکعتوں میں پڑھی جا سکتی ہے۔ وتر میں قنوت جائز ہے۔"
+        ))
+    )
+
+    private val beforeFard = t("Before the Fard", "Farz se pehle", "फ़र्ज़ से पहले", "فرض سے پہلے")
+    private val theFard = t("The obligatory prayer", "Farz namaz", "फ़र्ज़ नमाज़", "فرض نماز")
+    private val afterFard = t("After the Fard", "Farz ke baad", "फ़र्ज़ के बाद", "فرض کے بعد")
+    private val afterSunnah = t("After the Sunnah", "Sunnat ke baad", "सुन्नत के बाद", "سنت کے بعد")
+    private val afterNafl = t("After the Nafl", "Nafl ke baad", "नफ़्ल के बाद", "نفل کے بعد")
+    private val afterWitr = t("After Witr", "Witr ke baad", "वित्र के बाद", "وتر کے بعد")
+
+    val daily: List<DailyPrayer> = listOf(
+        DailyPrayer(
+            "fajr", t("Fajr", "Fajr", "फ़ज्र", "فجر"),
+            listOf(Rakats(2, SalahKind.SUNNAH_MUAKKADAH, beforeFard), Rakats(2, SalahKind.FARD, theFard)),
+            t(
+                "The two Sunnah before the Fard are the most emphasised Sunnah of the day.",
+                "Farz se pehle ki do Sunnatein din bhar ki sab se zyada takeed wali Sunnatein hain.",
+                "फ़र्ज़ से पहले की दो सुन्नतें दिन भर की सबसे ज़्यादा ताकीद वाली सुन्नतें हैं।",
+                "فرض سے پہلے کی دو سنتیں دن بھر کی سب سے زیادہ تاکید والی سنتیں ہیں۔"
+            )
+        ),
+        DailyPrayer(
+            "zuhr", t("Zuhr", "Zuhr", "ज़ुहर", "ظہر"),
+            listOf(
+                Rakats(4, SalahKind.SUNNAH_MUAKKADAH, beforeFard), Rakats(4, SalahKind.FARD, theFard),
+                Rakats(2, SalahKind.SUNNAH_MUAKKADAH, afterFard), Rakats(2, SalahKind.NAFL, afterSunnah)
+            ),
+            t(
+                "Its time begins when the sun declines from its highest point.",
+                "Iska waqt sooraj dhalne (Zawal) ke baad shuru hota hai.",
+                "इसका वक़्त सूरज ढलने (ज़वाल) के बाद शुरू होता है।",
+                "اس کا وقت سورج ڈھلنے (زوال) کے بعد شروع ہوتا ہے۔"
+            )
+        ),
+        DailyPrayer(
+            "asr", t("Asr", "Asr", "अस्र", "عصر"),
+            listOf(Rakats(4, SalahKind.SUNNAH_GHAIR_MUAKKADAH, beforeFard), Rakats(4, SalahKind.FARD, theFard)),
+            t(
+                "After the Fard of Asr no Nafl is prayed until sunset.",
+                "Asr ke Farz ke baad ghuroob tak koi Nafl nahi padha jata.",
+                "अस्र के फ़र्ज़ के बाद ग़ुरूब तक कोई नफ़्ल नहीं पढ़ा जाता।",
+                "عصر کے فرض کے بعد غروب تک کوئی نفل نہیں پڑھا جاتا۔"
+            )
+        ),
+        DailyPrayer(
+            "maghrib", t("Maghrib", "Maghrib", "मग़रिब", "مغرب"),
+            listOf(
+                Rakats(3, SalahKind.FARD, theFard), Rakats(2, SalahKind.SUNNAH_MUAKKADAH, afterFard),
+                Rakats(2, SalahKind.NAFL, afterSunnah)
+            ),
+            t(
+                "Pray it without delay once the sun has set.",
+                "Sooraj doobte hi bina der kiye padhein.",
+                "सूरज डूबते ही बिना देर किए पढ़ें।",
+                "سورج ڈوبتے ہی بغیر دیر کیے پڑھیں۔"
+            )
+        ),
+        DailyPrayer(
+            "isha", t("Isha", "Isha", "इशा", "عشاء"),
+            listOf(
+                Rakats(4, SalahKind.SUNNAH_GHAIR_MUAKKADAH, beforeFard), Rakats(4, SalahKind.FARD, theFard),
+                Rakats(2, SalahKind.SUNNAH_MUAKKADAH, afterFard), Rakats(2, SalahKind.NAFL, afterSunnah),
+                Rakats(3, SalahKind.WITR, afterNafl), Rakats(2, SalahKind.NAFL, afterWitr)
+            ),
+            t(
+                "Witr comes after the Fard and Sunnah; it is best as the last prayer of the night.",
+                "Witr Farz aur Sunnat ke baad hai; behtar hai ke yeh raat ki aakhri namaz ho.",
+                "वित्र फ़र्ज़ और सुन्नत के बाद है; बेहतर है कि यह रात की आख़िरी नमाज़ हो।",
+                "وتر فرض اور سنت کے بعد ہے؛ بہتر ہے کہ یہ رات کی آخری نماز ہو۔"
+            )
+        )
+    )
+
+    /** Shown beside the five daily prayers; it replaces Zuhr on Friday. */
+    val jumuah = DailyPrayer(
+        "jumuah", t("Jumu‘ah", "Jumu'ah", "जुमा", "جمعہ"),
+        listOf(
+            Rakats(4, SalahKind.SUNNAH_MUAKKADAH, beforeFard), Rakats(2, SalahKind.FARD, theFard),
+            Rakats(4, SalahKind.SUNNAH_MUAKKADAH, afterFard), Rakats(2, SalahKind.SUNNAH_GHAIR_MUAKKADAH, afterSunnah),
+            Rakats(2, SalahKind.NAFL, afterSunnah)
+        ),
+        t(
+            "It takes the place of Zuhr on Friday for those on whom it is Fard. The two Fard are prayed behind the imam after the khutbah.",
+            "Jin par Farz hai unke liye Jumu'ah ke din yeh Zuhr ki jagah hai. Do Farz khutbe ke baad imam ke peeche padhe jate hain.",
+            "जिन पर फ़र्ज़ है उनके लिए जुमे के दिन यह ज़ुहर की जगह है। दो फ़र्ज़ ख़ुत्बे के बाद इमाम के पीछे पढ़े जाते हैं।",
+            "جن پر فرض ہے ان کے لیے جمعہ کے دن یہ ظہر کی جگہ ہے۔ دو فرض خطبے کے بعد امام کے پیچھے پڑھے جاتے ہیں۔"
+        )
+    )
+
+    val allPrayers: List<DailyPrayer> = daily + jumuah
+
+    private val niyyahTemplate = t(
+        "I intend {count} rak‘at {kind} of {prayer}, for Allah Ta‘ala, facing the Ka‘bah.",
+        "Niyyat ki maine {count} rakat namaz {kind}, waqt {prayer} ka, waste Allah Ta'ala ke, munh mera Kaaba sharif ki taraf.",
+        "नीयत की मैंने {count} रकअत नमाज़ {kind}, वक़्त {prayer} का, वास्ते अल्लाह तआला के, मुँह मेरा काबा शरीफ़ की तरफ़।",
+        "نیت کی میں نے {count} رکعت نماز {kind}، وقت {prayer} کا، واسطے اللہ تعالیٰ کے، منہ میرا کعبہ شریف کی طرف۔"
+    )
+
+    /** The customary wording of the intention; it is the resolve of the heart that counts. */
+    fun niyyah(prayer: DailyPrayer, unit: Rakats, language: String): String = niyyahTemplate.inLanguage(
+        language,
+        "count" to unit.count,
+        "kind" to unit.kind.title.inLanguage(language),
+        "prayer" to prayer.title.inLanguage(language)
+    )
+
+    val recitationList: List<Recitation> = salahRecitations
+    val recitations: Map<String, Recitation> = salahRecitations.associateBy { it.id }
+
+    /** Purification, the make-up of the prayer and everyday rulings. */
+    val rules: List<SalahTopic> = salahRules
+
+    /** Witr, the congregational prayers and the Nawafil. */
+    val topics: List<SalahTopic> = salahSpecialPrayers
+
+    val guideSchoolNotes: Map<Madhhab, SalahText> = schoolDifferenceNotes
+
+    /** Every position of one prayer, in order. No guide copy is assembled in composables. */
+    fun prayerSteps(
+        form: GuideForm,
+        madhhab: Madhhab,
+        worshipper: Worshipper = Worshipper.MAN,
+        prayingAs: PrayingAs = PrayingAs.ALONE
+    ): List<GuideStep> = buildPrayerSteps(form, madhhab, worshipper, prayingAs)
+}
+
+/** Screen copy of the Salah guide, kept beside its content so all of it is translated together. */
+object SalahUi {
+    val HERO_TITLE = t("Your prayer guide", "Aap ki namaz guide", "आपकी नमाज़ गाइड", "آپ کی نماز گائیڈ")
+    val SCHOOL_LINE = t("{school} school", "{school} mazhab", "{school} मज़हब", "{school} مذہب")
+    val CHANGE = t("Change", "Badlein", "बदलें", "بدلیں")
+    val CHOOSE_MADHHAB = t("Choose madhhab", "Mazhab chunein", "मज़हब चुनें", "مذہب منتخب کریں")
+    val CLOSE = t("Close", "Band karein", "बंद करें", "بند کریں")
+
+    val TAB_DAILY = t("Rak‘at", "Rakatein", "रकअतें", "رکعتیں")
+    val TAB_GUIDE = t("How to pray", "Tareeqa", "तरीक़ा", "طریقہ")
+    val TAB_RECITATIONS = t("Recitations", "Kya padhein", "क्या पढ़ें", "کیا پڑھیں")
+    val TAB_RULES = t("Masail", "Masail", "मसाइल", "مسائل")
+    val TAB_MORE = t("More prayers", "Aur namazein", "और नमाज़ें", "مزید نمازیں")
+
+    val RAKAT_SUMMARY = t("{total} rak‘at · {fard} Fard", "{total} rakat · {fard} Farz", "{total} रकअत · {fard} फ़र्ज़", "{total} رکعت · {fard} فرض")
+    val RAKAT = t("rak‘at", "rakat", "रकअत", "رکعت")
+    val LEARN = t("Learn step by step", "Qadam ba qadam seekhein", "क़दम-ब-क़दम सीखें", "قدم بہ قدم سیکھیں")
+    val LEARN_FARD = t("Learn the {count} Fard", "{count} Farz seekhein", "{count} फ़र्ज़ सीखें", "{count} فرض سیکھیں")
+    val LEARN_UNIT = t("Learn", "Seekhein", "सीखें", "سیکھیں")
+    val NIYYAH = t("Niyyah", "Niyyat", "नीयत", "نیت")
+
+    val GUIDE_TITLE = t("Step-by-step Salah", "Namaz qadam ba qadam", "नमाज़ क़दम-ब-क़दम", "نماز قدم بہ قدم")
+    val GUIDE_HINT = t(
+        "Choose the prayer, then follow each position in order.",
+        "Namaz chunein, phir har rukn tarteeb se dekhein.",
+        "नमाज़ चुनें, फिर हर रुक्न तरतीब से देखें।",
+        "نماز منتخب کریں، پھر ہر رکن ترتیب سے دیکھیں۔"
+    )
+    val BEGINNER = t("Beginner mode", "Beginner mode", "बिगिनर मोड", "مبتدی موڈ")
+    val BEGINNER_HINT = t("One step at a time", "Ek waqt mein ek qadam", "एक वक़्त में एक क़दम", "ایک وقت میں ایک قدم")
+    val STEP_OF = t("Step {n} of {total}", "Qadam {n} / {total}", "क़दम {n} / {total}", "قدم {n} / {total}")
+    val RAKAH_N = t("Rak‘ah {n}", "Rakat {n}", "रकअत {n}", "رکعت {n}")
+    val PREVIOUS = t("Previous", "Pichhla", "पिछला", "پچھلا")
+    val NEXT = t("Next", "Agla", "अगला", "اگلا")
+    val START_AGAIN = t("Start again", "Dobara shuru karein", "दोबारा शुरू करें", "دوبارہ شروع کریں")
+    val SHOW = t("Show", "Dikhayein", "दिखाएँ", "دکھائیں")
+    val HIDE = t("Hide", "Chhupayein", "छुपाएँ", "چھپائیں")
+
+    val QIBLA = t("Qibla", "Qibla", "क़िबला", "قبلہ")
+    val QIBLA_HINT = t(
+        "Find the direction of the Ka‘bah before you pray.",
+        "Namaz se pehle Kaaba ka rukh maloom karein.",
+        "नमाज़ से पहले काबा का रुख़ मालूम करें।",
+        "نماز سے پہلے کعبہ کا رخ معلوم کریں۔"
+    )
+    val OPEN = t("Open", "Kholein", "खोलें", "کھولیں")
+    val REFERENCE = t("Reference", "Hawala", "हवाला", "حوالہ")
 }

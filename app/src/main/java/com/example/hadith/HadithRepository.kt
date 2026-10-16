@@ -17,6 +17,9 @@ data class HadithCatalogState(
 object HadithRepository {
     private val _state = MutableStateFlow(HadithCatalogState())
     val state: StateFlow<HadithCatalogState> = _state.asStateFlow()
-    fun init(context: Context) = HadithPdfStore.init(context)
+    fun init(context: Context) {
+        HadithPdfStore.init(context)
+        BookSearchIndex.init(context)
+    }
     suspend fun load(forceRefresh: Boolean = false) { _state.value = HadithCatalogState() }
 }

@@ -15,9 +15,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -61,6 +63,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.example.core.net.StreamPlayer
 import com.example.domain.model.Surah
 import com.example.quran.FullQuranCatalog
 import com.example.quran.RootInfo
@@ -74,9 +77,16 @@ import com.example.quran.WbwWord
 import com.example.quran.WordByWordRepository
 import com.example.core.audio.PlaybackSpeed
 import com.example.ui.components.PlaybackSpeedButton
+import com.example.ui.components.ErrorState
+import com.example.ui.components.HeroSurface
+import com.example.ui.components.pressScale
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizeUiText
+import com.example.ui.localization.localizedUiText
 import com.example.ui.localization.persistedAppLanguage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -210,7 +220,7 @@ private class RecitationPlayer(private val context: Context) {
         releasePlayer()
         val local = !source.startsWith("http")
         playerSource = source
-        return ExoPlayer.Builder(context).build().apply {
+        return StreamPlayer.build(context).apply {
             setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_SPEECH).build(), false)
             addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(state: Int) {
@@ -255,7 +265,7 @@ private class RecitationPlayer(private val context: Context) {
 
     private fun playSingle(word: WbwWord, source: Int = 0) {
         val url = word.audioUrls.getOrNull(source) ?: return stop()
-        val clip = ExoPlayer.Builder(context).build()
+        val clip = StreamPlayer.build(context)
         single = clip
         clip.setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_SPEECH).build(), false)
         clip.addListener(object : Player.Listener {
@@ -306,6 +316,8 @@ private data class AudioRequest(val title: String, val surahs: List<Int>, val by
 
 @Composable
 internal fun QuranWordLearningScreen(modifier: Modifier = Modifier) {
+    com.example.core.analytics.AnalyticsScreen("quran_word_learning_screen")
+
     val context = LocalContext.current
     val appLanguage = LocalAppLanguage.current
     val state = remember(context) { WbwState(context, appLanguage) }
@@ -313,13 +325,13 @@ internal fun QuranWordLearningScreen(modifier: Modifier = Modifier) {
     DisposableEffect(player) { onDispose { player.release() } }
     remember(context) { WbwAudioDownloads.init(context) }
     val downloads by WbwAudioDownloads.state.collectAsState()
-    val index by produceState<WbwIndex?>(null) { value = WordByWordRepository.index(context) }
+    val index by produceState<WbwIndex?>(null) { value = runCatching { WordByWordRepository.index(context) }.getOrNull() }
     var request by remember { mutableStateOf<AudioRequest?>(null) }
 
     var openSurah by rememberSaveable { mutableIntStateOf(0) }
     var startAyah by rememberSaveable { mutableIntStateOf(1) }
     fun open(surah: Int, ayah: Int) { player.stop(); startAyah = ayah; openSurah = surah }
-    BackHandler(openSurah != 0) { open(0, 1) }
+    BackHandler(openSurah != 0) { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "close_surah_system_back", "back"); open(0, 1) }
 
     Box(modifier.fillMaxSize().background(MushafPaper)) {
         if (openSurah == 0) {
@@ -327,7 +339,7 @@ internal fun QuranWordLearningScreen(modifier: Modifier = Modifier) {
         } else key(openSurah) {
             SurahReader(
                 openSurah, startAyah, state, index, downloads, player,
-                onBack = { open(0, 1) }, onOpenSurah = { open(it, 1) }, onRequest = { request = it }
+                onBack = { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "close_surah", "back"); open(0, 1) }, onOpenSurah = { open(it, 1) }, onRequest = { request = it }
             )
         }
     }
@@ -350,13 +362,17 @@ private fun SurahPicker(
 ) {
     val surahs = FullQuranCatalog.surahs
     var query by rememberSaveable { mutableStateOf("") }
+    com.example.core.analytics.AnalyticsSearch("quran_word_learning_screen", query)
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val needle = query.trim().lowercase()
-    val filtered = remember(needle) {
+    val language = LocalAppLanguage.current
+    val filtered = remember(needle, language) {
         val plain = needle.replace("-", " ").replace("'", "")
         if (needle.isEmpty()) surahs else surahs.filter {
             it.number.toString() == needle || it.arabicName.contains(needle) || it.englishMeaning.lowercase().contains(needle) ||
-                it.englishName.lowercase().replace("-", " ").replace("'", "").contains(plain)
+                it.englishName.lowercase().replace("-", " ").replace("'", "").contains(plain) ||
+                localizeUiText(it.englishName, language).lowercase().contains(needle) ||
+                localizeUiText(it.englishMeaning, language).lowercase().contains(needle)
         }
     }
     fun surahRequest(surah: Surah, delete: Boolean) = AudioRequest(
@@ -365,7 +381,7 @@ private fun SurahPicker(
     val surahRow: @Composable (Surah) -> Unit = { surah ->
         SurahRow(
             surah, index?.audio?.get(surah.number - 1)?.bytes, downloads,
-            onClick = { onOpen(surah.number, 1) },
+            onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "open_surah", "tap", item = "surah_${surah.number}"); onOpen(surah.number, 1) },
             onDownload = { onRequest(surahRequest(surah, delete = false)) },
             onCancel = { WbwAudioDownloads.cancel(listOf(surah.number)) },
             onDelete = { onRequest(surahRequest(surah, delete = true)) }
@@ -381,42 +397,49 @@ private fun SurahPicker(
         if (state.lastSurah in 1..114) {
             item {
                 val surah = surahs[state.lastSurah - 1]
+                val interaction = remember { MutableInteractionSource() }
                 Surface(
-                    onClick = { onOpen(surah.number, state.lastAyah) },
-                    color = QuranGoldLight.copy(alpha = .55f), shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, MushafGold.copy(alpha = .5f)),
-                    modifier = Modifier.fillMaxWidth().testTag("quran_wbw_continue")
+                    onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "continue_last_ayah", "tap"); onOpen(surah.number, state.lastAyah) },
+                    color = Color(0xFFF6EBCB), shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, MushafGold.copy(alpha = .45f)),
+                    modifier = Modifier.fillMaxWidth().pressScale(interaction).testTag("quran_wbw_continue"),
+                    interactionSource = interaction
                 ) {
-                    Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        NumberBadge(surah.number, active = true)
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            LocalizedText("Continue learning", color = QuranMuted, fontSize = 12.sp)
-                            LocalizedText("Surah ${surah.englishName} · Ayah ${state.lastAyah}", color = QuranGreen, fontWeight = FontWeight.Bold)
+                            LocalizedText("Continue learning", color = QuranMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            LocalizedText("Surah ${surah.englishName} · Ayah ${state.lastAyah}", color = QuranGreen, fontWeight = FontWeight.Bold,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
+                        Text(surah.arabicName, fontFamily = IndoPakFont, fontSize = 20.sp, color = QuranGreen, maxLines = 1)
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = QuranGreen)
                     }
                 }
             }
         }
         item {
-            OutlinedTextField(
-                query, { query = it }, Modifier.fillMaxWidth().testTag("quran_wbw_search"),
-                placeholder = { LocalizedText("Search surah name or number") },
-                leadingIcon = { Icon(Icons.Default.Search, null) },
-                trailingIcon = if (query.isNotEmpty()) {{ IconButton({ query = "" }) { Icon(Icons.Default.Close, "Clear") } }} else null,
-                singleLine = true, shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = QuranCard, unfocusedContainerColor = QuranCard, focusedBorderColor = QuranGreen)
-            )
+            QuranSearchField(
+                query = query,
+                onQueryChange = { query = it },
+                onClear = { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "clear_surah_search", "tap"); query = "" },
+                modifier = Modifier.testTag("quran_wbw_search")
+            ) { LocalizedText("Search surah name or number") }
         }
         if (needle.isEmpty()) {
             item {
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                     listOf("Surah", "Juz", "Downloads").forEachIndexed { i, label ->
                         SegmentedButton(
-                            selected = tab == i, onClick = { tab = i },
+                            selected = tab == i, onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "select_picker_tab", "tap", item = "tab_$i"); tab = i },
                             shape = SegmentedButtonDefaults.itemShape(i, 3),
-                            colors = SegmentedButtonDefaults.colors(activeContainerColor = QuranGoldLight, activeContentColor = QuranGreen),
+                            colors = SegmentedButtonDefaults.colors(
+                                activeContainerColor = QuranGoldLight, activeContentColor = QuranGreen, activeBorderColor = MushafGold,
+                                inactiveContainerColor = QuranCard, inactiveContentColor = QuranGreen, inactiveBorderColor = MushafBorder
+                            ),
                             modifier = Modifier.testTag("quran_wbw_tab_$i")
-                        ) { LocalizedText(label, fontWeight = FontWeight.SemiBold, maxLines = 1) }
+                        ) { LocalizedText(label, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     }
                 }
             }
@@ -424,7 +447,11 @@ private fun SurahPicker(
         when {
             needle.isNotEmpty() || tab == 0 -> {
                 if (filtered.isEmpty()) item {
-                    LocalizedText("No surah found.", color = QuranMuted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(24.dp))
+                    Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Search, null, tint = MushafGold.copy(alpha = .7f), modifier = Modifier.size(40.dp))
+                        Spacer(Modifier.height(8.dp))
+                        LocalizedText("No surah found.", color = QuranMuted, textAlign = TextAlign.Center)
+                    }
                 }
                 items(filtered, key = { "s${it.number}" }) { surahRow(it) }
             }
@@ -442,7 +469,7 @@ private fun SurahPicker(
                     )
                     JuzRow(
                         juz, surahs[s - 1], a, members, bytes, downloads, index,
-                        onClick = { onOpen(s, a) },
+                        onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "open_juz", "tap", item = "juz_$juz"); onOpen(s, a) },
                         onDownload = { onRequest(juzRequest(delete = false)) },
                         onCancel = { WbwAudioDownloads.cancel(members) },
                         onDelete = { onRequest(juzRequest(delete = true)) }
@@ -453,11 +480,14 @@ private fun SurahPicker(
                 item { DownloadsSummary(downloads, index, onRequest) }
                 val mine = surahs.filter { downloads.isDownloaded(it.number) || downloads.isActive(it.number) }
                 if (mine.isEmpty()) item {
-                    LocalizedText(
-                        "No audio downloaded yet. Tap the download button next to any surah or juz to listen without internet.",
-                        color = QuranMuted, textAlign = TextAlign.Center, fontSize = 13.sp,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 20.dp)
-                    )
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Download, null, tint = MushafGold.copy(alpha = .7f), modifier = Modifier.size(40.dp))
+                        Spacer(Modifier.height(8.dp))
+                        LocalizedText(
+                            "No audio downloaded yet. Tap the download button next to any surah or juz to listen without internet.",
+                            color = QuranMuted, textAlign = TextAlign.Center, fontSize = 13.sp
+                        )
+                    }
                 }
                 items(mine, key = { "d${it.number}" }) { surahRow(it) }
             }
@@ -468,8 +498,16 @@ private fun SurahPicker(
 @Composable private fun ProgressHeader(state: WbwState, index: WbwIndex?) {
     val coverage = index?.let(state::coverage) ?: 0f
     val percent = coverage * 100
-    Surface(color = QuranGreen, shape = RoundedCornerShape(18.dp)) {
-        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+    // Coverage fills in when the screen opens, so the bar reads as progress rather than a static line.
+    var started by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { started = true }
+    val shownCoverage by animateFloatAsState(if (started) coverage else 0f, tween(700), label = "wbwCoverage")
+    HeroSurface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        contentPadding = PaddingValues(16.dp)
+    ) {
+        Column(Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     LocalizedText("Word by word Quran", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 19.sp)
@@ -482,8 +520,9 @@ private fun SurahPicker(
             }
             Spacer(Modifier.height(10.dp))
             LinearProgressIndicator(
-                progress = { coverage }, Modifier.fillMaxWidth().height(6.dp),
-                color = QuranGoldLight, trackColor = Color.White.copy(alpha = .18f), strokeCap = StrokeCap.Round
+                progress = { shownCoverage }, Modifier.fillMaxWidth().height(6.dp),
+                color = QuranGoldLight, trackColor = Color.White.copy(alpha = .18f), strokeCap = StrokeCap.Round,
+                gapSize = 0.dp, drawStopIndicator = {}
             )
             Spacer(Modifier.height(6.dp))
             LocalizedText(
@@ -511,15 +550,15 @@ private fun SurahPicker(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (index != null && remaining.isNotEmpty()) {
                     OutlinedButton(
-                        { onRequest(AudioRequest("the whole Quran", remaining, remaining.sumOf { index.audio[it - 1].bytes }, delete = false)) },
-                        Modifier.weight(1f)
-                    ) { Icon(Icons.Default.Download, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); LocalizedText("Download all", maxLines = 1) }
+                        { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "download_all_audio", "tap"); onRequest(AudioRequest("the whole Quran", remaining, remaining.sumOf { index.audio[it - 1].bytes }, delete = false)) },
+                        Modifier.weight(1f), colors = ButtonDefaults.outlinedButtonColors(contentColor = QuranGreen)
+                    ) { Icon(Icons.Default.Download, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); LocalizedText("Download all", maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
                 if (downloads.downloaded.isNotEmpty()) {
                     OutlinedButton(
-                        { onRequest(AudioRequest("all downloads", downloads.downloaded.toList(), downloads.usedBytes, delete = true)) },
-                        Modifier.weight(1f)
-                    ) { Icon(Icons.Default.DeleteOutline, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); LocalizedText("Delete all", maxLines = 1) }
+                        { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "delete_all_audio", "tap"); onRequest(AudioRequest("all downloads", downloads.downloaded.toList(), downloads.usedBytes, delete = true)) },
+                        Modifier.weight(1f), colors = ButtonDefaults.outlinedButtonColors(contentColor = QuranGreen)
+                    ) { Icon(Icons.Default.DeleteOutline, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); LocalizedText("Delete all", maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
             }
         }
@@ -531,17 +570,17 @@ private fun SurahPicker(
     onClick: () -> Unit, onDownload: () -> Unit, onCancel: () -> Unit, onDelete: () -> Unit
 ) {
     val downloaded = downloads.isDownloaded(surah.number)
-    Surface(onClick = onClick, color = QuranCard, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, MushafBorder.copy(alpha = .25f)), modifier = Modifier.fillMaxWidth().testTag("quran_wbw_surah_${surah.number}")) {
+    val interaction = remember { MutableInteractionSource() }
+    Surface(onClick = onClick, color = QuranCard, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, MushafBorder.copy(alpha = .22f)),
+        modifier = Modifier.fillMaxWidth().pressScale(interaction).testTag("quran_wbw_surah_${surah.number}"), interactionSource = interaction) {
         Row(Modifier.padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(36.dp).background(QuranGoldLight.copy(alpha = .45f), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-                Text("${surah.number}", color = QuranGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            }
+            NumberBadge(surah.number)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                LocalizedText(surah.englishName, color = MushafInk, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                LocalizedText(surah.englishName, color = MushafInk, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 LocalizedText("${surah.englishMeaning} · ${surah.totalAyat} ayat", color = QuranMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (downloaded) LocalizedText("Audio offline", color = LearnedGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                else if (bytes != null && !downloads.isActive(surah.number)) Text("Audio ${bytes.asSize()}", color = QuranMuted, fontSize = 11.sp)
+                else if (bytes != null && !downloads.isActive(surah.number)) LocalizedText("Audio ${bytes.asSize()}", color = QuranMuted, fontSize = 11.sp)
             }
             Text(surah.arabicName, fontFamily = IndoPakFont, fontSize = 21.sp, color = QuranGreen)
             DownloadControl(downloaded, downloads.active[surah.number], onDownload, onCancel, onDelete, Modifier.testTag("quran_wbw_download_${surah.number}"))
@@ -564,17 +603,17 @@ private fun SurahPicker(
         }
         (done.toFloat() / bytes).coerceIn(0f, 1f)
     }
-    Surface(onClick = onClick, color = QuranCard, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, MushafBorder.copy(alpha = .25f)), modifier = Modifier.fillMaxWidth().testTag("quran_wbw_juz_$juz")) {
+    val interaction = remember { MutableInteractionSource() }
+    Surface(onClick = onClick, color = QuranCard, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, MushafBorder.copy(alpha = .22f)),
+        modifier = Modifier.fillMaxWidth().pressScale(interaction).testTag("quran_wbw_juz_$juz"), interactionSource = interaction) {
         Row(Modifier.padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(36.dp).background(QuranGreen, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-                Text("$juz", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            }
+            NumberBadge(juz, active = true)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 LocalizedText("Juz $juz", color = MushafInk, fontWeight = FontWeight.SemiBold)
                 LocalizedText("Starts at ${surah.englishName} · Ayah $ayah", color = QuranMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (downloaded) LocalizedText("Audio offline", color = LearnedGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                else if (progress == null) Text("Audio ${bytes.asSize()}", color = QuranMuted, fontSize = 11.sp)
+                else if (progress == null) LocalizedText("Audio ${bytes.asSize()}", color = QuranMuted, fontSize = 11.sp)
             }
             Text("پارہ ${juz.toArabicDigits()}", fontFamily = IndoPakFont, fontSize = 19.sp, color = QuranGreen)
             DownloadControl(downloaded, progress, onDownload, onCancel, onDelete, Modifier.testTag("quran_wbw_juz_download_$juz"))
@@ -585,19 +624,19 @@ private fun SurahPicker(
 /** Download → progress ring (tap to cancel) → offline badge (tap to remove). */
 @Composable private fun DownloadControl(
     downloaded: Boolean, progress: Float?, onDownload: () -> Unit, onCancel: () -> Unit, onDelete: () -> Unit,
-    modifier: Modifier = Modifier, size: Dp = 44.dp
+    modifier: Modifier = Modifier, size: Dp = 48.dp
 ) {
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         when {
             progress != null -> Box(
-                Modifier.size(size).clip(CircleShape).clickable(role = Role.Button, onClick = onCancel), contentAlignment = Alignment.Center
+                Modifier.size(size).clip(CircleShape).clickable(role = Role.Button, onClick = com.example.core.analytics.AppAnalytics.trackAction("quran_word_learning_screen", "cancel_audio_download", onCancel)), contentAlignment = Alignment.Center
             ) {
                 if (progress > 0f) CircularProgressIndicator(progress = { progress }, Modifier.size(28.dp), color = QuranGreen, strokeWidth = 3.dp, trackColor = MushafBorder.copy(alpha = .25f))
                 else CircularProgressIndicator(Modifier.size(28.dp), color = QuranGreen, strokeWidth = 3.dp)
-                Icon(Icons.Default.Close, "Cancel download", tint = QuranGreen, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Close, localizedUiText("Cancel download"), tint = QuranGreen, modifier = Modifier.size(14.dp))
             }
-            downloaded -> IconButton(onDelete) { Icon(Icons.Default.OfflinePin, "Downloaded · tap to remove", tint = LearnedGreen) }
-            else -> IconButton(onDownload) { Icon(Icons.Default.Download, "Download audio", tint = QuranMuted) }
+            downloaded -> IconButton(onDelete) { Icon(Icons.Default.OfflinePin, localizedUiText("Downloaded · tap to remove"), tint = LearnedGreen) }
+            else -> IconButton(onDownload) { Icon(Icons.Default.Download, localizedUiText("Download audio"), tint = QuranMuted) }
         }
     }
 }
@@ -605,24 +644,23 @@ private fun SurahPicker(
 @Composable private fun AudioRequestDialog(request: AudioRequest, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     val names = request.surahs.map { FullQuranCatalog.surahs[it - 1].englishName }
     AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(if (request.delete) Icons.Default.DeleteOutline else Icons.Default.Download, null, tint = QuranGreen) },
+        onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("quran_word_learning_screen", "dismiss_audio_request", onDismiss),
+        icon = { Icon(if (request.delete) Icons.Default.DeleteOutline else Icons.Default.Download, null) },
         title = { LocalizedText(if (request.delete) "Remove audio?" else "Download audio?") },
         text = {
             Column {
                 LocalizedText(
                     if (request.delete) "Remove the downloaded recitation of ${request.title} and free ${request.bytes.asSize()}. The text and meanings stay available offline."
-                    else "Download the recitation of ${request.title} (Mishary Alafasy) to listen without internet. Size: ${request.bytes.asSize()}. Wi-Fi is recommended.",
-                    color = MushafInk
+                    else "Download the recitation of ${request.title} (Mishary Alafasy) to listen without internet. Size: ${request.bytes.asSize()}. Wi-Fi is recommended."
                 )
                 if (!request.delete && request.title.startsWith("Juz") && names.size > 1) {
                     Spacer(Modifier.height(8.dp))
-                    LocalizedText("Audio is saved per surah, so this includes the full surahs: ${names.joinToString(", ")}", color = QuranMuted, fontSize = 12.sp)
+                    LocalizedText("Audio is saved per surah, so this includes the full surahs: ${names.joinToString(", ")}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
         },
         confirmButton = {
-            Button(onConfirm, colors = ButtonDefaults.buttonColors(containerColor = QuranGreen), modifier = Modifier.testTag("quran_wbw_confirm_audio")) {
+            Button(onConfirm, colors = ButtonDefaults.buttonColors(containerColor = QuranGreen, contentColor = Color.White), modifier = Modifier.testTag("quran_wbw_confirm_audio")) {
                 LocalizedText(if (request.delete) "Remove" else "Download")
             }
         },
@@ -637,12 +675,23 @@ private fun SurahReader(
     number: Int, startAyah: Int, state: WbwState, index: WbwIndex?, downloads: WbwDownloadState, player: RecitationPlayer,
     onBack: () -> Unit, onOpenSurah: (Int) -> Unit, onRequest: (AudioRequest) -> Unit
 ) {
+    com.example.core.analytics.AnalyticsScreen("surah_reader")
+    LaunchedEffect(number) { com.example.core.analytics.AppAnalytics.content("word_by_word", "surah_$number") }
+
     val context = LocalContext.current
     val surah = FullQuranCatalog.surahs[number - 1]
-    val ayahs by produceState<List<WbwAyah>?>(null, number) { value = WordByWordRepository.surah(context, number) }
+    // A damaged asset must show a retry card, never crash the reader.
+    var loadAttempt by remember { mutableIntStateOf(0) }
+    var loadFailed by remember { mutableStateOf(false) }
+    val ayahs by produceState<List<WbwAyah>?>(null, number, loadAttempt) {
+        loadFailed = false
+        value = runCatching { WordByWordRepository.surah(context, number) }.getOrNull()
+        if (value == null) loadFailed = true
+    }
     val headerItems = if (number != 1 && number != 9) 1 else 0
     fun itemFor(ayah: Int) = if (ayah <= 1) 0 else ayah - 1 + headerItems
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = itemFor(startAyah))
+    com.example.core.analytics.AnalyticsScroll("quran_word_learning_screen", listState)
     val scope = rememberCoroutineScope()
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var showJump by rememberSaveable { mutableStateOf(false) }
@@ -670,15 +719,15 @@ private fun SurahReader(
     Column(Modifier.fillMaxSize()) {
         Surface(color = QuranCard, shadowElevation = 2.dp) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onBack, Modifier.testTag("quran_wbw_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = QuranGreen) }
-                Column(Modifier.weight(1f).clickable(role = Role.Button) { showJump = true }.testTag("quran_wbw_jump")) {
+                IconButton(onBack, Modifier.testTag("quran_wbw_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, localizedUiText("Back"), tint = QuranGreen) }
+                Column(Modifier.weight(1f).clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "open_jump_to_ayah", "tap"); showJump = true }.testTag("quran_wbw_jump")) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         LocalizedText("${surah.number}. ${surah.englishName}", color = MushafInk, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                        Icon(Icons.Default.UnfoldMore, "Go to ayah", tint = QuranMuted, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.UnfoldMore, localizedUiText("Go to ayah"), tint = QuranMuted, modifier = Modifier.size(18.dp))
                     }
                     LocalizedText(
                         if (downloads.isDownloaded(number)) "${surah.totalAyat} ayat · audio offline" else "${surah.totalAyat} ayat · ${surah.englishMeaning}",
-                        color = if (downloads.isDownloaded(number)) LearnedGreen else QuranMuted, fontSize = 11.sp, maxLines = 1
+                        color = if (downloads.isDownloaded(number)) LearnedGreen else QuranMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                 }
                 if (audio != null) {
@@ -690,13 +739,19 @@ private fun SurahReader(
                     )
                 }
                 PlaybackSpeedButton(state.playbackSpeed, state::updatePlaybackSpeed, Modifier.padding(start = 4.dp), color = QuranGreen)
-                IconButton({ showSettings = true }, Modifier.testTag("quran_wbw_settings")) { Icon(Icons.Default.Tune, "Display settings", tint = QuranGreen) }
+                IconButton({ com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "open_display_settings", "tap"); showSettings = true }, Modifier.testTag("quran_wbw_settings")) { Icon(Icons.Default.Tune, localizedUiText("Display settings"), tint = QuranGreen) }
             }
         }
 
         val loaded = ayahs
         if (loaded == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = QuranGreen) }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                if (loadFailed) ErrorState(
+                    onRetry = { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "retry_load_surah", "tap"); loadAttempt++ },
+                    title = "Quran text could not open.",
+                    retryText = "Try again"
+                ) else CircularProgressIndicator(color = QuranGreen)
+            }
         } else {
             LazyColumn(
                 Modifier.fillMaxSize().testTag("quran_wbw_reader"), state = listState,
@@ -712,8 +767,8 @@ private fun SurahReader(
                 if (number < 114) item(key = "next") {
                     val next = FullQuranCatalog.surahs[number]
                     Button(
-                        { onOpenSurah(next.number) }, Modifier.fillMaxWidth().padding(top = 6.dp).testTag("quran_wbw_next_surah"),
-                        colors = ButtonDefaults.buttonColors(containerColor = QuranGreen)
+                        { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "open_next_surah", "tap", item = "surah_${next.number}"); onOpenSurah(next.number) }, Modifier.fillMaxWidth().padding(top = 6.dp).testTag("quran_wbw_next_surah"),
+                        colors = ButtonDefaults.buttonColors(containerColor = QuranGreen, contentColor = Color.White)
                     ) {
                         LocalizedText("Next surah: ${next.englishName}")
                         Spacer(Modifier.width(6.dp))
@@ -741,9 +796,11 @@ private fun SurahReader(
 
 @Composable private fun AyahCard(ayah: WbwAyah, state: WbwState, player: RecitationPlayer, onWord: (WbwWord) -> Unit) {
     val playing = player.playingAyah == ayah.key
+    // The gold frame follows recitation smoothly from ayah to ayah.
+    val frame by androidx.compose.animation.animateColorAsState(if (playing) MushafGold else MushafBorder.copy(alpha = .3f), tween(250), label = "ayahFrame")
     Surface(
-        color = QuranCard, shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(if (playing) 2.dp else 1.dp, if (playing) MushafGold else MushafBorder.copy(alpha = .3f)),
+        color = QuranCard, shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(if (playing) 2.dp else 1.dp, frame),
         modifier = Modifier.fillMaxWidth().testTag("quran_wbw_ayah_${ayah.key}")
     ) {
         Column(Modifier.padding(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 12.dp)) {
@@ -753,7 +810,7 @@ private fun SurahReader(
                 }
                 Spacer(Modifier.weight(1f))
                 FilledTonalButton(
-                    { player.toggleAyah(ayah) }, Modifier.height(32.dp).testTag("quran_ayah_play_${ayah.key}"),
+                    { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "toggle_ayah_audio", "tap"); player.toggleAyah(ayah) }, Modifier.heightIn(min = 32.dp).testTag("quran_ayah_play_${ayah.key}"),
                     contentPadding = PaddingValues(horizontal = 12.dp),
                     colors = ButtonDefaults.filledTonalButtonColors(containerColor = if (playing) QuranGreen else QuranGoldLight.copy(alpha = .5f), contentColor = if (playing) Color.White else QuranGreen)
                 ) {
@@ -793,12 +850,14 @@ private fun SurahReader(
 }
 
 @Composable private fun WordTile(word: WbwWord, learned: Boolean, speaking: Boolean, meaning: String?, showTransliteration: Boolean, arabicSize: Float, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
     Surface(
-        onClick = onClick,
+        onClick = com.example.core.analytics.AppAnalytics.trackAction("quran_word_learning_screen", "open_word", onClick),
         color = when { speaking -> QuranGoldLight; learned -> LearnedTint; else -> MushafPaper },
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(if (speaking) 2.dp else 1.dp, when { speaking -> MushafGold; learned -> LearnedGreen.copy(alpha = .4f); else -> MushafBorder.copy(alpha = .3f) }),
-        modifier = Modifier.widthIn(min = 48.dp, max = 140.dp).testTag("quran_word_${word.id}")
+        modifier = Modifier.widthIn(min = 48.dp, max = 140.dp).pressScale(interaction, pressedScale = .94f).testTag("quran_word_${word.id}"),
+        interactionSource = interaction
     ) {
         Column(Modifier.padding(horizontal = 8.dp, vertical = 5.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(word.arabic, fontFamily = IndoPakFont, fontSize = arabicSize.sp, color = MushafInk, textAlign = TextAlign.Center)
@@ -822,9 +881,9 @@ private fun SurahReader(
     val learned = state.isLearned(word)
     val root: RootInfo? = wbwIndex?.roots?.get(word.root)
     val occurrences = wbwIndex?.lemmaCounts?.get(word.lemma)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = QuranCard) {
+    ModalBottomSheet(onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("quran_word_learning_screen", "dismiss_word_sheet", onDismiss), containerColor = QuranCard) {
         Column(
-            Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 24.dp).testTag("quran_word_sheet"),
+            Modifier.fillMaxWidth().verticalScroll(com.example.core.analytics.rememberAnalyticsScrollState("quran_word_learning_screen")).padding(start = 20.dp, end = 20.dp, bottom = 24.dp).testTag("quran_word_sheet"),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             LocalizedText("Ayah ${word.surah}:${word.ayah} · Word ${word.position}", color = QuranMuted, fontSize = 12.sp)
@@ -878,31 +937,34 @@ private fun SurahReader(
             }
             Spacer(Modifier.height(14.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton({ player.playWord(word) }, Modifier.weight(1f).testTag("quran_word_pronounce")) {
-                    Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); LocalizedText("Listen")
+                OutlinedButton({ com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "listen_word", "tap"); player.playWord(word) }, Modifier.weight(1f).testTag("quran_word_pronounce"), colors = ButtonDefaults.outlinedButtonColors(contentColor = QuranGreen)) {
+                    Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); LocalizedText("Listen", maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Button(
-                    {
+                    { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "toggle_word_learned", "tap");
                         state.setLearned(word, !learned)
                         if (!learned && index < words.lastIndex) onNavigate(index + 1)
                     },
                     Modifier.weight(1f).testTag("quran_word_mark_learned"),
-                    colors = ButtonDefaults.buttonColors(containerColor = if (learned) LearnedGreen else QuranGreen)
+                    colors = ButtonDefaults.buttonColors(containerColor = if (learned) LearnedGreen else QuranGreen, contentColor = Color.White)
                 ) {
                     Icon(if (learned) Icons.Default.CheckCircle else Icons.Default.Check, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
-                    LocalizedText(if (learned) "Learned" else "I know this", maxLines = 1)
+                    LocalizedText(if (learned) "Learned" else "I know this", maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             Spacer(Modifier.height(8.dp))
-            // Arabic reads right-to-left: the next word lies to the left, so the arrows follow the text.
+            // Arabic reads right-to-left: the next word lies to the left, so the arrows follow the text
+            // in every app language instead of flipping with the layout direction.
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                TextButton({ onNavigate(index + 1) }, enabled = index < words.lastIndex) {
+                TextButton({ com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "next_word", "tap"); onNavigate(index + 1) }, enabled = index < words.lastIndex, colors = ButtonDefaults.textButtonColors(contentColor = QuranGreen)) {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null); LocalizedText("Next")
                 }
                 Text("${index + 1} / ${words.size}", color = QuranMuted, fontSize = 12.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                TextButton({ onNavigate(index - 1) }, enabled = index > 0) {
+                TextButton({ com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "previous_word", "tap"); onNavigate(index - 1) }, enabled = index > 0, colors = ButtonDefaults.textButtonColors(contentColor = QuranGreen)) {
                     LocalizedText("Previous"); Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                 }
+            }
             }
         }
     }
@@ -911,15 +973,15 @@ private fun SurahReader(
 // ---------------------------------------------------------------- Settings & navigation
 
 @Composable private fun DisplaySettingsSheet(state: WbwState, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = QuranCard) {
-        Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 28.dp)) {
+    ModalBottomSheet(onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("quran_word_learning_screen", "dismiss_display_settings", onDismiss), containerColor = QuranCard) {
+        Column(Modifier.fillMaxWidth().verticalScroll(com.example.core.analytics.rememberAnalyticsScrollState("quran_word_learning_screen")).padding(start = 20.dp, end = 20.dp, bottom = 28.dp)) {
             LocalizedText("Display", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MushafInk)
             Spacer(Modifier.height(12.dp))
             LocalizedText("Meaning language", color = QuranMuted, fontSize = 13.sp)
             Spacer(Modifier.height(6.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 WbwLanguage.entries.forEach { lang ->
-                    FilterChip(state.language == lang, { state.updateLanguage(lang) }, { Text(lang.label) },
+                    FilterChip(state.language == lang, { state.updateLanguage(lang) }, { Text(lang.label) }, colors = quranChipColors(),
                         leadingIcon = if (state.language == lang) {{ Icon(Icons.Default.Check, null, Modifier.size(16.dp)) }} else null)
                 }
             }
@@ -948,8 +1010,8 @@ private fun SurahReader(
 }
 
 @Composable private fun SettingSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(role = Role.Switch) { onChange(!checked) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        LocalizedText(label, color = MushafInk, modifier = Modifier.weight(1f))
+    Row(Modifier.fillMaxWidth().clickable(role = Role.Switch) { com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "toggle_display_setting", "tap"); onChange(!checked) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        LocalizedText(label, color = MushafInk, modifier = Modifier.weight(1f).padding(end = 12.dp))
         Switch(checked, onChange, colors = SwitchDefaults.colors(checkedTrackColor = QuranGreen))
     }
 }
@@ -959,7 +1021,7 @@ private fun SurahReader(
     val value = text.toIntOrNull()
     val valid = value != null && value in 1..total
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("quran_word_learning_screen", "dismiss_jump_to_ayah", onDismiss),
         title = { LocalizedText("Go to ayah") },
         text = {
             OutlinedTextField(
@@ -969,7 +1031,7 @@ private fun SurahReader(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
         },
-        confirmButton = { TextButton({ value?.let(onJump) }, enabled = valid) { LocalizedText("Go") } },
+        confirmButton = { TextButton({ com.example.core.analytics.AppAnalytics.interaction("quran_word_learning_screen", "confirm_jump_to_ayah", "tap"); value?.let(onJump) }, enabled = valid) { LocalizedText("Go") } },
         dismissButton = { TextButton(onDismiss) { LocalizedText("Cancel") } }
     )
 }

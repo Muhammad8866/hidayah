@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Hidayah - PayPal</title>
+<style>
+  body { margin: 16px; font-family: sans-serif; background: #fff; color: #1b1b1b; }
+  #message { text-align: center; margin-top: 24px; }
+</style>
+</head>
+<body>
+<!-- Opened inside the Hidayah app (PayPalDialog). ?amount=12.50 is the USD amount chosen in the app;
+     the page reports its result by navigating to hidayah-pay://paid or hidayah-pay://failed. -->
+<div id="buttons"></div>
+<p id="message"></p>
+<script>
+  function signal(name) { location.href = 'hidayah-pay://' + name; }
+  var amount = new URLSearchParams(location.search).get('amount') || '';
+  var validAmount = /^\d{1,5}\.\d{2}$/.test(amount) && Number(amount) >= 1 && Number(amount) <= 10000;
+</script>
+<script src="https://www.paypal.com/sdk/js?client-id=BAAQ_NwSnIKaJG3VGDrEV28PGE4BaTSiSDPSfvFXC4sHjz1yWAFQaPKOweGgugpqlI-afVz25INw3RVYTo&currency=USD&intent=capture&components=buttons" onerror="signal('failed')"></script>
+<script>
+  if (!validAmount) {
+    document.getElementById('message').textContent = 'Open this page from the Hidayah app.';
+  } else if (window.paypal) {
+    paypal.Buttons({
+      createOrder: function (data, actions) {
+        return actions.order.create({
+          purchase_units: [{ amount: { currency_code: 'USD', value: amount }, description: 'Hidayah app support' }],
+          application_context: { shipping_preference: 'NO_SHIPPING' }
+        });
+      },
+      onApprove: function (data, actions) {
+        return actions.order.capture().then(function () { signal('paid'); });
+      },
+      onError: function () { signal('failed'); }
+    }).render('#buttons').catch(function () { signal('failed'); });
+  }
+</script>
+</body>
+</html>

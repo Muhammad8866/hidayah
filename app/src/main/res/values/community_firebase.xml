@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Community Masjid backend (Firebase project deen-companion-app); values mirror res/raw/community_google_services.json. -->
+<resources>
+    <string name="community_firebase_project_id" translatable="false">deen-companion-app</string>
+    <string name="community_firebase_app_id" translatable="false">1:30965960026:android:db30cb8cda1a4f747f7763</string>
+    <string name="community_firebase_api_key" translatable="false">AIzaSyCJ5Krl1G7rc3NnScPtEJ1qc_1PCYzHxHA</string>
+    <string name="community_firebase_storage_bucket" translatable="false">deen-companion-app.firebasestorage.app</string>
+    <string name="community_firebase_sender_id" translatable="false">30965960026</string>
+</resources>

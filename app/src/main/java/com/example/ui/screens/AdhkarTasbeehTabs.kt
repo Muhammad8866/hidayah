@@ -26,6 +26,8 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,6 +36,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -76,6 +79,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -113,6 +118,10 @@ import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizeUiText
 import com.example.ui.theme.GoldAccent
+import com.example.ui.components.HeroSurface
+import com.example.ui.components.IconBadge
+import com.example.ui.components.islamicPattern
+import com.example.ui.components.pressScale
 import com.example.ui.theme.HeroGradientBottom
 import com.example.ui.theme.HeroGradientTop
 import com.example.viewmodel.MainUiState
@@ -151,11 +160,14 @@ private fun RollingCount(value: Int, content: @Composable (Int) -> Unit) {
 
 @Composable
 fun AdhkarTab(uiState: MainUiState, viewModel: MainViewModel) {
+    com.example.core.analytics.AnalyticsScreen("adhkar_tab")
+
     val language = LocalAppLanguage.current
     val haptics = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     // Evening adhkar are recited from Asr onwards, morning adhkar from Fajr.
+    com.example.core.analytics.AnalyticsScroll("adhkar_tasbeeh_tabs", listState)
     var isMorning by rememberSaveable {
         mutableStateOf(uiState.currentPrayer !in setOf(PrayerType.ASR, PrayerType.MAGHRIB, PrayerType.ISHA))
     }
@@ -168,6 +180,14 @@ fun AdhkarTab(uiState: MainUiState, viewModel: MainViewModel) {
         }
     }
     KeepScreenOn()
+    AdhkarAudioLifecycle()
+    val adhkarSpeech = rememberDuaSpeech()
+    val adhkarSpeechState by adhkarSpeech.state.collectAsState()
+    LaunchedEffect(adhkarSpeechState.activeId) {
+        if (adhkarSpeechState.activeId != null) AdhkarAudioPlayer.stop()
+    }
+    // A recording from the other session does not keep playing over the new list.
+    LaunchedEffect(isMorning) { AdhkarAudioPlayer.stop(); adhkarSpeech.stop() }
 
     val session = if (isMorning) "morning" else "evening"
     val adhkar = if (isMorning) AdhkarDatasetRepository.MORNING_ADHKAR else AdhkarDatasetRepository.EVENING_ADHKAR
@@ -191,6 +211,7 @@ fun AdhkarTab(uiState: MainUiState, viewModel: MainViewModel) {
         derivedStateOf { listState.firstVisibleItemIndex > currentIndex }
     }
 
+    CompositionLocalProvider(LocalAdhkarSpeech provides adhkarSpeech) {
     Column(modifier = Modifier.fillMaxSize()) {
         // The header stays above the list, so the session switch and progress are always in reach.
         AdhkarHeader(
@@ -259,6 +280,7 @@ fun AdhkarTab(uiState: MainUiState, viewModel: MainViewModel) {
         }
     }
 
+    }
     if (confirmReset) {
         ResetConfirmDialog(
             onConfirm = { viewModel.resetAdhkar(adhkar.map(::keyOf)) },
@@ -284,7 +306,7 @@ private fun ContinuePill(
         modifier = modifier
     ) {
         Surface(
-            onClick = onClick,
+            onClick = com.example.core.analytics.AppAnalytics.trackAction("adhkar_tab", "continue_adhkar", onClick),
             shape = CircleShape,
             color = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -375,6 +397,14 @@ private fun AdhkarHeader(
                     drawStopIndicator = {}
                 )
                 Spacer(modifier = Modifier.width(12.dp))
+                AnimatedVisibility(visible = total > 0 && completed == total, enter = scaleIn() + fadeIn(), exit = fadeOut()) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = colors.primary,
+                        modifier = Modifier.padding(end = 4.dp).size(18.dp)
+                    )
+                }
                 Text(
                     text = "$completed / $total",
                     style = MaterialTheme.typography.labelLarge,
@@ -382,11 +412,9 @@ private fun AdhkarHeader(
                     color = colors.primary
                 )
                 IconButton(
-                    onClick = onReset,
+                    onClick = com.example.core.analytics.AppAnalytics.trackAction("adhkar_tab", "open_reset_adhkar", onReset),
                     enabled = canReset,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .testTag("adhkar_reset_all")
+                    modifier = Modifier.testTag("adhkar_reset_all")
                 ) {
                     Icon(
                         Icons.Default.Refresh,
@@ -420,7 +448,7 @@ private fun SessionOption(
     val content by animateColorAsState(if (selected) colors.onPrimary else colors.onSurfaceVariant, label = "session_fg")
     Surface(
         selected = selected,
-        onClick = onClick,
+        onClick = com.example.core.analytics.AppAnalytics.trackAction("adhkar_tab", "select_adhkar_session", onClick),
         shape = CircleShape,
         color = container,
         contentColor = content,
@@ -446,13 +474,12 @@ private fun SessionOption(
 
 @Composable
 private fun AdhkarDoneBanner() {
-    Box(
+    HeroSurface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Brush.linearGradient(listOf(HeroGradientTop, HeroGradientBottom)))
-            .padding(18.dp)
-            .testTag("adhkar_done_banner")
+            .testTag("adhkar_done_banner"),
+        shape = MaterialTheme.shapes.large,
+        contentPadding = PaddingValues(18.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Surface(
@@ -475,7 +502,7 @@ private fun AdhkarDoneBanner() {
                 )
                 Text(
                     text = "الْحَمْدُ لِلَّهِ",
-                    style = TextStyle(fontSize = 20.sp, textDirection = TextDirection.Rtl),
+                    style = TextStyle(fontSize = 20.sp, lineHeight = 36.sp, textDirection = TextDirection.Rtl),
                     color = GoldAccent
                 )
             }
@@ -500,21 +527,24 @@ private fun AdhkarCard(
     // A finished dhikr folds away so the next one is close at hand; tapping it opens it again.
     var reopened by rememberSaveable(dua.id, done) { mutableStateOf(false) }
     val collapsed = done && !reopened
+    val interaction = remember { MutableInteractionSource() }
 
     // The whole card is the counter, so a tap anywhere while reciting counts once.
     Card(
         onClick = { if (collapsed) reopened = true else onCount() },
-        shape = RoundedCornerShape(18.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = if (done) colors.primaryContainer.copy(alpha = 0.35f) else colors.surface
         ),
         border = when {
-            done -> BorderStroke(1.dp, colors.primary.copy(alpha = 0.4f))
+            done -> BorderStroke(1.dp, colors.primary.copy(alpha = 0.35f))
             isCurrent -> BorderStroke(2.dp, colors.primary)
-            else -> BorderStroke(1.dp, colors.outline.copy(alpha = 0.6f))
+            else -> BorderStroke(1.dp, colors.outlineVariant)
         },
+        interactionSource = interaction,
         modifier = Modifier
             .fillMaxWidth()
+            .pressScale(interaction, pressedScale = 0.985f)
             .animateContentSize()
             .testTag("adhkar_card_${dua.id}")
     ) {
@@ -523,7 +553,7 @@ private fun AdhkarCard(
                 modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = colors.primary, modifier = Modifier.size(22.dp))
+                IconBadge(icon = Icons.Default.Check, accent = colors.primary, size = 28.dp, iconSize = 18.dp, filled = true)
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = "$position. $title",
@@ -536,11 +566,12 @@ private fun AdhkarCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "$count / $target",
+                    maxLines = 1,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = colors.primary
                 )
-                IconButton(onClick = onReset) {
+                IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("adhkar_tab", "reset_dhikr", onReset)) {
                     Icon(Icons.Default.Refresh, contentDescription = localizeUiText("Reset", language), modifier = Modifier.size(20.dp))
                 }
             }
@@ -607,9 +638,17 @@ private fun AdhkarCardBody(
         }
 
         Spacer(modifier = Modifier.height(14.dp))
-        ArabicText(text = dua.arabicText, fontSize = 24.sp, lineHeight = 46.sp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.medium)
+                .background(colors.primaryContainer.copy(alpha = if (isCurrent) 0.4f else 0.25f))
+                .padding(horizontal = 14.dp, vertical = 10.dp)
+        ) {
+            ArabicText(text = dua.arabicText, fontSize = 25.sp, lineHeight = 48.sp)
+        }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = dua.transliteration,
             style = MaterialTheme.typography.bodyMedium,
@@ -617,6 +656,7 @@ private fun AdhkarCardBody(
             fontWeight = FontWeight.Medium,
             color = colors.primary
         )
+        AdhkarAudioControls(dua)
         Spacer(modifier = Modifier.height(6.dp))
         Text(text = meaning.text, style = MaterialTheme.typography.bodyMedium)
         meaning.fallbackLanguage?.let { label ->
@@ -624,7 +664,7 @@ private fun AdhkarCardBody(
         }
 
         Spacer(modifier = Modifier.height(12.dp))
-        Surface(color = goldContainer(), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+        Surface(color = goldContainer(), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
             Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.Top) {
                 Icon(
                     Icons.Default.AutoAwesome,
@@ -663,7 +703,7 @@ private fun AdhkarCardBody(
         Spacer(modifier = Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (count > 0) {
-                IconButton(onClick = onReset) {
+                IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("adhkar_tab", "reset_dhikr", onReset)) {
                     Icon(
                         Icons.Default.Refresh,
                         contentDescription = localizeUiText("Reset", language),
@@ -771,12 +811,12 @@ private fun AdhkarCounterButton(count: Int, target: Int, onCount: () -> Unit, la
 @Composable
 private fun ResetConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("adhkar_tab", "dismiss_reset_dialog", onDismiss),
         icon = { Icon(Icons.Default.Refresh, contentDescription = null) },
         title = { LocalizedText("Reset count?") },
         confirmButton = {
             TextButton(
-                onClick = {
+                onClick = { com.example.core.analytics.AppAnalytics.interaction("adhkar_tab", "confirm_reset", "tap"); 
                     onConfirm()
                     onDismiss()
                 },
@@ -784,17 +824,20 @@ private fun ResetConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
             ) { LocalizedText("Reset") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { LocalizedText("Cancel") }
+            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("adhkar_tab", "cancel_reset", onDismiss)) { LocalizedText("Cancel") }
         },
         containerColor = MaterialTheme.colorScheme.surface
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TasbeehTab(
     uiState: MainUiState,
     viewModel: MainViewModel
 ) {
+    com.example.core.analytics.AnalyticsScreen("tasbeeh_tab")
+
     val language = LocalAppLanguage.current
     val haptics = LocalHapticFeedback.current
     val preset = TasbeehPreset.forPhrase(uiState.tasbeehPhrase)
@@ -814,7 +857,7 @@ fun TasbeehTab(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(com.example.core.analytics.rememberAnalyticsScrollState("adhkar_tasbeeh_tabs"))
             .padding(vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -896,7 +939,8 @@ fun TasbeehTab(
                         text = "${localizeUiText("Next", language)}: ${nextPreset.transliteration} · ${nextPreset.goal}",
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -904,7 +948,10 @@ fun TasbeehTab(
             }
 
             Spacer(modifier = Modifier.height(18.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 StatPill(
                     icon = Icons.Default.Repeat,
                     text = "Rounds: $rounds",
@@ -918,23 +965,23 @@ fun TasbeehTab(
             }
 
             Spacer(modifier = Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)) {
                 OutlinedButton(
-                    onClick = {
+                    onClick = { com.example.core.analytics.AppAnalytics.interaction("tasbeeh_tab", "undo_tasbeeh", "tap"); 
                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         viewModel.undoTasbeeh()
                     },
                     enabled = count > 0,
-                    modifier = Modifier.testTag("tasbeeh_undo")
+                    modifier = Modifier.heightIn(min = 48.dp).testTag("tasbeeh_undo")
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     LocalizedText("Undo", maxLines = 1)
                 }
                 OutlinedButton(
-                    onClick = { confirmReset = true },
+                    onClick = { com.example.core.analytics.AppAnalytics.interaction("tasbeeh_tab", "open_reset_tasbeeh", "tap"); confirmReset = true },
                     enabled = count > 0 || rounds > 0,
-                    modifier = Modifier.testTag("tasbeeh_reset")
+                    modifier = Modifier.heightIn(min = 48.dp).testTag("tasbeeh_reset")
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
@@ -973,6 +1020,7 @@ fun TasbeehTab(
 private fun TasbeehPresetRow(selectedPhrase: String, onSelect: (TasbeehPreset) -> Unit) {
     val colors = MaterialTheme.colorScheme
     val rowState = rememberLazyListState()
+    com.example.core.analytics.AnalyticsScroll("adhkar_tasbeeh_tabs", rowState)
     val selectedIndex = TasbeehPreset.ALL.indexOfFirst { it.phrase == selectedPhrase }
     // Brings the chosen dhikr into view, e.g. after "Next" moves along Tasbeeh-e-Fatimi,
     // but leaves the row alone when that card is already fully on screen.
@@ -995,15 +1043,18 @@ private fun TasbeehPresetRow(selectedPhrase: String, onSelect: (TasbeehPreset) -
     ) {
         itemsIndexed(TasbeehPreset.ALL, key = { _, option -> option.phrase }) { _, option ->
             val selected = option.phrase == selectedPhrase
+            val interaction = remember { MutableInteractionSource() }
             Card(
                 onClick = { if (!selected) onSelect(option) },
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.large,
                 colors = CardDefaults.cardColors(
                     containerColor = if (selected) colors.primaryContainer else colors.surface
                 ),
-                border = if (selected) BorderStroke(2.dp, colors.primary) else BorderStroke(1.dp, colors.outline.copy(alpha = 0.6f)),
+                border = if (selected) BorderStroke(2.dp, colors.primary) else BorderStroke(1.dp, colors.outlineVariant),
+                interactionSource = interaction,
                 modifier = Modifier
                     .width(150.dp)
+                    .pressScale(interaction)
                     .testTag("tasbeeh_preset_${option.goal}_${option.transliteration.replace(' ', '_').lowercase()}")
             ) {
                 Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
@@ -1011,6 +1062,7 @@ private fun TasbeehPresetRow(selectedPhrase: String, onSelect: (TasbeehPreset) -
                         text = option.arabic,
                         style = TextStyle(
                             fontSize = 18.sp,
+                            lineHeight = 34.sp,
                             fontWeight = FontWeight.Medium,
                             textDirection = TextDirection.Rtl,
                             textAlign = TextAlign.Right
@@ -1049,7 +1101,7 @@ private fun TasbeehPresetRow(selectedPhrase: String, onSelect: (TasbeehPreset) -
 private fun FatimiSteps(currentIndex: Int, roundDone: Boolean) {
     val colors = MaterialTheme.colorScheme
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        Text(
+        com.example.ui.localization.LocalizedText(
             text = "Tasbeeh-e-Fatimi",
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
@@ -1089,7 +1141,8 @@ private fun FatimiSteps(currentIndex: Int, roundDone: Boolean) {
                             text = "${step.transliteration} ${step.goal}",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
@@ -1128,6 +1181,11 @@ private fun TasbeehCounter(count: Int, goal: Int, roundDone: Boolean, onTap: () 
             .fillMaxWidth(0.8f)
             .widthIn(max = 320.dp)
             .aspectRatio(1f)
+            // A faint halo behind the ring lifts the counter off the page.
+            .background(
+                Brush.radialGradient(listOf(colors.primary.copy(alpha = 0.10f), Color.Transparent)),
+                CircleShape
+            )
     ) {
         CircularProgressIndicator(
             progress = { progress },
@@ -1158,6 +1216,10 @@ private fun TasbeehCounter(count: Int, goal: Int, roundDone: Boolean, onTap: () 
                 modifier = Modifier
                     .fillMaxSize()
                     .background(face)
+                    .islamicPattern(
+                        (if (roundDone) Color.White else colors.primary).copy(alpha = 0.06f),
+                        cell = 34.dp
+                    )
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     AnimatedVisibility(visible = roundDone, enter = scaleIn() + fadeIn(), exit = fadeOut()) {

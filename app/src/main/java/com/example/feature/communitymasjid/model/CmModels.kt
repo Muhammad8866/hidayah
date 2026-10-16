@@ -34,8 +34,8 @@ data class CmTimings(val times: Map<CmPrayer, CmPrayerTime>) {
 }
 
 /**
- * A masjid from OpenStreetMap ([docId] is the OSM ID, "node_123") or one added by the community
- * ([docId] is "user_<id>", added by [addedByUid]). The docId is also the Firestore document ID.
+ * A Google place (docId = "google_<placeId>") or a community masjid
+ * (docId = "user_<id>"). Community contributions use the same stable document ID.
  */
 data class CmMosque(
     val docId: String,

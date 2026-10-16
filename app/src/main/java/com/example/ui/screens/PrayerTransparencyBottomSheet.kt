@@ -3,6 +3,7 @@ import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizedUiText
 import com.example.ui.localization.LocalAppLocale
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -26,6 +28,9 @@ import com.example.domain.model.AsrJuristicMethod
 import com.example.domain.model.CalculationMethod
 import com.example.prayer.AstronomicalPrayerCalculator
 import com.example.prayer.HijriRegion
+import com.example.ui.components.AppCard
+import com.example.ui.components.IconBadge
+import com.example.ui.components.Spacing
 import com.example.viewmodel.MainUiState
 import com.example.viewmodel.MainViewModel
 import java.util.Calendar
@@ -44,7 +49,17 @@ fun PrayerTransparencyBottomSheet(
     viewModel: MainViewModel,
     onDismiss: () -> Unit
 ) {
+    com.example.core.analytics.AnalyticsScreen("prayer_transparency_sheet")
     var selectedCategory by remember { mutableStateOf(TransparencyCategory.ASTRONOMICAL) }
+    val locale = LocalAppLocale.current
+    // Hemisphere letters follow the sign, so southern and western cities are not shown as N/E.
+    val coordinates = uiState.selectedCity.let { city ->
+        String.format(
+            locale, "%.4f° %s, %.4f° %s",
+            kotlin.math.abs(city.latitude), if (city.latitude < 0) "S" else "N",
+            kotlin.math.abs(city.longitude), if (city.longitude < 0) "W" else "E"
+        )
+    }
 
     val calendar = remember(uiState.selectedCity) {
         Calendar.getInstance(TimeZone.getTimeZone(uiState.selectedCity.timeZoneId))
@@ -58,7 +73,7 @@ fun PrayerTransparencyBottomSheet(
     }
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("prayer_transparency_bottom_sheet", "dismiss_sheet", onDismiss),
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         containerColor = MaterialTheme.colorScheme.surface
     ) {
@@ -73,6 +88,8 @@ fun PrayerTransparencyBottomSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                IconBadge(icon = Icons.Default.Info, accent = MaterialTheme.colorScheme.primary, size = 44.dp)
+                Spacer(Modifier.width(Spacing.md))
                 Column(modifier = Modifier.weight(1f)) {
                     LocalizedText(
                         text = "Why This Time?",
@@ -85,7 +102,7 @@ fun PrayerTransparencyBottomSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                IconButton(onClick = onDismiss) {
+                IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("prayer_transparency_bottom_sheet", "close_sheet", onDismiss)) {
                     Icon(imageVector = Icons.Default.Close, contentDescription = localizedUiText("Close"))
                 }
             }
@@ -100,7 +117,11 @@ fun PrayerTransparencyBottomSheet(
                 items(TransparencyCategory.values(), key = { it.name }) { category ->
                     FilterChip(
                         selected = selectedCategory == category,
-                        onClick = { selectedCategory = category },
+                        shape = RoundedCornerShape(50),
+                        leadingIcon = if (selectedCategory == category) {
+                            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        } else null,
+                        onClick = { com.example.core.analytics.AppAnalytics.interaction("prayer_transparency_bottom_sheet", "select_transparency_category", "tap", item = category.name); selectedCategory = category },
                         label = { LocalizedText(category.label) },
                         modifier = Modifier.testTag("transparency_chip_${category.name.lowercase()}")
                     )
@@ -110,19 +131,22 @@ fun PrayerTransparencyBottomSheet(
             Spacer(modifier = Modifier.height(14.dp))
 
             LazyColumn(
-                modifier = Modifier.heightIn(max = 460.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                modifier = Modifier
+                    .heightIn(max = 460.dp)
+                    .animateContentSize(),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 when (selectedCategory) {
                     TransparencyCategory.ASTRONOMICAL -> {
                         item {
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                                ),
-                                shape = RoundedCornerShape(14.dp)
+                            AppCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MaterialTheme.shapes.medium,
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                                outlined = false,
+                                contentPadding = PaddingValues(14.dp)
                             ) {
-                                Column(modifier = Modifier.padding(14.dp)) {
+                                Column {
                                     LocalizedText(
                                         text = "On-Device Solar Ephemeris Engine",
                                         style = MaterialTheme.typography.titleSmall,
@@ -142,7 +166,7 @@ fun PrayerTransparencyBottomSheet(
                         item {
                             TransparencyRow(
                                 title = "Geographical Coordinates",
-                                value = "${String.format("%.4f", uiState.selectedCity.latitude)}° N, ${String.format("%.4f", uiState.selectedCity.longitude)}° E",
+                                value = coordinates,
                                 note = "Location: ${uiState.selectedCity.name}, ${uiState.selectedCity.stateOrCountry} (Timezone: ${uiState.selectedCity.timeZoneId})"
                             )
                         }
@@ -150,7 +174,7 @@ fun PrayerTransparencyBottomSheet(
                         item {
                             TransparencyRow(
                                 title = "Solar Declination (δ)",
-                                value = "${String.format("%.4f", ephemeris.declinationDeg)}°",
+                                value = "${String.format(locale, "%.4f", ephemeris.declinationDeg)}°",
                                 note = "Current angle between the sun's rays and the plane of the Earth's equator."
                             )
                         }
@@ -158,7 +182,7 @@ fun PrayerTransparencyBottomSheet(
                         item {
                             TransparencyRow(
                                 title = "Equation of Time (EoT)",
-                                value = "${String.format("%.2f", ephemeris.equationOfTimeMinutes)} minutes",
+                                value = "${String.format(locale, "%.2f", ephemeris.equationOfTimeMinutes)} minutes",
                                 note = "Difference between apparent solar time (sundial) and mean solar clock time."
                             )
                         }
@@ -166,7 +190,7 @@ fun PrayerTransparencyBottomSheet(
                         item {
                             TransparencyRow(
                                 title = "Julian Day Number (JDN)",
-                                value = String.format("%.4f", ephemeris.julianDate),
+                                value = String.format(locale, "%.4f", ephemeris.julianDate),
                                 note = "Continuous astronomical epoch count used to prevent calendar drift."
                             )
                         }
@@ -174,7 +198,7 @@ fun PrayerTransparencyBottomSheet(
                         item {
                             TransparencyRow(
                                 title = "Astronomical Solar Noon (Dhuhr Base)",
-                                value = AstronomicalPrayerCalculator.formatHoursToAmPm(ephemeris.solarNoonHours, LocalAppLocale.current),
+                                value = AstronomicalPrayerCalculator.formatHoursToAmPm(ephemeris.solarNoonHours, locale),
                                 note = "Exact moment the sun crosses the local meridian (T₀ = 12:00 + TZ - λ/15 - EoT)."
                             )
                         }
@@ -227,13 +251,14 @@ fun PrayerTransparencyBottomSheet(
                         }
 
                         item {
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                                ),
-                                shape = RoundedCornerShape(12.dp)
+                            AppCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MaterialTheme.shapes.medium,
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
+                                outlined = false,
+                                contentPadding = PaddingValues(14.dp)
                             ) {
-                                Column(modifier = Modifier.padding(14.dp)) {
+                                Column {
                                     LocalizedText(
                                         text = "Distinction: Salah Opening vs. Iqamah",
                                         style = MaterialTheme.typography.labelMedium,
@@ -253,9 +278,9 @@ fun PrayerTransparencyBottomSheet(
                     TransparencyCategory.PRIVACY_OBSERVABILITY -> {
                         item {
                             TransparencyRow(
-                                title = "Zero External Location Leakage",
+                                title = "Local Prayer Calculations",
                                 value = "100% On-Device Computation",
-                                note = "GPS coordinates and manual city coordinates never leave your device. No cloud analytics or third-party ad networks have access."
+                                note = "Prayer calculations run on your device. Optional Google Analytics does not receive exact coordinates. Nearby masjid services use location when requested; see the privacy policy."
                             )
                         }
 
@@ -291,24 +316,32 @@ fun PrayerTransparencyBottomSheet(
     }
 }
 
+/** One fact in the sheet: a small label, the value in the brand colour and a short explanation. */
 @Composable
 private fun TransparencyRow(title: String, value: String, note: String) {
-    Column {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+            .padding(horizontal = 14.dp, vertical = Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
         LocalizedText(
             text = title,
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         LocalizedText(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.Bold
         )
         LocalizedText(
             text = note,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }

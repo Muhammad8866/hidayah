@@ -9,6 +9,8 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.core.audio.PlaybackSpeed
+import com.example.core.net.FastNet
+import com.example.core.net.StreamPlayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,8 +22,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
 
 data class TafsirAudioState(
@@ -51,7 +51,6 @@ object TafsirAudioManager {
     private val downloads = mutableMapOf<String, Job>()
     private val downloadSlots = Semaphore(3)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val client = OkHttpClient()
     private val _state = MutableStateFlow(TafsirAudioState())
     val state = _state.asStateFlow()
 
@@ -86,6 +85,7 @@ object TafsirAudioManager {
         if (queue.isEmpty()) return
         QuranAudioManager.stop()
         com.example.naat.NaatAudioManager.stop()
+        com.example.azan.AzanAudioManager.stop()
         queueIndex = 0
         prepare(queue[0], positionMs)
     }
@@ -97,6 +97,7 @@ object TafsirAudioManager {
     }
 
     fun pause() {
+        com.example.core.analytics.AppAnalytics.media("tafsir_audio", "pause")
         player?.pause()
         ticker?.cancel()
         rememberPosition()
@@ -105,6 +106,7 @@ object TafsirAudioManager {
     }
 
     fun resume() {
+        com.example.core.analytics.AppAnalytics.media("tafsir_audio", "resume")
         val current = player ?: return resumeLast()
         TafsirAudioService.start(context)
         if (current.playbackState == Player.STATE_IDLE) current.prepare()
@@ -114,16 +116,24 @@ object TafsirAudioManager {
     }
 
     fun toggle() { if (_state.value.isPlaying) pause() else resume() }
-    fun next() { if (queueIndex + 1 < queue.size) prepare(queue[++queueIndex]) }
-    fun previous() { if (queueIndex > 0) prepare(queue[--queueIndex]) else seekTo(0) }
+    fun next() {
+        com.example.core.analytics.AppAnalytics.media("tafsir_audio", "next")
+        if (queueIndex + 1 < queue.size) prepare(queue[++queueIndex])
+    }
+    fun previous() {
+        com.example.core.analytics.AppAnalytics.media("tafsir_audio", "previous")
+        if (queueIndex > 0) prepare(queue[--queueIndex]) else seekTo(0)
+    }
 
     fun seekTo(positionMs: Int) {
+        com.example.core.analytics.AppAnalytics.media("tafsir_audio", "seek")
         player?.seekTo(positionMs.toLong())
         _state.value = _state.value.copy(positionMs = positionMs)
         rememberPosition(positionMs)
     }
 
     fun setSpeed(speed: Float) {
+        com.example.core.analytics.AppAnalytics.media("tafsir_audio", "speed_change")
         val safe = PlaybackSpeed.sanitize(speed)
         _state.value = _state.value.copy(speed = safe)
         player?.setPlaybackSpeed(safe)
@@ -132,6 +142,8 @@ object TafsirAudioManager {
     }
 
     private fun prepare(track: TafsirAudioTrack, positionMs: Int = 0) {
+        com.example.core.analytics.AppAnalytics.media("tafsir_audio", "play")
+        com.example.core.analytics.AppAnalytics.content("tafsir_audio", "surah_${track.surah}", "play")
         ticker?.cancel()
         player?.release()
         player = null
@@ -140,7 +152,7 @@ object TafsirAudioManager {
             durationMs = 0, resumeId = track.id, resumePositionMs = positionMs, error = null
         )
         persist(track.id, positionMs)
-        val candidate = ExoPlayer.Builder(context).build()
+        val candidate = StreamPlayer.build(context)
         player = candidate
         candidate.setAudioAttributes(
             AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
@@ -157,6 +169,7 @@ object TafsirAudioManager {
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (player !== candidate) return
+                com.example.core.analytics.AppAnalytics.playbackState("tafsir_audio", playbackState)
                 if (playbackState == Player.STATE_BUFFERING) {
                     _state.value = _state.value.copy(isBuffering = true)
                 } else if (playbackState == Player.STATE_READY) {
@@ -178,6 +191,7 @@ object TafsirAudioManager {
 
             override fun onPlayerError(error: PlaybackException) {
                 if (player !== candidate) return
+                com.example.core.analytics.AppAnalytics.mediaState("tafsir_audio", "failed", "playback_error")
                 ticker?.cancel()
                 _state.value = _state.value.copy(isPlaying = false, isBuffering = false,
                     error = "Tafseer audio could not be played. Tap Play to retry.")
@@ -224,13 +238,9 @@ object TafsirAudioManager {
             _state.value = _state.value.copy(downloading = _state.value.downloading + track.id)
             val result = downloadSlots.withPermit { withContext(Dispatchers.IO) {
                 runCatching {
-                    client.newCall(Request.Builder().url(track.audioUrl).build()).execute().use { response ->
-                        if (!response.isSuccessful) error("HTTP ${response.code}")
-                        val body = response.body ?: error("Empty audio")
-                        val temp = File(directory, "${track.id}.part")
-                        body.byteStream().use { input -> temp.outputStream().use { output -> input.copyTo(output) } }
-                        if (!temp.renameTo(file(track))) error("Could not save audio")
-                    }
+                    val temp = File(directory, "${track.id}.part")
+                    FastNet.download(track.audioUrl, temp)
+                    if (!temp.renameTo(file(track))) error("Could not save audio")
                 }
             } }
             downloads.remove(track.id)
@@ -244,6 +254,14 @@ object TafsirAudioManager {
 
     fun downloadAll(tracks: List<TafsirAudioTrack>) = tracks.forEach(::download)
 
+    /** Stops the running downloads of [tracks]; partial files are discarded. */
+    fun cancelDownloads(tracks: List<TafsirAudioTrack>) {
+        val ids = tracks.map { it.id }.filter { it in downloads }
+        if (ids.isEmpty()) return
+        ids.forEach { downloads.remove(it)?.cancel() }
+        _state.value = _state.value.copy(downloading = _state.value.downloading - ids.toSet())
+    }
+
     fun delete(track: TafsirAudioTrack) {
         if (_state.value.playingId == track.id) stop()
         file(track).delete()
@@ -253,6 +271,7 @@ object TafsirAudioManager {
     fun clearError() { _state.value = _state.value.copy(error = null) }
 
     fun stop() {
+        com.example.core.analytics.AppAnalytics.media("tafsir_audio", "stop")
         if (!::context.isInitialized) return
         rememberPosition()
         ticker?.cancel()

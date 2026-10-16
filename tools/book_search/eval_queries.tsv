@@ -1,0 +1,113 @@
+# query <tab> asset prefix ("" = all books) <tab> text one of the first results must contain (a|b = either) [<tab> how many results to look at, default 5]
+# Roman Urdu / Hinglish
+safar me namaz kaise padhe	en-	journey|travel|safar
+wuzu ka tarika	en-	ablution|wudu
+wazu kaise kare	en-	ablution|wudu
+ghusl ka tariqa	en-	ghusl|bath
+roza kin cheezon se toot jata hai	en-	fast
+roze ki fazilat	en-	excellence of fast|virtues of fasting|merit of fast
+zakat kis par farz hai	en-	zakat|zakaat
+sood lena kaisa hai	en-	riba|usury|interest
+namaz e janaza	en-	funeral|janazah
+qurbani ke masail	en-	sacrific|qurbani|udhiya
+shab e qadr ki fazilat	en-	qadr
+taraweeh ki namaz	en-	taraweeh|tarawih|night prayer|ramadan
+tahajjud	en-	night prayer|tahajjud|at night
+maa baap ke huqooq	en-	parents
+padosi ke huqooq	en-	neighbo
+gheebat	en-	backbit|gheebat
+jhoot bolna	en-	lie|lying|false
+gussa	en-	anger|angry
+sabr ki fazilat	en-	patien
+pareshani ki dua	en-	distress|supplicat|worr|grief|anxiety
+nikah ka tarika	en-	marriage|nikah
+talaq ke masail	en-	divorce|talaq
+haiz ke masail	en-	menstru|haiz
+tayammum kaise kare	en-	tayammum
+eid ki namaz	en-	eid|festival
+jumma ki fazilat	en-	friday|jumu
+azan ka jawab	en-	adhan|adhaan|azaan|call to prayer|mu'adhdhin
+dajjal ka fitna	en-	dajjal
+qabr ka azab	en-	grave
+jannat ki nematen	en-	paradise|jannat
+shirk kya hai	en-	shirk|polythe|associat
+hajj ka tarika	en-	hajj|pilgrim
+umrah	en-	umra
+itikaf	en-	i'tikaf|itikaf|i`tikaf|aitekaaf
+sehri aur iftar	en-	suhur|sahri|sehri|pre-dawn|iftar|breaking
+miswak ki fazilat	en-	siwak|miswak|tooth
+khwab ki tabeer	en-	dream
+wirasat ki taqseem	en-	inherit
+qasam ka kaffara	en-	oath|expiat
+istikhara ki dua	en-	istikhara
+# spelling variants and typos
+namaaz	en-	prayer|namaaz
+nemaz	en-	prayer|namaaz
+zakaat	en-	zakat|zakaat
+ramzan	en-	ramadan|ramadaan|ramadhan
+tahjud	en-	night prayer|tahajjud|at night
+namz	en-	prayer|namaaz
+kurbani	en-	sacrific|qurbani
+hadees e qudsi	en-	allah
+# Hindi
+वुज़ू का तरीका	en-	ablution|wudu
+वुजू	en-	ablution|wudu
+नमाज़ की फ़ज़ीलत	en-	excellence of prayer|merit of prayer|virtue|superiority|prayer
+रोज़ा	en-	fast
+ज़कात	en-	zakat|zakaat
+हज	en-	hajj|pilgrim
+निकाह	en-	marriage|nikah
+तलाक़	en-	divorce|talaq
+जनाज़ा	en-	funeral|janazah
+सूद	en-	riba|usury|interest
+ग़ुस्सा	en-	anger|angry
+माँ बाप	en-	parents
+क़ुर्बानी	en-	sacrific|qurbani
+तहज्जुद	en-	night prayer|tahajjud|at night
+# Gujarati
+ગુસ્લ	en-	ghusl|bath
+નમાઝ	en-	prayer|namaaz
+રોઝા	en-	fast
+ઝકાત	en-	zakat|zakaat
+વુઝૂ	en-	ablution|wudu
+નિકાહ	en-	marriage|nikah
+કુરબાની	en-	sacrific|qurbani
+# Bengali
+নামাজ	en-	prayer|namaaz
+রোজা	en-	fast
+যাকাত	en-	zakat|zakaat
+হজ	en-	hajj|pilgrim
+# Urdu
+روزہ کی فضیلت	en-	excellence of fast|virtues of fasting|merit of fast
+نماز جنازہ	en-	funeral|janazah
+وضو کا طریقہ	en-	ablution|wudu
+زکوٰۃ	en-	zakat|zakaat
+سود	en-	riba|usury|interest
+والدین کے حقوق	en-	parents
+قربانی	en-	sacrific|qurbani
+طلاق	en-	divorce|talaq
+نماز	ar-	صلاة|الصلاة
+روزہ	ar-	الصوم|الصيام
+# Arabic
+الوضوء	ar-	الوضوء
+كتاب الصيام	ar-	الصيام|الصوم
+صلاة المسافر	ar-	السفر|المسافر|قصر
+الزكاة	ar-	الزكاة
+النكاح	ar-	النكاح
+الجنائز	ar-	الجنائز
+ليلة القدر	ar-	القدر
+# English
+how to perform ablution	en-	ablution
+shortening the prayer while travelling	en-	journey|travel|shorten
+rights of parents	en-	parents
+interest and usury	en-	riba|usury
+night of qadr	en-	qadr
+punishment of the grave	en-	grave
+virtues of fasting	en-bahar	virtues of fasting
+abu hurairah honey	en-	honey
+# free words by sound
+mohammed	en-	muhammad|mohammed
+ayesha	en-	aisha|a'isha|ayesha|'aishah	10
+# all books together still surface readable editions
+safar me namaz		journey|travel|safar|السفر
+roza		fast|الصوم|الصيام

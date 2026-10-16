@@ -53,11 +53,11 @@ class CmLocationProvider(context: Context) {
      * Fast fix for listing masjids: a recent cached fix returns instantly, otherwise a
      * balanced-power fix (Wi-Fi/cell, usually < 2 s) is requested instead of waiting for GPS.
      */
-    suspend fun quickLocation(maxAgeMs: Long = 3 * 60 * 60_000L): CmUserLocation? {
-        // The list is refined by a precise fix afterwards, so an older cached fix is fine to start with.
+    suspend fun quickLocation(maxAgeMs: Long = 2 * 60_000L): CmUserLocation? {
+        // Do not list masjids around a stale fix from a previous city.
         val last = lastKnownLocation()
         last?.takeIf { System.currentTimeMillis() - it.fixedAtMs <= maxAgeMs }?.let { return it }
-        return currentLocation(timeoutMs = 5_000, highAccuracy = false) ?: last
+        return currentLocation(timeoutMs = 5_000, highAccuracy = false)
     }
 
     /** [highAccuracy] uses GPS (needed for presence checks); false is much faster for listing. */
@@ -73,7 +73,7 @@ class CmLocationProvider(context: Context) {
                     client.getCurrentLocation(priority, cancel.token)
                         .addOnSuccessListener { location ->
                             if (cont.isActive) cont.resume(location?.let {
-                                CmUserLocation(it.latitude, it.longitude, it.accuracy, System.currentTimeMillis())
+                                CmUserLocation(it.latitude, it.longitude, it.accuracy, it.time)
                             })
                         }
                         .addOnFailureListener { if (cont.isActive) cont.resume(null) }

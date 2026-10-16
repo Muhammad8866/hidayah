@@ -1,0 +1,491 @@
+id|name|english|hinglish
+0|Abdullah|Servant of Allah|Allah ka banda
+1|Abdur Rahman|Servant of the Most Merciful|Bahut meherban Allah ka banda
+2|Abdul Ahad|Servant of the One|Yakta Allah ka banda
+3|Abdul Bari|Servant of the Maker|Banane wale Allah ka banda
+4|Abdul Basit|Servant of the One who grants abundance|Kushadgi dene wale Allah ka banda
+5|Abdul Baqi|Servant of the Everlasting|Hamesha rehne wale Allah ka banda
+6|Abdul Basir|Servant of the All-Seeing|Sab dekhne wale Allah ka banda
+7|Abdut Tawwab|Servant of the Accepter of repentance|Tauba qabool karne wale Allah ka banda
+8|Abdul Jabbar|Servant of the Majestic|Azmat wale Allah ka banda
+9|Abdul Jalil|Servant of the Sublime|Buzurgi wale Allah ka banda
+10|Abdul Hasib|Servant of the Sufficient|Kaafi hone wale Allah ka banda
+11|Abdul Hafiz|Servant of the Preserver|Hifazat karne wale Allah ka banda
+12|Abdul Haqq|Servant of the One worthy of worship|Ibadat ke laayiq Allah ka banda
+13|Abdul Hakam|Servant of the Judge|Faisla karne wale Allah ka banda
+14|Abdul Hakim|Servant of the Wise|Hikmat wale Allah ka banda
+15|Abdul Halim|Servant of the Forbearing|Burdbar Allah ka banda
+16|Abdul Hamid|Servant of the One with perfect qualities|Khoobiyon wale Allah ka banda
+17|Abdul Hayy|Servant of the Ever-Living|Hamesha zinda Allah ka banda
+18|Abdul Khaliq|Servant of the Creator|Paida karne wale Allah ka banda
+19|Abdur Rafi|Servant of the One who elevates|Buland karne wale Allah ka banda
+20|Abdur Rahim|Servant of the Merciful|Rahmat wale Allah ka banda
+21|Abdur Razzaq|Servant of the Provider|Rizq dene wale Allah ka banda
+22|Abdur Rashid|Servant of the One with right guidance|Sahi tadbeer wale Allah ka banda
+23|Abdur Rauf|Servant of the Most Kind|Nihayat meherban Allah ka banda
+24|Abdus Salam|Servant of the Giver of peace|Salamati dene wale Allah ka banda
+25|Abdus Sami|Servant of the All-Hearing|Sab sunne wale Allah ka banda
+26|Abdush Shakur|Servant of the Appreciative|Qadr farmane wale Allah ka banda
+27|Abdus Sabur|Servant of the Patient|Burdbar Allah ka banda
+28|Abdus Samad|Servant of the Self-Sufficient|Be-niyaz Allah ka banda
+29|Abdul Aziz|Servant of the Honoured|Izzat wale Allah ka banda
+30|Abdul Azim|Servant of the Magnificent|Azmat wale Allah ka banda
+31|Abdul Alim|Servant of the All-Knowing|Ilm wale Allah ka banda
+32|Abdul Ghaffar|Servant of the Oft-Forgiving|Bahut bakhshne wale Allah ka banda
+33|Abdul Ghafur|Servant of the Forgiving|Bakhshne wale Allah ka banda
+34|Abdul Ghani|Servant of the Independent|Be-parwa Allah ka banda
+35|Abdul Fattah|Servant of the Best Judge|Behtareen faisla karne wale Allah ka banda
+36|Abdul Qadir|Servant of the Powerful|Qudrat wale Allah ka banda
+37|Abdul Quddus|Servant of the Holy|Har aib se paak Allah ka banda
+38|Abdul Qawi|Servant of the Giver of strength|Quwwat dene wale Allah ka banda
+39|Abdul Kabir|Servant of the Greatest|Sabse bade Allah ka banda
+40|Abdul Karim|Servant of the Most Generous|Bahut karam farmane wale Allah ka banda
+41|Abdul Latif|Servant of the Gracious|Lutf aur karam wale Allah ka banda
+42|Abdul Majid|Servant of the Sublime|Buzurgi wale Allah ka banda
+43|Abdul Matin|Servant of the Strong|Quwwat wale Allah ka banda
+44|Abdul Mujib|Servant of the Answerer of prayers|Dua qabool karne wale Allah ka banda
+45|Abdul Majeed|Servant of the Glorious|Izzat wale Allah ka banda
+46|Abdul Malik|Servant of the King|Badshah Allah ka banda
+47|Abdul Mumin|Servant of the Giver of security|Aman dene wale Allah ka banda
+48|Abdun Nafi|Servant of the Benefactor|Nafa dene wale Allah ka banda
+49|Abdun Nur|Servant of the One with light|Noor wale Allah ka banda
+50|Abdul Wajid|Servant of the Powerful|Qudrat wale Allah ka banda
+51|Abdul Wahid|Servant of the Unique|Zaat aur sifat mein yakta Allah ka banda
+52|Abdul Warith|Servant of the Everlasting Inheritor|Hamesha baaqi rehne wale Allah ka banda
+53|Abdul Wasi|Servant of the One who grants abundance|Wusat dene wale Allah ka banda
+54|Abdul Wadud|Servant of the Loving|Bahut muhabbat karne wale Allah ka banda
+55|Abdul Wakil|Servant of the Trustee|Kaam banane wale Allah ka banda
+56|Abdul Wali|Servant of the Protector|Himayat karne wale Allah ka banda
+57|Abdul Wahhab|Servant of the Bestower|Bahut ata karne wale Allah ka banda
+58|Abdul Hadi|Servant of the Guide|Hidayat dene wale Allah ka banda
+59|Ahsan|One with good qualities|Achchi sifat wala
+60|Ahsham|Dignified; composed|Waqar aur itminan wala
+61|Azhar|Bright; fair complexion|Chamakdar aur saaf rang wala
+62|Azam|Superior|Bartar
+63|Akram|Very kind; generous|Bahut meherban aur sakhi
+64|Aman|Refuge; protection|Panah aur hifazat
+65|Amjad|Honourable; noble|Buzurgi aur sharaf wala
+66|Amin|Trustworthy|Amanat-daar
+67|Badr|Full moon|Poora chand
+68|Burhan|Clear proof|Saaf daleel
+69|Bashir|Bearer of good news|Khushkhabri dene wala
+70|Hatim|One who decides|Faisla karne wala
+71|Hamid|One who praises|Hamd karne wala
+72|Habib|Beloved|Pyara
+73|Hasib|Sufficient; honourable|Kaafi aur izzat wala
+74|Hakim|Wise|Hikmat wala
+75|Halim|Forbearing|Burdbar aur bardasht wala
+76|Hammad|One who praises Allah often|Allah ki kasrat se hamd karne wala
+77|Hanif|Steadfast in Islam|Islam par sabit-qadam
+78|Damigh|One who defeats falsehood|Batil ko mitaane wala
+79|Raghib|Inclined; eager|Maail aur khwahishmand
+80|Rahim|Merciful|Rahm wala
+81|Rashid|Upright; steadfast|Seedha aur sabit-qadam
+82|Rafiq|Very kind|Bahut meherbani karne wala
+83|Rauf|Tender-hearted|Narm-dil
+84|Zahid|Detached from worldly desires|Duniya se be-raghbat
+85|Zahir|Bright; radiant|Roshan chehre wala
+86|Zayn|Beauty of appearance and character|Soorat aur seerat ki khoobsurati
+87|Sajid|One who prostrates|Sajda karne wala
+88|Sakhi|Generous|Sakhawat karne wala
+89|Sadid|One who sets things right|Durust karne wala
+90|Siraj|Sun; light|Sooraj aur roshni
+91|Saeed|Fortunate|Khush-naseeb
+92|Sultan|King; strong proof|Badshah aur mazboot daleel
+93|Saif|Sword|Talwar
+94|Shakir|Grateful|Shukr ada karne wala
+95|Shahid|Witness|Gawahi dene wala
+96|Sharif|High-ranking; noble|Buland martabe wala
+97|Shafi|Intercessor|Shafa'at karne wala
+98|Shafiq|Kind; sympathetic|Meherban aur hamdard
+99|Shahir|Well-known|Shohrat wala
+100|Sabir|Patient|Sabr karne wala
+101|Sadiq|Truthful|Sachcha
+102|Ziya|Light; radiance|Roshni aur chamak
+103|Tahir|Pure|Paak
+104|Tabib|Healer; physician|Bimaron ka ilaaj karne wala
+105|Tayyib|Pure|Paak
+106|Zah ir|Clear; manifest|Wazeh aur roshan
+107|Abid|Worshipper|Ibadat-guzar
+108|Adil|Just|Insaaf karne wala
+109|Arif|One who recognises|Pehchanne wala
+110|Aqib|Successor; one who comes last|Janashin aur aakhir mein aane wala
+111|Aziz|Dominant|Ghalib
+112|Azim|Great; dignified|Buzurgi aur azmat wala
+113|Imad|Pillar; dependable leader|Sutoon aur bharosemand rehnuma
+114|Ghiyath|Abundant rain|Kasrat ki barish
+115|Fatih|Opener; initiator|Kholne aur shuru karne wala
+116|Fazil|Learned; distinguished|Ilm aur fazilat wala
+117|Qasim|One who distributes|Taqseem karne wala
+118|Qamar|Moon|Chand
+119|Qawi|Strong|Quwwat wala
+120|Kamil|Complete|Mukammal
+121|Karim|Generous|Sakhi
+122|Kafil|One who supports others|Kafalat karne wala
+123|Kawkab|Bright star|Roshan sitara
+124|Labib|Intelligent; wise|Aqalmand aur dana
+125|Majid|Respectable; honoured|Mohtaram aur izzat wala
+126|Mamun|Trusted with a deposit|Amanat mein bharosemand
+127|Mubarak|Blessed; virtuous|Barkat wala aur nek
+128|Mubashshir|Bearer of good news|Khushkhabri sunane wala
+129|Mubin|Clear; apparent|Roshan aur zahir
+130|Matin|Strong|Mazboot
+131|Mujahid|One who strives in Allah's way|Allah ki raah mein koshish karne wala
+132|Mujtaba|Selected|Chuna hua
+133|Mujib|One who responds; helps|Jawab aur madad dene wala
+134|Mahfuz|Protected|Mehfooz
+135|Muhammad|Praised|Tareef kiya gaya
+136|Mahmud|Worthy of praise|Tareef ke laayiq
+137|Mukhtar|Selected|Chuna hua
+138|Muddaththir|Wrapped in a cloak|Chadar odhne wala
+139|Murtaza|Chosen; honoured|Barguzida aur buzurg
+140|Muzzammil|Wrapped in a blanket|Kambal odhne wala
+141|Mustajib|Obedient|Ita'at karne wala
+142|Mustaqim|One who follows a straight path|Seedhi raah par chalne wala
+143|Masud|Fortunate|Khush-naseeb
+144|Mashhud|Witnessed|Jiski gawahi di gayi
+145|Misbah|Lamp|Chiragh
+146|Musaddiq|One who confirms|Tasdeeq karne wala
+147|Mustafa|Chosen|Chuna hua
+148|Muti|Obedient|Ita'at-guzar
+149|Muzaffar|Victorious|Fatah paane wala
+150|Muazzam|Respected; honoured|Buzurg aur izzat wala
+151|Muallim|Teacher|Sikhane wala
+152|Muin|Helper|Madadgar
+153|Muqtasid|Moderate|Miyana rawi wala
+154|Mukarram|Honoured|Izzat wala
+155|Munsif|Just|Insaaf karne wala
+156|Mansur|Helped; supported|Madad paane wala
+157|Munib|Obedient|Hukm maanne wala
+158|Munir|One who illuminates|Roshan karne wala
+159|Nasik|Worshipper|Ibadat karne wala
+160|Nashir|One who unfolds; reveals|Khol kar zahir karne wala
+162|Nasih|Adviser|Naseehat karne wala
+163|Nasir|Helper|Madad karne wala
+164|Najm|Star|Sitara
+165|Najib|Of good lineage; esteemed|Achche nasab wala aur pasandida
+166|Najid|Guide; expert|Rehnuma aur maahir
+167|Nazir|Warner|Khabardar karne wala
+168|Naqib|Leader; supporter|Sardar aur kafalat karne wala
+169|Nur|Light|Roshni
+170|Humam|Dignified king|Azmat wala badshah
+171|Wajid|Learned; wealthy|Aalim aur ghani
+172|Wasit|Moderate|Darmiyana
+173|Wasi|One who gives abundantly|Kasrat se dene wala
+174|Waid|One who promises|Wada karne wala
+175|Wasim|Handsome|Khoobsurat chehre wala
+176|Wali|Friend of Allah|Allah ka dost
+178|Adam|Created from earth; a Prophet's name|Mitti se paida hue; Nabi ka naam
+179|Ibrahim|Kind father; a Prophet's name|Meherban baap; Nabi ka naam
+180|Idris|One who teaches; a Prophet's name|Dars dene wale; Nabi ka naam
+181|Ishaq|One who smiles much; a Prophet's name|Bahut muskurane wale; Nabi ka naam
+182|Ismail|Obedient to Allah; a Prophet's name|Allah ke farmanbardar; Nabi ka naam
+183|Ilyas|Courageous; a Prophet's name|Bahadur; Nabi ka naam
+184|Ayyub|Obedient; a Prophet's name|Farmanbardar; Nabi ka naam
+185|Daniyal|Divine judgement; a Prophet's name in the source|Allah ka faisla; source mein Nabi ka naam
+186|Dawud|Beloved of Allah; a Prophet's name|Allah ke mehboob; Nabi ka naam
+187|Dhul Kifl|One who takes responsibility; a Prophet's name|Zimmedari lene wale; Nabi ka naam
+188|Zakariya|One who remembers Allah; a Prophet's name|Allah ka zikr karne wale; Nabi ka naam
+189|Sulaiman|Free of faults; a Prophet's name|Be-aib; Nabi ka naam
+190|Shuayb|Small group; a Prophet's name|Chhoti jamaat; Nabi ka naam
+191|Salih|Righteous; a Prophet's name|Nek aur ba-amal; Nabi ka naam
+192|Uzair|Helper; a blessed name listed in the source|Madadgar; source mein mubarak naam
+193|Isa|Noble in character; a Prophet's name|Shareef-un-nafs; Nabi ka naam
+194|Lut|Heartfelt love; a Prophet's name|Dili muhabbat; Nabi ka naam
+195|Musa|A Prophet's name; source associates it with water and trees|Nabi ka naam; source mein paani aur darakht se nisbat
+196|Nuh|One who weeps in fear of Allah; a Prophet's name|Allah ke khauf se rone wale; Nabi ka naam
+197|Harun|Beloved; a Prophet's name|Har-dil-aziz; Nabi ka naam
+198|Hud|One who returns to truth; a Prophet's name|Haq ki taraf lautne wale; Nabi ka naam
+199|Yahya|Life; a Prophet's name|Zindagi; Nabi ka naam
+200|Yaqub|One who follows; a Prophet's name|Peechha karne wale; Nabi ka naam
+201|Yusuf|Very handsome; a Prophet's name|Nihayat khoobsurat; Nabi ka naam
+202|Yunus|Companionship; a Prophet's name|Uns wale; Nabi ka naam
+207|Hasan|Good|Achcha
+208|Husayn|Beautiful|Khoobsurat
+209|Muhsin|One who does good|Bhalai karne wala
+210|Ali|High; exalted|Buland martabe wala
+211|Abu Bakr|Precedence; superiority in the source|Awwaliyat aur afzaliyat
+212|Umar|Life|Zindagi
+213|Uthman|One who strives|Koshish karne wala
+215|Talha|Empty stomach; a Companion's name|Khaali pait; Sahabi ka naam
+216|Zubayr|Strong|Taqatwar
+218|Saad|Fortunate|Khush-naseeb
+220|Abu Ubaydah|A Companion's kunyah; associated with a small maidservant|Sahabi ki kuniyat; chhoti kaneez se nisbat
+221|Akhram|A hill descending into a valley|Nasheb mein utarne wala teela
+223|Asad|Lion|Sher
+224|Asad the Fortunate|Very successful; Arabic As'ad|Bahut kamyab; Arabi As'ad
+225|Aslam|Very safe|Zyada salamati wala
+226|Usayd|Little lion|Chhota sher
+227|Ashraf|Very noble|Zyada sharafat wala
+228|Anas|Companionship; affection; peace of heart|Apnapan, muhabbat aur dil ka sukoon
+229|Anis|Friendly; affectionate|Uns aur muhabbat dene wala
+231|Bilal|Water; something that moistens the throat|Paani; halaq ko tar karne wali cheez
+232|Thabit|Steadfast|Mustaqil mizaj
+233|Thumamah|A plant with dense branches|Bhari shaakhon wala paudha
+234|Thawban|One who repents|Tauba karne wala
+235|Jabir|Strong|Zor wala
+236|Jubayr|Powerful|Zabardast
+237|Jafar|Broad river|Bahut wasee nahr
+238|Habis|One who restrains|Rokne wala
+240|Hajib|Guardian|Hifazat karne wala
+241|Harith|One who earns|Kamane wala
+242|Hazim|Far-sighted; perceptive|Door-andesh aur tez-nazar
+243|Hatib|Woodcutter; collector of firewood|Lakdiyan jama karne wala
+244|Hubab|Beloved; friend|Mehboob aur dost
+245|Hibban|Radiant-faced|Noorani chehre wala
+246|Hudhayfah|Free of faults|Be-aib
+247|Hurr|Pure; free; noble|Khalis, aazad aur shareef
+248|Hassan|Very handsome|Bahut haseen
+251|Humran|Reddish complexion|Surkh rang wala
+252|Hamza|Lion|Sher
+253|Humayd|Honourable|Buzurg
+254|Hanzalah|A tree's name|Ek darakht ka naam
+255|Hunayf|Inclined towards good; upright|Khair ki taraf maail aur seedha
+256|Khalid|Long-lasting|Derpa
+257|Khabbab|One who walks swiftly|Tez chalne wala
+258|Khubayb|Deep hollow; a Companion's name|Gehra gaddha; Sahabi ka naam
+259|Khufaf|Clever; intelligent|Hoshiyar aur zaheen
+260|Khallad|One who resides for a long time|Lambe arse tak rehne wala
+261|Darim|Well-fleshed|Jiski haddiyon par gosht ho
+262|Daylam|Perceptive; understanding|Maamla-fahm aur baseerat wala
+263|Dh abil|Slender|Dubla patla
+264|Dhakwan|Clever; intelligent|Hoshiyar aur zaheen
+266|Zari|Cultivator|Kashtkar
+269|Ziyad|Increase; abundance|Izafa aur kasrat
+270|Zayd|Increase; growth|Izafa aur badhotri
+271|Sariyah|One who travels by night|Raat mein chalne wala
+272|Salif|Advanced in age or excellence|Umar ya fazilat mein badha hua
+273|Salim|Safe from illness and harm|Bimari aur aafat se salamat
+274|Saib|Generous-hearted|Khule dil se sakhi
+275|Sufyan|Swift in flight|Jaldi parwaaz karne wala
+276|Salman|Obedient; free of faults|Farmanbardar aur be-aib
+277|Sulaym|Sound; safe; clean|Salamat aur saaf
+278|Simak|Something lofty|Buland cheez
+279|Saman|Obedient|Ita'at aur farmanbardari wala
+280|Sumayr|Companion in evening conversation|Raat ko saathi se baat karne wala
+281|Sinan|Spear|Neza
+282|Sahl|Gentle; easy|Narm mizaj aur aasaan
+283|Suhayl|Gentle in dealing with others|Narm bartao karne wala
+285|Shuja|Brave|Bahadur
+286|Shaddad|Strong; brave|Bahut taqatwar aur bahadur
+287|Shurayh|Clear; protected|Wazeh aur mehfooz
+288|Sharik|Partner|Hissedar
+289|Shamun|Obedient|Farmanbardar
+290|Shayban|White; cool; snow|Safed, thanda aur barf
+291|Subayh|Bright-faced|Roshan chehre wala
+292|Safwan|Smooth rock|Chikni chattan
+293|Damdam|Courageous|Diler
+294|Tariq|Bright star|Roshan sitara
+295|Tufayl|Means; connection|Waseela
+296|Zuhayr|Helper|Madadgar
+297|Asim|Protector|Hifazat aur bachao karne wala
+298|Aqil|Intelligent|Aqalmand aur hoshiyar
+299|Abbad|Servant; worshipper|Banda aur ibadat-guzar
+300|Abbas|A lion feared by other lions|Doosre sheron ko daraane wala sher
+301|Atiq|Noble; free|Shareef aur aazad
+302|Urwah|Lion; dependable|Sher aur bharosemand
+303|Affan|Very chaste|Bahut paak-daman
+304|Uqayl|Wise; intelligent|Dana aur zaheen
+305|Ammar|Forbearing; dignified|Burdbar aur ba-waqar
+306|Umayr|Full; abundant|Labrez
+307|Ghassan|Depth of the heart|Dil ki gehrai
+308|Fudayl|Distinguished|Fazilat wala
+309|Qarib|Small boat|Chhoti kashti
+310|Qatadah|A tree's name|Ek darakht ka naam
+311|Qutbah|Leader|Sardar
+312|Kathir|Abundant|Bahut aur waafir
+314|Kahmas|Lion|Sher
+315|Lahib|Open; clear path|Khula aur wazeh raasta
+316|Lahiq|One who joins|Milne wala
+317|Labid|One who resides|Qiyam karne wala
+318|Luqman|Very wise; experienced|Bahut dana aur tajurbekar
+319|Mati|Excellent thing|Bahut umda cheez
+320|Mazin|Rain-bearing cloud|Barish barsane wala baadal
+321|Malik|Owner|Milkiyat rakhne wala
+322|Midlaj|One who travels at night|Raat mein safar karne wala
+323|Marzuq|Prosperous|Khushhaal
+325|Musab|Forbearing|Bardasht karne wala
+326|Mutarrif|One at the edge|Kinare wala
+327|Mazhar|Appearance; place of manifestation|Manzar aur zahir hone ki jagah
+328|Muadh|Place of refuge|Panah ki jagah
+329|Muawiyah|One who prolongs a call|Aawaz kheenchne wala
+330|Maqil|Refuge|Panahgah
+331|Muawwidh|One who prays for protection|Panah ki dua dene wala
+332|Mughith|One who hears a plea|Faryad sunne wala
+333|Miqdad|One who divides into two parts|Do hisson mein baantne wala
+334|Miqdam|Brave; foremost in battle|Bahadur aur aage badhne wala
+335|Makhul|One with kohl-lined eyes|Surma lagi aankhon wala
+337|Mundhir|Warner|Khabardar karne wala
+338|Munkadir|One who swoops|Jhapatne wala
+339|Minhal|Very generous|Nihayat sakhi
+340|Munis|Friend; comforter|Dost aur ghamkhwar
+341|Maymun|Blessed; fortunate|Barkat aur khush-qismati wala
+342|Naim|One who lives in comfort|Khushhaal zindagi wala
+343|Nafi|Beneficial|Nafa dene wala
+344|Nasib|Share; portion|Hissa
+345|Numan|Blessed with favours|Nemat paane wala
+346|Nuaym|Possessor of blessings|Nemat wala
+347|Nawfal|Generous|Fayyaz aur darya-dil
+349|Waqid|One who lights a fire|Aag roshan karne wala
+350|Wail|One who takes refuge|Panah mein aane wala
+351|Hilal|New moon|Pehli tareekh ka chand
+352|Yasir|Ease; gentleness|Aasani aur narmi
+353|Yamin|Blessed|Barkat wala
+354|Yasar|Wealthy|Daulatmand
+355|Yaman|Blessed|Barkat wala
+356|Arslan|Lion|Sher
+357|Taqi|Pious|Parhezgar
+358|Jamal|Beauty|Husn
+359|Junayd|Small army|Chhota lashkar
+360|Jiwan|Life; existence|Zindagi aur wajood
+361|Hakim the Leader|Leader; Arabic Hakim with long a|Sardar; Haakim
+362|Hashmat|Dignity; grandeur|Buzurgi aur shaan
+363|Khalil|True friend|Sachcha dost
+364|Didar|Sight; appearance|Jalwa aur nazara
+365|Razin|Dignified; composed|Ba-waqar aur sanjeeda
+366|Rayhan|Flowers other than roses in the source|Source mein gulab ke alawa phool
+367|Zamil|Companion riding behind another|Peechhe sawari karne wala
+368|Sarfaraz|Honoured|Moazzaz
+370|Shahbaz|Falcon|Shaheen
+371|Adnan|Name of an ancestor of Prophet Muhammad|Nabi Muhammad ke jad ka naam
+372|Irfan|Recognition; knowledge|Shanakht aur pehchan
+373|Ata|Gift; grant|Bakhshish aur inaam
+374|Aqeel|Wise; intelligent|Dana aur zaheen
+375|Imran|Name of Prophet Isa's maternal grandfather in the source|Source mein Nabi Isa ke nana ka naam
+376|Zafar|Success|Kamyabi
+378|Maruf|Name of the saint Maruf al-Karkhi|Buzurg Maruf Karkhi ka naam
+379|Naqi|Pure; clean|Paak aur saaf
+380|Hashim|One who breaks bread into small pieces|Roti ke chhote tukde karne wala
+381|Warith|Helper; supporter|Madadgar aur himayati
+382|Wahb|Gift; grant|Ata aur bakhshish
+383|Asif|Name of Prophet Sulaiman's minister in the source|Source mein Nabi Sulaiman ke wazir ka naam
+384|Uhud|Name of a mountain|Ek pahad ka naam
+385|Ayaz|Name of a wise, pious servant of King Mahmud|Mahmud Badshah ke nek aur zaheen khadim ka naam
+386|Hunayn|A servant's name; a valley between Makkah and Taif|Ek khadim aur Makkah-Taif ki waadi ka naam
+387|Dhulfiqar|Notched sword; associated with Sayyiduna Ali|Mehron wali talwar; Hazrat Ali se nisbat
+388|Ramadan|Ninth Hijri month; month of Quran's revelation|Nauwan Hijri mahina; Quran ke nuzool ka mahina
+389|Rayyan|Gate of Paradise for those who fast|Rozedaron ke liye Jannat ka darwaza
+390|Arafat|Plain near Makkah where pilgrims stand on 9 Dhul Hijjah|Makkah ka maidan jahan hujjaj wuquf karte hain
+391|Amina|At peace; fearless|Mutmain aur be-khauf
+392|Umm Ayman|Blessed; strong; a Companion's kunyah|Barkat aur quwwat wali; Sahabiya ki kuniyat
+393|Thuwaybah|One who returns|Lautne wali
+394|Halima|Forbearing|Burdbar aur sabr wali
+395|Khadija|Girl born before her time|Waqt se pehle paida hone wali
+396|Sawdah|Dark complexion|Sanwli rangat wali
+397|Aisha|Prosperous|Khushhaal
+398|Hafsa|Beautiful|Khoobsurat
+399|Umm Salamah|Mother of one who acknowledges; a kunyah|Iqrar karne wali ki maa; kuniyat
+400|Umm Habibah|Mother of a beloved person; a kunyah|Mehboob hasti ki maa; kuniyat
+401|Maymunah|Blessed|Barkat wali
+402|Juwayriyah|Little girl|Chhoti ladki
+403|Safiyyah|Chosen|Chuni hui
+404|Zaynab|A beautiful fragrant plant|Khoobsurat khushboodar paudha
+405|Ruqayyah|One who progresses|Taraqqi karne wali
+406|Umm Kulthum|Mother of a full-cheeked girl; a kunyah|Bhara chehra wali ki maa; kuniyat
+407|Fatima|Associated in the source with deliverance from Hellfire|Source mein Jahannam se nijat ki nisbat
+408|Maria|Fair; radiant|Gori aur chamak wali
+409|Rayhanah|Fragrant plant|Khushboodar paudha
+410|Nafisa|Pure; clean|Paak aur saaf
+411|Umamah|One who resolves|Irada karne wali
+415|Asiyah|Pillar|Sutoon
+416|Uthaylah|Honourable; noble|Sharaf aur buzurgi wali
+417|Arwa|Beautiful|Haseen aur khoobsurat
+418|Asma|Sign; mark|Nishani aur alamat
+419|Umaymah|Stone|Patthar
+420|Umayyah|Little maidservant|Chhoti kaneez
+421|Unaysah|Guiding; kind|Rehnumai aur meherbani karne wali
+422|Ayman|Upright; right-sided|Seedhi aur daahni
+423|Barirah|Fruit of a tree|Ek darakht ka phal
+424|Busrah|Bud; sprout|Konpal
+425|Bashirah|Bearer of good news|Khushkhabri dene wali
+426|Buhayyah|Beauty|Jamal
+427|Jamila|Beautiful|Khoobsurat
+428|Habiba|Beloved|Pyari
+429|Harmalah|Small garment|Chhoti poshak
+430|Hasanah|Blessing|Nemat
+431|Hakimah|Wise woman|Aqalmand khatoon
+432|Hamnah|A variety of grapes from Taif|Taif ke angooron ki ek qism
+433|Khalidah|Long-lasting|Der tak rehne wali
+434|Khawlah|Doe; beautiful|Hirni aur khoobsurat
+435|Khayrah|Excellent; distinguished|Aala aur mumtaz
+436|Daqrah|Beautiful garden with abundant plants|Paudhon wala khoobsurat baagh
+437|Rabab|White clouds|Safed baadal
+438|Ruzaynah|Wise; pious|Aqalmand aur parsa
+439|Rufaydah|Helper; gift|Madadgar aur atiya
+440|Ruqayqah|Tender-hearted|Narm-dil
+441|Ramlah|Raised part of land|Zameen ka buland hissa
+442|Rumaythah|Fertile land|Zarkhez zameen
+443|Rumaysa|Name of a star|Ek sitare ka naam
+444|Zuraynah|Golden|Sunehri
+445|Sairah|One who travels|Sair karne wali
+446|Subayah|Seven|Saat
+447|Sarra|Prosperity; good land|Khushhaali aur umda zameen
+448|Suda|Blessed; fortunate|Mubarak aur khush-bakht
+449|Suaydah|Fortunate woman|Khush-naseeb khatoon
+450|Sukaynah|Dignity; tranquillity|Waqar aur sukoon
+451|Salma|Safe from harm|Aafat se mehfooz
+452|Sumayyah|Sign; mark|Alamat
+453|Sunbul|Fragrant grass|Khushboodar ghaas
+454|Sima|Marked; bearing a sign|Nishani wali
+455|Shifa|Health; recovery|Tandurusti aur sehat
+456|Atikah|Fragrant|Khushboo wali
+457|Afra|Slow-paced|Aahista raftaar
+458|Aqilah|Intelligent|Aqalmand aur samajhdar
+459|Atiyyah|Gift|Inaam mein di gayi cheez
+460|Fariah|Long-haired|Lambe baalon wali
+461|Qirsafah|Fast-moving; revolving|Tez chalne aur ghoomne wali
+462|Furayah|Tall; long-haired|Lambe qad aur baalon wali
+463|Qurrat ul Ayn|Comfort of the eyes|Aankhon ki thandak
+464|Kabshah|Protective|Hifazat karne wali
+465|Karima|Honoured woman|Moazzaz khatoon
+466|Lubabah|The purest and best part|Khalis aur behtareen hissa
+467|Lubna|Fragrant; beautiful|Khushboodar aur khoobsurat
+468|Mutiah|Obedient|Farmanbardar
+469|Muadhah|Refuge|Panahgah
+470|Mulaykah|Queen|Malika
+471|Nasibah|Noble woman of well-known lineage|Achche nasab wali shareef khatoon
+472|Hujaymah|Pearl; partly set milk in the source|Moti; source mein adha jama doodh
+473|Yusayrah|Easy; straight|Aasaan aur seedhi
+474|Aniqah|Pleasant; beautiful|Khush-aayind aur khoobsurat
+475|Bardah|Maidservant|Kaneez
+476|Bilqis|Name of the Queen of Sheba|Malika-e-Saba ka naam
+477|Tahiyyah|Greeting|Salam aur salami
+478|Jabalah|Leader; learned; steadfast|Sardar, aalima aur sabit-qadam
+479|Hanifah|Firm in faith|Deen mein sachchi aur mazboot
+480|Hammadah|One who praises and gives thanks|Hamd aur shukr karne wali
+481|Hawwa|Life; name of Prophet Adam's wife|Zindagi; Nabi Adam ki zauja ka naam
+482|Rabiah|Fourth; compassionate|Chauthi aur shafqat wali
+483|Raisah|Wealthy|Daulatmand
+484|Zubdah|Best part; chosen|Behtareen hissa aur barguzida
+485|Zajlah|People's voices|Logon ki aawaz
+486|Zinat|Beauty; adornment|Khoobsurati aur sajawat
+487|Sarah|Noble; honoured|Shareef aur moazzaz
+488|Sariyah|One who travels by night|Raat mein chalne wali
+489|Sidrah|Jujube tree|Beri ka darakht
+490|Safinah|Boat|Kashti
+492|Sakinah|Peace; tranquillity|Sukoon aur itminan
+493|Saniyyah|Radiant; high-ranking; beautiful|Roshan, buland martabe wali aur khoobsurat
+494|Shamsah|Skylight|Roshandan
+495|Suwaydah|Leader; dusky complexion|Sardar aur sanwli
+496|Shawanah|Thick, scattered hair|Ghane bikhre baal
+497|Sughra|Small; younger|Chhoti
+498|Safurah|Name of Prophet Musa's wife in the source|Source mein Nabi Musa ki zauja ka naam
+499|Tafiyah|Prominent grape in a bunch|Angoor ke guchhe ka numayan dana
+500|Tayyibah|Excellent; pure|Umda aur paak
+502|Atifah|Kind|Meherbani karne wali
+503|Aaliyah|Lofty|Buland martabe wali
+504|Abdah|Female servant|Bandi
+505|Ajradah|Light; swift|Halki aur tez
+506|Azizah|Beloved; friend|Mehboob aur dost
+507|Ghuzayyah|One who resolves|Irada karne wali
+509|Fasilah|Date-palm cutting|Khajoor ki qalam
+510|Quraybah|Related; seeking goodwill|Qarabat aur khushnudi wali
+511|Majidah|Respectable; generous|Mohtaram aur sakhi
+512|Marjanah|Coral; pearl|Moonga aur moti
+513|Maryam|Devout woman; name of Prophet Isa's mother|Ibadat-guzar; Nabi Isa ki walida ka naam
+514|Munibah|Repentant; obedient|Tauba karne wali aur farmanbardar
+515|Munifah|Beautiful; tall|Haseen aur khoobsurat qad wali
+516|Muwafiqah|Agreeable; compatible|Munasibat wali
+517|Nudbah|Eloquent|Faseeh baat karne wali
+518|Wajihah|Beautiful|Khoobsurat
+519|Hajrah|Very hot midday; name of Prophet Ismail's mother|Bahut garam dopahar; Nabi Ismail ki walida ka naam

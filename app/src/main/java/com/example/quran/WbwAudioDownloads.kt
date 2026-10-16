@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import com.example.core.net.FastNet
 import com.example.ui.localization.localizeUiText
 import com.example.ui.localization.persistedAppLanguage
 import kotlinx.coroutines.CoroutineScope
@@ -14,12 +15,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import okhttp3.Call
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
-import java.util.concurrent.TimeUnit
 
 data class WbwDownloadState(
     val downloaded: Set<Int> = emptySet(),
@@ -36,7 +34,6 @@ data class WbwDownloadState(
  * Downloads run one at a time in the app process, so they continue while the user reads elsewhere.
  */
 object WbwAudioDownloads {
-    private val client = OkHttpClient.Builder().connectTimeout(30, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val main = Handler(Looper.getMainLooper())
     private val _state = MutableStateFlow(WbwDownloadState())
@@ -47,7 +44,7 @@ object WbwAudioDownloads {
     private val pending = ArrayDeque<Pair<Int, SurahAudio>>()
     private var worker: Job? = null
     private var current: Int? = null
-    private var currentCall: Call? = null
+    private var currentJob: Job? = null
     private var cancelled = false
 
     fun init(context: Context) {
@@ -73,7 +70,7 @@ object WbwAudioDownloads {
 
     fun cancel(surahs: Collection<Int>) = synchronized(this) {
         pending.removeAll { it.first in surahs }
-        if (current in surahs) { cancelled = true; currentCall?.cancel() }
+        if (current in surahs) { cancelled = true; currentJob?.cancel() }
         publishQueue()
     }
 
@@ -85,25 +82,29 @@ object WbwAudioDownloads {
 
     fun deleteAll() = delete((1..114).toList())
 
-    private fun drain() {
+    private suspend fun drain() {
         while (true) {
             val (surah, audio) = synchronized(this) {
                 pending.removeFirstOrNull()?.also { current = it.first; cancelled = false }
             } ?: break
             try {
-                fetch(surah, audio)
+                // A child job so one surah can be cancelled without stopping the queue.
+                coroutineScope {
+                    val job = launch { fetch(surah, audio) }
+                    synchronized(this@WbwAudioDownloads) { currentJob = job; if (cancelled) job.cancel() }
+                }
             } catch (e: Exception) {
                 if (!cancelled) toast("Download stopped. Check your internet connection and try again.")
             } finally {
                 file(surah, ".part").delete()
-                synchronized(this) { current = null; currentCall = null }
+                synchronized(this) { current = null; currentJob = null }
                 refresh()
             }
         }
     }
 
     /** Tries each mirror in turn; a cancel stops immediately instead of moving on to the next one. */
-    private fun fetch(surah: Int, audio: SurahAudio) {
+    private suspend fun fetch(surah: Int, audio: SurahAudio) {
         var failure: Exception? = null
         for (url in audio.urls) {
             try { fetch(surah, url, audio.bytes); return } catch (e: Exception) {
@@ -114,39 +115,20 @@ object WbwAudioDownloads {
         throw failure ?: IllegalStateException("No download source")
     }
 
-    private fun fetch(surah: Int, url: String, expectedBytes: Long) {
-        val call = client.newCall(Request.Builder().url(url).build())
-        synchronized(this) { currentCall = call; if (cancelled) call.cancel() }
-        call.execute().use { response ->
-            if (!response.isSuccessful) error("HTTP ${response.code}")
-            val body = response.body ?: error("Empty response")
-            if (body.contentType()?.type.equals("text", ignoreCase = true)) error("Source returned a web page instead of audio")
-            val total = body.contentLength().takeIf { it > 0 } ?: expectedBytes
-            val temp = file(surah, ".part")
-            try {
-            var copied = 0L
+    private suspend fun fetch(surah: Int, url: String, expectedBytes: Long) {
+        val temp = file(surah, ".part")
+        try {
             var lastPublished = 0f
-            body.byteStream().use { input ->
-                temp.outputStream().buffered().use { output ->
-                    val buffer = ByteArray(64 * 1024)
-                    while (true) {
-                        val count = input.read(buffer)
-                        if (count < 0) break
-                        output.write(buffer, 0, count)
-                        copied += count
-                        val progress = (copied.toFloat() / total).coerceIn(0f, 1f)
-                        if (progress - lastPublished >= .01f) {
-                            lastPublished = progress
-                            _state.update { it.copy(active = it.active + (surah to progress)) }
-                        }
-                    }
+            FastNet.download(url, temp) { copied, total ->
+                val progress = (copied.toFloat() / (if (total > 0) total else expectedBytes)).coerceIn(0f, 1f)
+                if (progress - lastPublished >= .01f) {
+                    lastPublished = progress
+                    _state.update { it.copy(active = it.active + (surah to progress)) }
                 }
             }
-            if (copied < total) error("Incomplete download")
             if (!temp.renameTo(file(surah))) error("Could not save audio")
-            } finally {
-                temp.delete()
-            }
+        } finally {
+            temp.delete()
         }
     }
 

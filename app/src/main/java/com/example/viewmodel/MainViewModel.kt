@@ -137,7 +137,11 @@ data class MainUiState(
     val hijriAdjustmentDays: Int = 0,
     /** Moon-sighting calendar chosen in Settings ([HijriRegion.id]); null follows the location. */
     val hijriCalendarId: String? = null,
-    val languageCode: String = "en"
+    val languageCode: String = "en",
+    /** True on a fresh install until the user confirms a language on the first-launch screen. */
+    val needsLanguageSelection: Boolean = false,
+    /** True until the feature tour has been finished or skipped once; More can start it again. */
+    val needsFeatureTour: Boolean = false
 )
 
 data class AppLanguage(
@@ -161,26 +165,26 @@ data class AppLanguage(
             AppLanguage("hinglish", "Hinglish (Roman Hindi)"),
             AppLanguage("hi", "हिन्दी (Hindi)"),
             AppLanguage("ur", "اردو (Urdu)"),
-            AppLanguage("as", "অসমীয়া (Assamese)"),
-            AppLanguage("bn", "বাংলা (Bengali)"),
-            AppLanguage("brx", "बड़ो (Bodo)"),
-            AppLanguage("doi", "डोगरी (Dogri)"),
-            AppLanguage("gu", "ગુજરાતી (Gujarati)"),
-            AppLanguage("kn", "ಕನ್ನಡ (Kannada)"),
-            AppLanguage("ks", "کٲشُر (Kashmiri)"),
-            AppLanguage("kok", "कोंकणी (Konkani)"),
-            AppLanguage("mai", "मैथिली (Maithili)"),
-            AppLanguage("ml", "മലയാളം (Malayalam)"),
-            AppLanguage("mni", "মৈতৈলোন্ (Manipuri)"),
-            AppLanguage("mr", "मराठी (Marathi)"),
-            AppLanguage("ne", "नेपाली (Nepali)"),
-            AppLanguage("or", "ଓଡ଼ିଆ (Odia)"),
-            AppLanguage("pa", "ਪੰਜਾਬੀ (Punjabi)"),
-            AppLanguage("sa", "संस्कृतम् (Sanskrit)"),
-            AppLanguage("sat", "ᱥᱟᱱᱛᱟᱲᱤ (Santali)"),
-            AppLanguage("sd", "سنڌي (Sindhi)"),
-            AppLanguage("ta", "தமிழ் (Tamil)"),
-            AppLanguage("te", "తెలుగు (Telugu)"),
+            AppLanguage("as", "অসমীয়া (Assamese)", reviewPending = true),
+            AppLanguage("bn", "বাংলা (Bengali)", reviewPending = true),
+            AppLanguage("brx", "बड़ो (Bodo)", reviewPending = true),
+            AppLanguage("doi", "डोगरी (Dogri)", reviewPending = true),
+            AppLanguage("gu", "ગુજરાતી (Gujarati)", reviewPending = true),
+            AppLanguage("kn", "ಕನ್ನಡ (Kannada)", reviewPending = true),
+            AppLanguage("ks", "کٲشُر (Kashmiri)", reviewPending = true),
+            AppLanguage("kok", "कोंकणी (Konkani)", reviewPending = true),
+            AppLanguage("mai", "मैथिली (Maithili)", reviewPending = true),
+            AppLanguage("ml", "മലയാളം (Malayalam)", reviewPending = true),
+            AppLanguage("mni", "মৈতৈলোন্ (Manipuri)", reviewPending = true),
+            AppLanguage("mr", "मराठी (Marathi)", reviewPending = true),
+            AppLanguage("ne", "नेपाली (Nepali)", reviewPending = true),
+            AppLanguage("or", "ଓଡ଼ିଆ (Odia)", reviewPending = true),
+            AppLanguage("pa", "ਪੰਜਾਬੀ (Punjabi)", reviewPending = true),
+            AppLanguage("sa", "संस्कृतम् (Sanskrit)", reviewPending = true),
+            AppLanguage("sat", "ᱥᱟᱱᱛᱟᱲᱤ (Santali)", reviewPending = true),
+            AppLanguage("sd", "سنڌي (Sindhi)", reviewPending = true),
+            AppLanguage("ta", "தமிழ் (Tamil)", reviewPending = true),
+            AppLanguage("te", "తెలుగు (Telugu)", reviewPending = true),
             // World languages added by best-effort machine translation (reviewPending = true).
             AppLanguage("ar", "العربية (Arabic)", reviewPending = true),
             AppLanguage("fa", "فارسی (Persian)", reviewPending = true),
@@ -227,7 +231,14 @@ data class AppLanguage(
             if (locale.language.equals("hi", ignoreCase = true) &&
                 locale.script.equals("Latn", ignoreCase = true)
             ) return "hinglish"
-            return supported.firstOrNull { it.code == locale.language.lowercase(Locale.ROOT) }?.code
+            // Android still reports some languages under their retired ISO codes.
+            val language = when (val raw = locale.language.lowercase(Locale.ROOT)) {
+                "in" -> "id"
+                "iw" -> "he"
+                "fil" -> "tl"
+                else -> raw
+            }
+            return supported.firstOrNull { it.code == language }?.code
         }
     }
 }
@@ -253,7 +264,14 @@ enum class DuasScreenTab {
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val appPreferences = PrayerSettingsStore.prefs(application)
+    /** Excluded from backup, so it describes this install only and is empty after a reinstall. */
+    private val installPreferences = application.getSharedPreferences(
+        "install_state",
+        android.content.Context.MODE_PRIVATE
+    )
     private val platformLocaleManagedKey = "platform_locale_managed"
+    private val languageSelectionDoneKey = "language_selection_done"
+    private val featureTourDoneKey = "feature_tour_done"
 
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
     private val sensorManager = application.getSystemService(SensorManager::class.java)
@@ -290,6 +308,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             prayerConfig = config,
             isNotificationEnabled = PrayerSettingsStore.notificationsEnabled(appPreferences),
             languageCode = loadLanguageCode(),
+            needsLanguageSelection = loadNeedsLanguageSelection(),
+            needsFeatureTour = !appPreferences.getBoolean(featureTourDoneKey, false),
             quranReaderMode = enumPreference("quran_reader_mode", defaults.quranReaderMode),
             quranPageNumber = appPreferences.getInt("quran_page", 1).coerceIn(1, 847),
             tasbeehCount = appPreferences.getInt("tasbeeh_count", 0).coerceAtLeast(0),
@@ -353,6 +373,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return AppLanguage.fromLocale(deviceLocale) ?: "en"
     }
 
+    /**
+     * The language screen opens the app until a language has been picked on this install. Only
+     * the non-backed-up flag is trusted: a backup restore brings the main preferences back before
+     * the first launch, and an install over an older build has never asked at all.
+     */
+    private fun loadNeedsLanguageSelection(): Boolean =
+        !installPreferences.getBoolean(languageSelectionDoneKey, false)
+
+    /**
+     * Applies the language picked on the first-launch screen, never shows that screen again, and
+     * hands over to the feature tour so it runs in the language that was just chosen.
+     */
+    fun completeLanguageSelection(code: String) {
+        com.example.core.analytics.AppAnalytics.setting("complete_language_selection", code)
+        com.example.core.analytics.AppAnalytics.milestone("onboarding", "language_selected", code)
+        installPreferences.edit().putBoolean(languageSelectionDoneKey, true).apply()
+        // A restored backup may already carry the "done" flag; the tour still follows the picker.
+        appPreferences.edit().putBoolean(featureTourDoneKey, false).apply()
+        _uiState.update { it.copy(needsLanguageSelection = false, needsFeatureTour = true) }
+        setLanguage(code)
+    }
+
+    /** Finishing and skipping the tour both end it for good. */
+    fun completeFeatureTour() {
+        com.example.core.analytics.AppAnalytics.setting("complete_feature_tour")
+        appPreferences.edit().putBoolean(featureTourDoneKey, true).apply()
+        _uiState.update { it.copy(needsFeatureTour = false) }
+    }
+
+    /** Replays the tour from More without forgetting that it has already been seen. */
+    fun startFeatureTour() {
+        com.example.core.analytics.AppAnalytics.setting("start_feature_tour")
+        _uiState.update { it.copy(needsFeatureTour = true) }
+    }
+
     private fun confirmedHijriMonthsKey(region: HijriRegion) = PrayerSettingsStore.confirmedHijriMonthsKey(region)
 
     private companion object {
@@ -369,6 +424,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun persistPrayerConfig(config: PrayerTimeConfig) = PrayerSettingsStore.saveConfig(appPreferences, config)
 
     fun setLanguage(code: String) {
+        com.example.core.analytics.AppAnalytics.setting("set_language", code)
         val normalized = AppLanguage.supported
             .firstOrNull { it.code.equals(code.trim(), ignoreCase = true) }
             ?.code
@@ -394,32 +450,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         PrayerNotificationReceiver.createNotificationChannel(getApplication())
         QuranAudioService.update(getApplication())
+        com.example.core.analytics.AnalyticsProfile.sync(getApplication())
     }
 
     /** Picks up changes made from Android's Settings > App languages while the app was away. */
     fun syncPlatformLanguage() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        // Nothing has been chosen yet; the first-launch screen sets the language.
+        if (_uiState.value.needsLanguageSelection) return
         val application = getApplication<Application>()
-        val platformLocales = runCatching {
-            application.getSystemService(LocaleManager::class.java)?.applicationLocales
+        val localeManager = runCatching {
+            application.getSystemService(LocaleManager::class.java)
         }.getOrNull() ?: return
+        val platformLocales = runCatching { localeManager.applicationLocales }.getOrNull() ?: return
 
-        if (platformLocales.isEmpty &&
-            appPreferences.contains("language_code") &&
-            !appPreferences.getBoolean(platformLocaleManagedKey, false)
-        ) {
-            // One-time migration for users who selected a language before Android 13 per-app
-            // locales were integrated. Without it, the first foreground event would reset them.
+        val code = if (platformLocales.isEmpty) null else AppLanguage.fromLocale(platformLocales.get(0))
+        if (code == null) {
+            // The platform holds no usable per-app language (restored backup, a choice made before
+            // Android 13 per-app locales, a cleared setting). The language chosen in the app stays
+            // and is handed back to the platform instead of falling back to the device language.
+            val chosen = _uiState.value.languageCode
             runCatching {
-                application.getSystemService(LocaleManager::class.java)?.applicationLocales =
-                    LocaleList.forLanguageTags(appLocale(_uiState.value.languageCode).toLanguageTag())
+                localeManager.applicationLocales =
+                    LocaleList.forLanguageTags(appLocale(chosen).toLanguageTag())
             }
-            appPreferences.edit().putBoolean(platformLocaleManagedKey, true).apply()
+            appPreferences.edit()
+                .putString("language_code", chosen)
+                .putBoolean(platformLocaleManagedKey, true)
+                .apply()
             return
         }
 
-        val locale = if (platformLocales.isEmpty) Locale.getDefault() else platformLocales.get(0)
-        val code = AppLanguage.fromLocale(locale) ?: "en"
         appPreferences.edit()
             .putString("language_code", code)
             .putBoolean(platformLocaleManagedKey, true)
@@ -444,6 +505,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         observeDomainEvents()
         loadQuranPage(_uiState.value.quranPageNumber)
         refreshFestivals()
+        // Setting choices double as report dimensions; city and coordinates are never part of them.
+        viewModelScope.launch {
+            uiState.map { listOf(it.languageCode, it.prayerConfig, it.hijriCalendarId, it.isNotificationEnabled,
+                it.quranReaderMode, it.isLiveLocation, it.hasConfirmedLocation) }
+                .distinctUntilChanged()
+                .collect { com.example.core.analytics.AnalyticsProfile.sync(getApplication()) }
+        }
         viewModelScope.launch {
             var lastHijriBoundary = currentHijriBoundaryKey()
             while (true) {
@@ -507,6 +575,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun selectCity(city: CityLocation) {
+        com.example.core.analytics.AppAnalytics.setting("set_location", "manual_city")
         stopLiveLocation()
         viewModelScope.launch {
             DomainEventBus.publish(LocationChangedEvent(city))
@@ -537,6 +606,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** Called after the user grants precise location. Updates GPS every 30 seconds while app is open. */
     fun startLiveLocation(userRequested: Boolean = false) {
         if (userRequested && !useLiveLocation) {
+            com.example.core.analytics.AppAnalytics.setting("set_location", "gps")
             useLiveLocation = true
             PrayerSettingsStore.saveUseLiveLocation(appPreferences, true)
             liveLocationGeneration++
@@ -565,21 +635,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             val request = LocationRequest.Builder(priority, 30_000)
                 .setMinUpdateIntervalMillis(10_000).setWaitForAccurateLocation(false).build()
-            fusedLocationClient.requestLocationUpdates(request, locationCallback!!, android.os.Looper.getMainLooper())
+            // Permission can be revoked between the check above and this call; the dashboard then keeps its city.
+            runCatching {
+                fusedLocationClient.requestLocationUpdates(request, locationCallback!!, android.os.Looper.getMainLooper())
+            }.onFailure { locationCallback = null }
         }
 
         // Ask for a fresh fix whenever the app returns to the foreground. If Android
         // location was just switched on this updates the dashboard without a tap.
         currentLocationRequest?.cancel()
         val cancellationTokenSource = CancellationTokenSource().also { currentLocationRequest = it }
-        fusedLocationClient.getCurrentLocation(priority, cancellationTokenSource.token)
-            .addOnSuccessListener { location ->
-                location?.let { updateLiveLocation(it) }
-            }
+        runCatching {
+            fusedLocationClient.getCurrentLocation(priority, cancellationTokenSource.token)
+                .addOnSuccessListener { location ->
+                    location?.let { updateLiveLocation(it) }
+                }
+        }
 
         // Fall back to Android's cached fix while a fresh one is being acquired.
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            location?.let { updateLiveLocation(it) }
+        runCatching {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                location?.let { updateLiveLocation(it) }
+            }
         }
     }
 
@@ -656,6 +733,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setCustomCoordinates(name: String, latitude: Double, longitude: Double, timeZoneId: String? = null) {
+        com.example.core.analytics.AppAnalytics.setting("set_location", "custom_coordinates")
         stopLiveLocation()
         val sanitizedName = SensitiveDataRedactor.redact(name)
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -681,6 +759,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Follows [region]'s moon-sighting calendar wherever the user is; null goes back to the location's own. */
     fun setHijriCalendar(region: HijriRegion?) {
+        com.example.core.analytics.AppAnalytics.setting("set_hijri_calendar", region?.id ?: "automatic")
         HijriRegion.preferred = region
         appPreferences.edit().putString(HIJRI_CALENDAR_KEY, region?.id).apply()
         _uiState.update { it.copy(hijriCalendarId = region?.id) }
@@ -690,6 +769,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Corrects today's Hijri date to a local moon-sighting announcement that differs from the prediction. */
     fun setHijriAdjustmentDays(days: Int) {
+        com.example.core.analytics.AppAnalytics.setting("set_hijri_adjustment_days", if (days < 0) "minus_${-days}" else "plus_$days")
         val state = _uiState.value
         val region = HijriRegion.forTimeZone(state.selectedCity.timeZoneId)
         val cal = Calendar.getInstance(TimeZone.getTimeZone(state.selectedCity.timeZoneId))
@@ -736,11 +816,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (_isRefreshing.value) return
         _isRefreshing.value = true
         viewModelScope.launch {
+            val started = SystemClock.elapsedRealtime()
             try {
                 val festivals = refreshRealtimeDate()
-                startLiveLocation()
+                runCatching { startLiveLocation() }
                 festivals.join()
+            } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                // A refresh that fails leaves the previous data in place; nothing to surface here.
             } finally {
+                // The indicator stays visible long enough to read as a completed refresh, not a flicker.
+                val elapsed = SystemClock.elapsedRealtime() - started
+                if (elapsed < 500) kotlinx.coroutines.delay(500 - elapsed)
                 _isRefreshing.value = false
             }
         }
@@ -756,6 +843,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val allowed = !enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         val active = enabled && allowed
+        com.example.core.analytics.AppAnalytics.setting("set_notifications_enabled", if (active) "on" else if (enabled) "blocked" else "off")
         PrayerSettingsStore.saveNotificationsEnabled(appPreferences, active)
         _uiState.update { it.copy(isNotificationEnabled = active) }
         if (active) {
@@ -793,13 +881,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         val city = _uiState.value.selectedCity
         val hijriFormatted = formatHijriDate(_uiState.value.hijriDate, _uiState.value.languageCode)
-        PrayerNotificationReceiver.showPrayerNotification(
-            context = getApplication(),
-            prayerName = _uiState.value.nextPrayer.displayName,
-            prayerArabic = _uiState.value.nextPrayer.arabicName,
-            prayerTime = _uiState.value.nextPrayerTimeFormatted,
-            location = city.name,
-            hijriDate = hijriFormatted
+        PrayerNotificationReceiver.deliverPrayerAlert(
+            getApplication(),
+            PrayerNotificationReceiver.alertDetails(
+                prayerName = _uiState.value.nextPrayer.displayName,
+                prayerArabic = _uiState.value.nextPrayer.arabicName,
+                prayerTime = _uiState.value.nextPrayerTimeFormatted,
+                location = city.name,
+                hijriDate = hijriFormatted
+            ),
+            test = true
         )
         _uiState.update { it.copy(notificationFeedbackMessage = "Test prayer alert sent.") }
     }
@@ -818,6 +909,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updatePrayerConfig(config: PrayerTimeConfig) {
+        val previous = _uiState.value.prayerConfig
+        when {
+            config.method != previous.method -> com.example.core.analytics.AppAnalytics.setting("set_prayer_method", config.method.name)
+            config.asrMethod != previous.asrMethod -> com.example.core.analytics.AppAnalytics.setting("set_asr_method", config.asrMethod.name)
+            config.highLatitudeRule != previous.highLatitudeRule ->
+                com.example.core.analytics.AppAnalytics.setting("set_high_latitude_rule", config.highLatitudeRule.name)
+            else -> com.example.core.analytics.AppAnalytics.setting("update_prayer_config")
+        }
         viewModelScope.launch {
             DomainEventBus.publish(PrayerSettingsChangedEvent(config))
         }
@@ -904,6 +1003,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setQuranReaderMode(mode: QuranReaderMode) {
+        com.example.core.analytics.AppAnalytics.setting("set_quran_reader_mode", mode.name)
         appPreferences.edit().putString("quran_reader_mode", mode.name).apply()
         _uiState.update { it.copy(quranReaderMode = mode) }
     }
@@ -965,6 +1065,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val progress = todaysAdhkarProgress()
         val current = progress[key] ?: 0
         if (current >= target) return
+        if (current + 1 == target) com.example.core.analytics.AppAnalytics.milestone("adhkar", "dhikr_completed")
         saveAdhkarProgress(progress + (key to current + 1))
     }
 
@@ -991,6 +1092,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val state = _uiState.value
         val next = if (state.tasbeehCount >= state.tasbeehGoal) 1 else state.tasbeehCount + 1
         val rounds = if (next == state.tasbeehGoal) state.tasbeehRounds + 1 else state.tasbeehRounds
+        // Only that a round was finished: not the phrase, the goal or the running count.
+        if (next == state.tasbeehGoal) com.example.core.analytics.AppAnalytics.milestone("tasbeeh", "round_completed")
         appPreferences.edit()
             .putInt("tasbeeh_count", next)
             .putInt("tasbeeh_rounds", rounds)
@@ -1017,6 +1120,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun resetTasbeeh() {
+        com.example.core.analytics.AppAnalytics.setting("reset_tasbeeh")
         appPreferences.edit()
             .putInt("tasbeeh_count", 0)
             .putInt("tasbeeh_rounds", 0)
@@ -1025,6 +1129,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setTasbeehPreset(phrase: String, goal: Int) {
+        com.example.core.analytics.AppAnalytics.setting("set_tasbeeh_preset")
         val safeGoal = goal.coerceAtLeast(1)
         appPreferences.edit()
             .putString("tasbeeh_phrase", phrase)

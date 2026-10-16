@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.test.core.app.ApplicationProvider
 import com.example.naat.NaatAudioManager
@@ -99,5 +100,18 @@ class NaatScreenTest {
         composeRule.onNodeWithTag("naat_download_all").performClick()
         composeRule.waitForIdle()
         composeRule.onRoot().captureRoboImage("build/outputs/roborazzi/naat_download_dialog.png")
+    }
+
+    @Test fun favouriteShowsUnderFavouritesFilter() {
+        show()
+        val id = "owais-aahista-chal"
+        composeRule.onNodeWithTag("naat_favourite_$id").performClick()
+        composeRule.onNodeWithTag("naat_filter_favourites").performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("naat_$id").assertIsDisplayed()
+        // Un-favouriting empties the filter again; the manager is shared by every test in this class.
+        composeRule.onNodeWithTag("naat_favourite_$id").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("naat_$id").assertDoesNotExist()
     }
 }

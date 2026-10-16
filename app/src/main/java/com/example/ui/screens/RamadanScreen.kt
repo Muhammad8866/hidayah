@@ -1,4 +1,6 @@
 package com.example.ui.screens
+import androidx.compose.material.icons.filled.LocationOff
+import com.example.ui.components.ScreenHeader
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizedUiText
 
@@ -12,6 +14,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,10 +30,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.prayer.RamadanTimetable
 import com.example.prayer.RamadanTimetable.Phase
-import com.example.ui.components.BackIconButton
+import com.example.ui.components.StateMessage
+import com.example.ui.components.AppCard
+import com.example.ui.components.HeroSurface
+import com.example.ui.components.IconBadge
+import com.example.ui.components.Spacing
+import com.example.ui.theme.GoldAccent
+import com.example.ui.localization.isRtlAppLanguage
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.formatHijriDate
 import com.example.ui.localization.appLocale
@@ -52,12 +62,14 @@ fun RamadanScreen(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null
 ) {
+    com.example.core.analytics.AnalyticsScreen("ramadan_screen")
+
     if (!uiState.hasConfirmedLocation) {
-        Column(modifier = modifier.fillMaxSize().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center) {
-            LocalizedText("Choose a city on Home for Sehri and Iftar times.",
-                style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+        Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
+            ScreenHeader("Ramzan Timetable", onBack = onBack)
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                StateMessage(icon = Icons.Default.LocationOff, title = "Choose a city on Home for Sehri and Iftar times.")
+            }
         }
         return
     }
@@ -74,7 +86,23 @@ fun RamadanScreen(
 
     val schedule = uiState.ramadanSchedule
     if (schedule == null) {
-        uiState.upcomingRamadan?.let { UpcomingRamadanContent(it, now, uiState, viewModel, timeZone, modifier, onBack) }
+        val upcoming = uiState.upcomingRamadan
+        if (upcoming != null) {
+            UpcomingRamadanContent(upcoming, now, uiState, viewModel, timeZone, modifier, onBack)
+        } else {
+            // Neither timetable is ready yet: offer a way back and a retry instead of a blank page.
+            Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                ScreenHeader("Ramzan Timetable", onBack = onBack)
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    StateMessage(
+                        icon = Icons.Default.NightsStay,
+                        title = "Ramzan Timetable",
+                        actionText = "Retry",
+                        onAction = { viewModel.refreshRealtimeDate() }
+                    )
+                }
+            }
+        }
         return
     }
     RamadanContent(schedule, now, uiState, viewModel, timeZone, modifier, onBack)
@@ -106,6 +134,8 @@ private fun RamadanContent(
     }
 
     val listState = rememberLazyListState()
+
+    com.example.core.analytics.AnalyticsScroll("ramadan_screen", listState)
     val scope = rememberCoroutineScope()
     val topSections = buildList {
         add("header")
@@ -123,8 +153,8 @@ private fun RamadanContent(
         modifier = modifier
             .fillMaxSize()
             .testTag("ramadan_screen"),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(start = Spacing.screen, end = Spacing.screen, top = 8.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
         items(topSections, key = { it }) { section ->
             when (section) {
@@ -133,7 +163,7 @@ private fun RamadanContent(
                     hijriYear = schedule.hijriYear,
                     subtitle = template("Roza {n}", "n" to "$activeRoza") + " · " + uiState.selectedCity.name,
                     onBack = onBack,
-                    onRefresh = { viewModel.refreshRealtimeDate() }
+                    onRefresh = { com.example.core.analytics.AppAnalytics.interaction("ramadan_screen", "refresh_ramadan", "refresh"); viewModel.refreshRealtimeDate() }
                 )
                 "hero" -> live?.let { LiveCountdownCard(it, now) }
                 "complete" -> MessageCard(
@@ -204,8 +234,8 @@ private fun UpcomingRamadanContent(
         modifier = modifier
             .fillMaxSize()
             .testTag("ramadan_screen"),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(start = Spacing.screen, end = Spacing.screen, top = 8.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
         item(key = "header") {
             RamadanHeader(
@@ -213,7 +243,7 @@ private fun UpcomingRamadanContent(
                 hijriYear = upcoming.hijriYear,
                 subtitle = localizedUiText("Today") + " " + formatHijriDate(uiState.hijriDate, language) + " · " + uiState.selectedCity.name,
                 onBack = onBack,
-                onRefresh = { viewModel.refreshRealtimeDate() }
+                onRefresh = { com.example.core.analytics.AppAnalytics.interaction("ramadan_screen", "refresh_upcoming_ramadan", "refresh"); viewModel.refreshRealtimeDate() }
             )
         }
 
@@ -233,18 +263,21 @@ private fun UpcomingRamadanContent(
             // so dividing elapsed milliseconds by 24 hours shows a misleading day count.
             val (remainingDays, remainingTime) = calendarCountdown(now, upcoming.startsAtMillis, timeZone)
             HeroCard(testTag = "ramadan_countdown") {
+                Icon(Icons.Default.NightsStay, contentDescription = null, tint = GoldAccent,
+                    modifier = Modifier.padding(bottom = 6.dp).size(28.dp))
                 HeroLabel("Ramadan begins in")
                 Text(
                     text = template("{n} days", "n" to "$remainingDays"),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    textAlign = TextAlign.Center,
+                    color = OnHero
                 )
                 Text(
                     text = formatCountdown(remainingTime),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                    color = OnHero.copy(alpha = 0.9f)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 HeroInfoLine(Icons.Default.NightsStay, template("First Taraweeh night begins at Maghrib: {date}", "date" to firstNightText))
@@ -292,15 +325,13 @@ private fun UpcomingRamadanContent(
 
 @Composable
 private fun RamadanHeader(title: String, hijriYear: Int, subtitle: String, onBack: (() -> Unit)?, onRefresh: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        if (onBack != null) BackIconButton(onBack)
-        Column(modifier = Modifier.weight(1f)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                LocalizedText(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text("$hijriYear AH", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-            }
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+    ScreenHeader(
+        title = title,
+        subtitle = subtitle,
+        localizeSubtitle = false,
+        titleSuffix = "$hijriYear ${if (isRtlAppLanguage(LocalAppLanguage.current)) "هـ" else "AH"}",
+        onBack = onBack
+    ) {
         IconButton(onClick = onRefresh) {
             Icon(Icons.Default.Refresh, contentDescription = localizedUiText("Refresh Ramadan timings"))
         }
@@ -312,18 +343,25 @@ private fun LiveCountdownCard(live: RamadanTimetable.LiveStatus, now: Long) {
     val day = live.day
     val fasting = live.phase == Phase.FASTING
     HeroCard(testTag = "ramadan_countdown") {
+        Icon(
+            imageVector = if (fasting) Icons.Default.WbTwilight else Icons.Default.DarkMode,
+            contentDescription = null,
+            tint = GoldAccent,
+            modifier = Modifier.padding(bottom = 6.dp).size(28.dp)
+        )
         HeroLabel(if (fasting) "Iftar in" else "Sehri ends in")
         Text(
             text = formatCountdown(live.targetMillis - now),
             style = MaterialTheme.typography.displayMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimary
+            color = OnHero
         )
         Text(
             text = if (fasting) template("Roza {n} · Iftar at {time}", "n" to "${day.roza}", "time" to day.iftarFormatted)
             else template("Roza {n} · Sehri ends at {time}", "n" to "${day.roza}", "time" to day.sehriFormatted),
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+            color = OnHero.copy(alpha = 0.9f),
+            textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -331,8 +369,8 @@ private fun LiveCountdownCard(live: RamadanTimetable.LiveStatus, now: Long) {
         LinearProgressIndicator(
             progress = { live.fastProgress },
             modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
-            color = MaterialTheme.colorScheme.onPrimary,
-            trackColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.25f),
+            color = GoldAccent,
+            trackColor = OnHero.copy(alpha = 0.2f),
             strokeCap = StrokeCap.Round
         )
         Spacer(modifier = Modifier.height(6.dp))
@@ -341,7 +379,7 @@ private fun LiveCountdownCard(live: RamadanTimetable.LiveStatus, now: Long) {
             Text(
                 text = formatDuration(day.fastDurationMillis),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+                color = OnHero.copy(alpha = 0.85f)
             )
             HeroEndpoint(Icons.Default.WbTwilight, "Iftar", day.iftarFormatted, Alignment.End, Modifier.weight(1f))
         }
@@ -355,8 +393,8 @@ private fun LiveCountdownCard(live: RamadanTimetable.LiveStatus, now: Long) {
 @Composable
 private fun MonthProgressCard(activeRoza: Int, completedFasts: Int) {
     val ashra = RamadanTimetable.ashraOf(activeRoza)
-    Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().testTag("ramadan_progress")) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    AppCard(modifier = Modifier.fillMaxWidth().testTag("ramadan_progress")) {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = template("Roza {n} of {total}", "n" to "$activeRoza", "total" to "30"),
@@ -367,7 +405,9 @@ private fun MonthProgressCard(activeRoza: Int, completedFasts: Int) {
                 Text(
                     text = template("{n} fasts completed", "n" to "${completedFasts.coerceIn(0, 30)}"),
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.padding(start = 8.dp).weight(1f)
                 )
             }
 
@@ -412,7 +452,7 @@ private fun MonthProgressCard(activeRoza: Int, completedFasts: Int) {
             ) {
                 Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                     LocalizedText(ashraTitle(ashra), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                    Text(
+                    com.example.ui.localization.LocalizedText(
                         "Sahih Ibn Khuzaymah 1887",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -445,10 +485,10 @@ private fun LaylatulQadrCard(upcomingNight: Int) {
 
 @Composable
 private fun DuaCard() {
-    Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Default.MenuBook, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+    AppCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                IconBadge(Icons.AutoMirrored.Filled.MenuBook, accent = MaterialTheme.colorScheme.primary, size = 36.dp, iconSize = 20.dp)
                 LocalizedText("Sehri & Iftar Duas", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             }
             LocalizedText("Intention for fasting (commonly recited):", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
@@ -509,7 +549,7 @@ private fun TimetableHeader(title: String, onJumpToToday: (() -> Unit)?) {
                     modifier = Modifier.weight(1f)
                 )
                 if (onJumpToToday != null) {
-                    TextButton(onClick = onJumpToToday, modifier = Modifier.testTag("ramadan_jump_today")) {
+                    TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("ramadan_screen", "jump_to_today", onJumpToToday), modifier = Modifier.heightIn(min = 48.dp).testTag("ramadan_jump_today")) {
                         Icon(Icons.Default.Today, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         LocalizedText("Go to today")
@@ -575,11 +615,15 @@ private fun TimetableRow(day: RamadanTimetable.RamadanDay, state: RowState, time
         shape = RoundedCornerShape(12.dp),
         color = when (state) {
             RowState.TODAY -> MaterialTheme.colorScheme.primaryContainer
-            RowState.PAST -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
-            RowState.UPCOMING -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            RowState.PAST -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+            RowState.UPCOMING -> MaterialTheme.colorScheme.surface
         },
         contentColor = contentColor,
-        border = if (isToday) androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
+        border = when (state) {
+            RowState.TODAY -> androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+            RowState.UPCOMING -> androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            RowState.PAST -> null
+        },
         modifier = Modifier
             .fillMaxWidth()
             .alpha(if (state == RowState.PAST) 0.6f else 1f)
@@ -654,18 +698,19 @@ private fun Footnotes(text: String) {
 // Building blocks
 // ---------------------------------------------------------------------------------------------
 
+/** Text and icons on the hero: it stays deep emerald in both themes, so white always reads. */
+private val OnHero = Color.White
+
 @Composable
 private fun HeroCard(testTag: String, content: @Composable ColumnScope.() -> Unit) {
-    val primary = MaterialTheme.colorScheme.primary
-    Box(
+    HeroSurface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(listOf(primary, lerp(primary, Color.Black, 0.35f))))
-            .testTag(testTag)
+            .testTag(testTag),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 22.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 22.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
             content = content
         )
@@ -678,16 +723,16 @@ private fun HeroLabel(text: String) {
         text = text,
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+        color = GoldAccent
     )
 }
 
 @Composable
 private fun HeroInfoLine(icon: ImageVector, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f), modifier = Modifier.size(16.dp))
+        Icon(icon, contentDescription = null, tint = OnHero.copy(alpha = 0.85f), modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(6.dp))
-        Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f))
+        Text(text, style = MaterialTheme.typography.bodySmall, color = OnHero.copy(alpha = 0.9f))
     }
 }
 
@@ -695,41 +740,42 @@ private fun HeroInfoLine(icon: ImageVector, text: String) {
 private fun HeroEndpoint(icon: ImageVector, label: String, time: String, alignment: Alignment.Horizontal, modifier: Modifier) {
     Column(horizontalAlignment = alignment, modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f), modifier = Modifier.size(14.dp))
+            Icon(icon, contentDescription = null, tint = OnHero.copy(alpha = 0.8f), modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            LocalizedText(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
+            LocalizedText(label, style = MaterialTheme.typography.labelSmall, color = OnHero.copy(alpha = 0.8f))
         }
-        Text(time, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+        Text(time, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = OnHero)
     }
 }
 
 @Composable
 private fun TimeCard(label: String, time: String, icon: ImageVector, modifier: Modifier = Modifier) {
-    Card(shape = RoundedCornerShape(16.dp), modifier = modifier) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(6.dp))
-            LocalizedText(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(text = time, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    AppCard(modifier = modifier) {
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            IconBadge(icon, accent = MaterialTheme.colorScheme.primary, size = 40.dp, iconSize = 22.dp)
+            Spacer(modifier = Modifier.height(8.dp))
+            LocalizedText(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+            Text(text = time, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         }
     }
 }
 
 @Composable
 private fun MessageCard(icon: ImageVector, title: String, text: String, reference: String? = null, highlighted: Boolean = false) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (highlighted) MaterialTheme.colorScheme.tertiaryContainer
-            else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-        ),
+    AppCard(
+        containerColor = if (highlighted) MaterialTheme.colorScheme.tertiaryContainer
+        else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+        contentColor = if (highlighted) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurface,
+        outlined = false,
+        contentPadding = PaddingValues(14.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(modifier = Modifier.padding(14.dp)) {
-            Icon(
-                icon, contentDescription = null,
-                tint = if (highlighted) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp)
+        Row {
+            IconBadge(
+                icon,
+                accent = if (highlighted) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.primary,
+                size = 36.dp,
+                iconSize = 20.dp
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

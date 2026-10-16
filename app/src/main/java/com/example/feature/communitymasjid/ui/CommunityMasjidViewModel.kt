@@ -21,6 +21,8 @@ import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -116,7 +118,7 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
 
     /**
      * Speed path: (1) the saved list appears instantly, (2) a quick Wi-Fi/cell or recent cached fix
-     * is used instead of waiting for GPS, (3) OSM and community lists load in parallel, and
+     * is used instead of waiting for GPS, (3) Google and community lists load in parallel, and
      * (4) a precise GPS fix arriving later only triggers a reload if the user is far from the quick one.
      */
     fun refreshList(force: Boolean) {
@@ -136,7 +138,9 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
             }
 
             _state.update { it.copy(isLocating = true) }
-            val location = locationProvider.quickLocation() ?: _state.value.location
+            val location = locationProvider.quickLocation() ?: _state.value.location?.takeIf {
+                System.currentTimeMillis() - it.fixedAtMs <= 2 * 60_000L
+            }
             _state.update { it.copy(isLocating = false, location = location ?: it.location) }
             if (location == null) {
                 _state.update { it.copy(isLoadingList = false, listError = "Could not get your location. Turn on device location and try again.") }
@@ -154,6 +158,21 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
 
     private suspend fun loadNearby(location: CmUserLocation, force: Boolean) {
         _state.update { it.copy(isLoadingList = true) }
+        // Offline: show what is saved at once instead of waiting out the network timeouts.
+        if (!com.example.core.net.Connectivity.isOnline.value) {
+            val saved = runCatching { repository.savedMosques(location) }.getOrDefault(emptyList())
+            val ids = saved.map { it.docId }
+            _state.update {
+                it.copy(
+                    mosques = if (saved.isNotEmpty()) saved else it.mosques,
+                    isLoadingList = false,
+                    showingCachedList = true,
+                    listError = null,
+                    records = it.records + runCatching { repository.cachedRecords(ids) }.getOrDefault(emptyMap())
+                )
+            }
+            return
+        }
         val result = repository.nearbyMosques(location, force)
         val ids = result.mosques.map { it.docId }
         _state.update {
@@ -161,11 +180,11 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
                 mosques = result.mosques,
                 isLoadingList = false,
                 showingCachedList = result.fromCache && result.error != null,
-                listError = if (result.error != null && result.mosques.isEmpty()) "Could not load nearby masjids. Check your internet connection." else null,
+                listError = result.notice ?: result.error?.let { if (it is IllegalStateException) it.message else "Nearby search could not be refreshed. Check your connection and try again." },
                 records = it.records + runCatching { repository.cachedRecords(ids) }.getOrDefault(emptyMap())
             )
         }
-        // Community data is optional: its failure leaves the OSM list fully usable.
+        // Community data is optional: its failure leaves the Google list fully usable.
         try {
             if (repository.isCommunityConfigured && ids.isNotEmpty()) {
                 val records = repository.refreshRecords(ids, force)
@@ -193,7 +212,7 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
         detailJob?.cancel()
         detailJob = viewModelScope.launch(guard) {
             updateDetail(mosque.docId) { it.copy(isLoading = true, error = null) }
-            // A stale fix would show the wrong distance; refresh it alongside the network load.
+            // Location is independent of the record; do not hold the detail spinner for GPS.
             if (_state.value.location == null || System.currentTimeMillis() - (_state.value.location?.fixedAtMs ?: 0) > LOCATION_MAX_AGE_MS) {
                 refreshLocation()
             }
@@ -201,8 +220,11 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
                 updateDetail(mosque.docId) { it.copy(record = cached) }
             }
             try {
-                val record = repository.record(mosque.docId, force)
-                val uid = repository.currentUid()
+                val (record, uid) = coroutineScope {
+                    val recordJob = async { repository.record(mosque.docId, force) }
+                    val uidJob = async { repository.currentUid() }
+                    recordJob.await() to uidJob.await()
+                }
                 val votes = repository.myVotes(mosque.docId, record.currentVersion)
                 updateDetail(mosque.docId) { it.copy(record = record, myUid = uid, myVotes = votes, isLoading = false) }
                 _state.update { it.copy(records = it.records + (mosque.docId to record)) }
@@ -275,7 +297,11 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
                 }
                 val presence = freshPresence(mosque) ?: run { onDone(false); return@launch }
                 val message = when (repository.setTiming(mosque, timings, presence)) {
-                    is CmWriteOutcome.TimingSet -> "Timings updated. Others at the masjid can vote on them."
+                    is CmWriteOutcome.TimingSet -> {
+                        // The masjid itself is never named in analytics.
+                        com.example.core.analytics.AppAnalytics.milestone("community_masjid", "timing_submitted")
+                        "Timings updated. Others at the masjid can vote on them."
+                    }
                     CmWriteOutcome.Unchanged -> "These timings are already current"
                     else -> "This masjid changed meanwhile. Please try again."
                 }
@@ -300,10 +326,13 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
         val mosque = detail.mosque
         runVote(mosque) { presence ->
             when (val outcome = repository.voteTiming(mosque.docId, record.currentVersion, vote, presence)) {
-                is CmWriteOutcome.Voted -> if (outcome.votedDown) {
-                    "Enough people voted these timings wrong — the previous timings are restored."
-                } else {
-                    "Vote saved (👍 ${outcome.up} · 👎 ${outcome.down})."
+                is CmWriteOutcome.Voted -> {
+                    com.example.core.analytics.AppAnalytics.milestone("community_masjid", "timing_vote_saved")
+                    if (outcome.votedDown) {
+                        "Enough people voted these timings wrong — the previous timings are restored."
+                    } else {
+                        "Vote saved (👍 ${outcome.up} · 👎 ${outcome.down})."
+                    }
                 }
                 CmWriteOutcome.Unchanged -> "You already voted this way"
                 CmWriteOutcome.OwnContent -> "You cannot vote on timings you set"
@@ -319,11 +348,14 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
         val mosque = detail.mosque
         runVote(mosque) { presence ->
             when (val outcome = repository.voteMosque(mosque, vote, reason, presence)) {
-                is CmWriteOutcome.Voted -> if (outcome.votedDown) {
-                    removeMosque(mosque.docId)
-                    "Enough people reported this masjid — it has been removed from the list."
-                } else {
-                    "Vote saved (👍 ${outcome.up} · 👎 ${outcome.down})."
+                is CmWriteOutcome.Voted -> {
+                    com.example.core.analytics.AppAnalytics.milestone("community_masjid", "masjid_vote_saved")
+                    if (outcome.votedDown) {
+                        removeMosque(mosque.docId)
+                        "Enough people reported this masjid — it has been removed from the list."
+                    } else {
+                        "Vote saved (👍 ${outcome.up} · 👎 ${outcome.down})."
+                    }
                 }
                 CmWriteOutcome.Unchanged -> "You already voted this way"
                 CmWriteOutcome.OwnContent -> "You cannot vote on a masjid you added"
@@ -406,6 +438,7 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
                     onDone(false); return@launch
                 }
                 val mosque = repository.addMosque(name.trim(), address.trim(), location, accuracy)
+                com.example.core.analytics.AppAnalytics.milestone("community_masjid", "masjid_added")
                 _state.update {
                     it.copy(
                         mosques = (it.mosques + mosque).sortedBy { m -> m.distanceMetres ?: Double.MAX_VALUE },

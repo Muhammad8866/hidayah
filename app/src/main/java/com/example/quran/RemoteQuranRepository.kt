@@ -1,14 +1,17 @@
 package com.example.quran
 
 import android.content.Context
+import com.example.core.net.FastNet
 import com.example.domain.model.Ayah
 import com.example.domain.model.MushafLine
 import com.example.util.toHinglish
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
+import java.io.File
 import java.security.MessageDigest
 
 /** Reads the complete Quran on demand; the Arabic source and translation stay paired by ayah. */
@@ -19,6 +22,10 @@ object RemoteQuranRepository {
 
     @Volatile private var tajPages: org.json.JSONArray? = null
     @Volatile private var tajSurahStartPages: Map<Int, Int>? = null
+    private val surahLocks = Array(114) { Mutex() }
+    private val surahCache = object : LinkedHashMap<Int, List<Ayah>>(8, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, List<Ayah>>): Boolean = size > 8
+    }
 
     /**
      * Loads and verifies the complete bundled Mushaf exactly once per process. A modified or
@@ -93,12 +100,7 @@ object RemoteQuranRepository {
         runCatching {
             require(page in 1..604)
             val url = "https://api.quran.com/api/v4/verses/by_page/$page?words=true&word_fields=text_indopak&per_page=50"
-            val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 12_000
-                readTimeout = 20_000
-                setRequestProperty("Accept", "application/json")
-            }
-            val root = JSONObject(connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() })
+            val root = JSONObject(FastNet.text(url))
             val verses = root.getJSONArray("verses")
             check(verses.length() > 0) { "Empty Mushaf page" }
             List(verses.length()) { index ->
@@ -131,26 +133,44 @@ object RemoteQuranRepository {
     }
 
     suspend fun loadSurah(number: Int, expectedAyahCount: Int): List<Ayah> = withContext(Dispatchers.IO) {
-        runCatching {
-            val connection = (URL("https://api.alquran.cloud/v1/surah/$number/editions/quran-uthmani,hi.hindi,ur.kanzuliman").openConnection() as HttpURLConnection).apply {
-                connectTimeout = 12_000; readTimeout = 20_000
-            }
-            val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-            val editions = root.getJSONArray("data")
-            val arabic = editions.getJSONObject(0).getJSONArray("ayahs")
-            val hindi = editions.getJSONObject(1).getJSONArray("ayahs")
-            val kanzulIman = editions.getJSONObject(2).getJSONArray("ayahs")
-            check(arabic.length() == expectedAyahCount) { "Incomplete Arabic Quran response" }
-            check(hindi.length() == expectedAyahCount && kanzulIman.length() == expectedAyahCount) {
-                "Quran editions are not aligned"
-            }
-            List(arabic.length()) { index ->
-                val ar = arabic.getJSONObject(index)
-                check(ar.getInt("numberInSurah") == index + 1 && ar.getString("text").isNotBlank()) {
-                    "Invalid Quran ayah sequence"
+        require(number in 1..114 && expectedAyahCount > 0)
+        synchronized(surahCache) { surahCache[number]?.takeIf { it.size == expectedAyahCount } }
+            ?.let { return@withContext it }
+        surahLocks[number - 1].withLock {
+            synchronized(surahCache) { surahCache[number]?.takeIf { it.size == expectedAyahCount } }
+                ?.let { return@withLock it }
+            // A verified surah is kept on disk across launches and in memory for fast revisits.
+            val stored = FastNet.storedFile("quran_surah_$number.json")
+            val saved = stored?.takeIf { it.isFile }?.let { runCatching { it.readText() }.getOrNull() }
+            runCatching {
+                val text = saved ?: FastNet.text("https://api.alquran.cloud/v1/surah/$number/editions/quran-uthmani,hi.hindi,ur.kanzuliman")
+                val root = JSONObject(text)
+                val editions = root.getJSONArray("data")
+                val arabic = editions.getJSONObject(0).getJSONArray("ayahs")
+                val hindi = editions.getJSONObject(1).getJSONArray("ayahs")
+                val kanzulIman = editions.getJSONObject(2).getJSONArray("ayahs")
+                check(arabic.length() == expectedAyahCount) { "Incomplete Arabic Quran response" }
+                check(hindi.length() == expectedAyahCount && kanzulIman.length() == expectedAyahCount) {
+                    "Quran editions are not aligned"
                 }
-                Ayah(number, ar.getInt("numberInSurah"), ar.getString("text"), "", hindi.getJSONObject(index).getString("text").toHinglish(), kanzulIman.getJSONObject(index).getString("text"), tafsirSummary = "Kanzul Iman Urdu translation by Imam Ahmed Raza Khan", tafsirSource = "Arabic: Uthmani • Urdu: Kanzul Iman", juzNumber = ar.optInt("juz", 1))
-            }
-        }.getOrDefault(emptyList())
+                List(arabic.length()) { index ->
+                    val ar = arabic.getJSONObject(index)
+                    check(ar.getInt("numberInSurah") == index + 1 && ar.getString("text").isNotBlank()) {
+                        "Invalid Quran ayah sequence"
+                    }
+                    Ayah(number, ar.getInt("numberInSurah"), ar.getString("text"), "", hindi.getJSONObject(index).getString("text").toHinglish(), kanzulIman.getJSONObject(index).getString("text"), tafsirSummary = "Kanzul Iman Urdu translation by Imam Ahmed Raza Khan", tafsirSource = "Arabic: Uthmani • Urdu: Kanzul Iman", juzNumber = ar.optInt("juz", 1))
+                }.also { ayahs ->
+                    synchronized(surahCache) { surahCache[number] = ayahs }
+                    if (saved == null && stored != null) runCatching {
+                        val temp = File(stored.path + ".part")
+                        temp.writeText(text)
+                        if (!temp.renameTo(stored)) temp.delete()
+                    }
+                }
+            }.onFailure {
+                if (it is CancellationException) throw it
+                if (saved != null) stored?.delete()
+            }.getOrDefault(emptyList())
+        }
     }
 }

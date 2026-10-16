@@ -1,5 +1,16 @@
 package com.example.ui.screens
 
+import com.example.ui.components.ScreenHeader
+import com.example.ui.components.AppSearchField
+import com.example.ui.components.AppCard
+import com.example.ui.components.HeroSurface
+import com.example.ui.components.IconBadge
+import com.example.ui.components.Spacing
+import com.example.ui.components.TonalPill
+import com.example.ui.components.accentTint
+import com.example.ui.components.islamicPattern
+import com.example.ui.theme.GoldAccent
+import androidx.compose.material3.HorizontalDivider
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -25,6 +36,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -170,6 +182,8 @@ fun DuasAdhkarScreen(
     viewModel: MainViewModel,
     modifier: Modifier = Modifier
 ) {
+    com.example.core.analytics.AnalyticsScreen("duas_adhkar_screen")
+
     // Kept by id so an open dua survives rotation.
     var openDuaId by rememberSaveable { mutableStateOf<String?>(null) }
     var arabicScale by rememberSaveable { mutableFloatStateOf(1f) }
@@ -179,11 +193,15 @@ fun DuasAdhkarScreen(
             .fillMaxSize()
             .testTag("duas_adhkar_screen")
     ) {
-        PrimaryTabRow(selectedTabIndex = uiState.duasScreenTab.ordinal) {
+        // The tabs sit on the page colour, so the screen reads as one calm surface.
+        PrimaryTabRow(
+            selectedTabIndex = uiState.duasScreenTab.ordinal,
+            containerColor = MaterialTheme.colorScheme.background
+        ) {
             SCREEN_TABS.forEach { (tab, label) ->
                 Tab(
                     selected = uiState.duasScreenTab == tab,
-                    onClick = { viewModel.selectDuasScreenTab(tab) },
+                    onClick = { com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "select_duas_tab", "tap", item = tab.name); viewModel.selectDuasScreenTab(tab) },
                     text = { LocalizedText(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     modifier = Modifier.testTag("duas_tab_${tab.name.lowercase()}")
                 )
@@ -242,14 +260,18 @@ fun DuasTab(
     viewModel: MainViewModel,
     onDuaClick: (Dua) -> Unit
 ) {
+    com.example.core.analytics.AnalyticsScreen("duas_tab")
+
     val language = LocalAppLanguage.current
     val keyboard = LocalSoftwareKeyboardController.current
     val listState = rememberLazyListState()
     // "All Duas" is also the unfiltered state, so opening its full list is tracked here.
+    com.example.core.analytics.AnalyticsScroll("duas_adhkar_screen", listState)
     var browsingAll by rememberSaveable { mutableStateOf(false) }
     val category = uiState.selectedDuaCategory
     val inCategory = category != DuaDatasetRepository.ALL_CATEGORY
     val searching = uiState.duaSearchQuery.isNotEmpty()
+    com.example.core.analytics.AnalyticsSearch("duas_tab", uiState.duaSearchQuery)
     // With nothing chosen yet, the tab opens on a picker of occasions instead of a long list.
     val showOccasions = !inCategory && !browsingAll && !searching
 
@@ -259,7 +281,7 @@ fun DuasTab(
     }
 
     // Back steps out one level: first the search, then the list, before leaving the screen.
-    BackHandler(enabled = !showOccasions) {
+    BackHandler(enabled = !showOccasions) { com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "dua_list_system_back", "back");
         when {
             searching -> viewModel.searchDuas("")
             else -> {
@@ -269,30 +291,16 @@ fun DuasTab(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        OutlinedTextField(
-            value = uiState.duaSearchQuery,
-            onValueChange = viewModel::searchDuas,
+    // Results stay above the keyboard while searching.
+    Column(modifier = Modifier.fillMaxSize().imePadding()) {
+        AppSearchField(
+            query = uiState.duaSearchQuery,
+            onQueryChange = viewModel::searchDuas,
+            placeholder = "Search duas",
             modifier = Modifier
-                .fillMaxWidth()
                 .padding(start = 16.dp, end = 16.dp, top = 12.dp)
                 .testTag("dua_search_field"),
-            placeholder = { LocalizedText("Search duas", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
-            trailingIcon = {
-                if (uiState.duaSearchQuery.isNotEmpty()) {
-                    IconButton(onClick = { viewModel.searchDuas("") }) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = localizeUiText("Clear search", language)
-                        )
-                    }
-                }
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(28.dp),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() })
+            keyboardActions = KeyboardActions(onSearch = { com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "submit_dua_search", "search_submit"); keyboard?.hide() })
         )
 
         if (showOccasions) {
@@ -306,7 +314,7 @@ fun DuasTab(
             DuaListContent(
                 uiState = uiState,
                 listState = listState,
-                onBack = {
+                onBack = { com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "dua_list_back", "back");
                     viewModel.searchDuas("")
                     viewModel.selectDuaCategory(DuaDatasetRepository.ALL_CATEGORY)
                     browsingAll = false
@@ -351,7 +359,7 @@ private fun DuaListContent(
                     DuaCard(
                         dua = dua,
                         showCategory = uiState.selectedDuaCategory == DuaDatasetRepository.ALL_CATEGORY,
-                        onClick = { onDuaClick(dua) }
+                        onClick = { com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "open_dua", "tap", item = dua.category); onDuaClick(dua) }
                     )
                 }
             }
@@ -364,67 +372,83 @@ private fun DuaCard(dua: Dua, showCategory: Boolean, onClick: () -> Unit) {
     val language = LocalAppLanguage.current
     val title = dua.displayTitle(language)
     val meaning = dua.displayMeaning(language)
-    Card(
+    AppCard(
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
+        shape = MaterialTheme.shapes.large,
+        contentPadding = PaddingValues(Spacing.lg),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("dua_card_${dua.id}")
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                GradeBadge(dua)
-            }
-            if (language != "en" && title == dua.title) {
-                Text("English", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            if (showCategory) {
-                LocalizedText(
-                    text = dua.category,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-            ArabicText(text = dua.arabicText, fontSize = 20.sp, lineHeight = 36.sp, maxLines = 2)
-
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = meaning.text,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            meaning.fallbackLanguage?.let { label ->
-                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                LocalizedText(
-                    text = dua.displaySource(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                if (dua.recommendedCount > 1) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    RepeatChip(dua.recommendedCount)
+                if (language != "en" && title == dua.title) {
+                    com.example.ui.localization.LocalizedText("English", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                if (showCategory) {
+                    LocalizedText(
+                        text = dua.category,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = accentTint(categoryAccent(dua.category)),
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            GradeBadge(dua)
+        }
+
+        // The Arabic sits on its own soft panel so it reads as the heart of the card.
+        Spacer(modifier = Modifier.height(Spacing.md))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f))
+                .padding(horizontal = 14.dp, vertical = 8.dp)
+        ) {
+            ArabicText(text = dua.arabicText, fontSize = 21.sp, lineHeight = 38.sp, maxLines = 2)
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = meaning.text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+        meaning.fallbackLanguage?.let { label ->
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        }
+
+        Spacer(modifier = Modifier.height(Spacing.md))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.AutoMirrored.Filled.MenuBook,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            LocalizedText(
+                text = dua.displaySource(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            if (dua.recommendedCount > 1) {
+                Spacer(modifier = Modifier.width(8.dp))
+                RepeatChip(dua.recommendedCount)
             }
         }
     }
@@ -453,71 +477,157 @@ private fun EmptyDuaResults(showClearSearch: Boolean, onClearSearch: () -> Unit)
             textAlign = TextAlign.Center
         )
         if (showClearSearch) {
-            TextButton(onClick = onClearSearch) { LocalizedText("Clear search") }
+            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("duas_adhkar_screen", "clear_dua_search", onClearSearch), modifier = Modifier.heightIn(min = 48.dp)) { LocalizedText("Clear search") }
         }
     }
+}
+
+/** Each occasion gets its own calm accent, so the grid scans by colour as well as by name. */
+private fun categoryAccent(category: String): Color = when (category) {
+    "Morning & Evening" -> Color(0xFFA9812A)
+    "Prayer & Mosque" -> Color(0xFF237A63)
+    "Sleep & Awakening" -> Color(0xFF5B5BAE)
+    "Anxiety & Distress" -> Color(0xFF2A7FA8)
+    "Travel & Leaving Home" -> Color(0xFF8A5A3C)
+    "Forgiveness & Istighfar" -> Color(0xFF2E8B6E)
+    "Parents & Family" -> Color(0xFFB0507A)
+    "Food & Gratitude" -> Color(0xFFC0664A)
+    "Quranic Duas" -> Color(0xFF14614B)
+    "Protection & Healing" -> Color(0xFF3B6FA8)
+    "Weather & Nature" -> Color(0xFF2A8C8C)
+    "Death & Janaza" -> Color(0xFF5E7268)
+    "Daily Life & Manners" -> Color(0xFF8A6D1F)
+    "Hajj & Umrah" -> Color(0xFF6B5BAE)
+    "Ramadan & Fasting" -> Color(0xFF4A5C9E)
+    "Comprehensive Duas" -> Color(0xFF9A6286)
+    else -> Color(0xFF14614B)
 }
 
 @Composable
 private fun OccasionGrid(onPick: (String) -> Unit) {
     val language = LocalAppLanguage.current
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 150.dp),
+        columns = GridCells.Adaptive(minSize = 156.dp),
         modifier = Modifier
             .fillMaxSize()
             .testTag("dua_occasion_grid"),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(start = Spacing.screen, end = Spacing.screen, top = Spacing.lg, bottom = Spacing.xxl),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        val openCategory = { category: String ->
+            com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "open_dua_category", "tap", item = category)
+            onPick(category)
+        }
+        fun tagOf(category: String) = "dua_occasion_${DuaDatasetRepository.CATEGORIES.indexOf(category)}"
+        // "All Duas" leads the grid as one wide banner; every occasion below it is a compact tile.
+        item(key = DuaDatasetRepository.ALL_CATEGORY, span = { GridItemSpan(maxLineSpan) }) {
+            AllDuasBanner(
+                count = countLabel(DUA_COUNTS[DuaDatasetRepository.ALL_CATEGORY] ?: 0, language),
+                onClick = { openCategory(DuaDatasetRepository.ALL_CATEGORY) },
+                modifier = Modifier.fillMaxWidth().testTag(tagOf(DuaDatasetRepository.ALL_CATEGORY))
+            )
+        }
+        item(key = "occasions_title", span = { GridItemSpan(maxLineSpan) }) {
             LocalizedText(
                 text = "Choose an occasion",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 4.dp, top = 10.dp, bottom = 2.dp)
             )
         }
-        gridItems(DuaDatasetRepository.CATEGORIES, key = { it }) { category ->
-            val isAll = category == DuaDatasetRepository.ALL_CATEGORY
-            val colors = MaterialTheme.colorScheme
-            Card(
-                onClick = { onPick(category) },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isAll) colors.primaryContainer else colors.surface
-                ),
-                border = BorderStroke(1.dp, colors.outline.copy(alpha = if (isAll) 0f else 0.6f)),
+        gridItems(
+            DuaDatasetRepository.CATEGORIES.filter { it != DuaDatasetRepository.ALL_CATEGORY },
+            key = { it }
+        ) { category ->
+            OccasionTile(
+                category = category,
+                count = countLabel(DUA_COUNTS[category] ?: 0, language),
+                onClick = { openCategory(category) },
+                modifier = Modifier.fillMaxWidth().testTag(tagOf(category))
+            )
+        }
+    }
+}
+
+/** The wide "All Duas" entry: emerald hero with the full count, above the occasion tiles. */
+@Composable
+private fun AllDuasBanner(count: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    HeroSurface(
+        modifier = modifier,
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 118.dp)
-                    .testTag("dua_occasion_${DuaDatasetRepository.CATEGORIES.indexOf(category)}")
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(GoldAccent.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Surface(
-                        shape = CircleShape,
-                        color = if (isAll) colors.primary else colors.primaryContainer,
-                        contentColor = if (isAll) colors.onPrimary else colors.onPrimaryContainer,
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(categoryIcon(category), contentDescription = null, modifier = Modifier.size(20.dp))
-                        }
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    LocalizedText(
-                        text = category,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = countLabel(DUA_COUNTS[category] ?: 0, language),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = colors.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                }
+                Icon(categoryIcon(DuaDatasetRepository.ALL_CATEGORY), contentDescription = null, tint = GoldAccent, modifier = Modifier.size(26.dp))
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                LocalizedText(
+                    text = DuaDatasetRepository.ALL_CATEGORY,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = count,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = GoldAccent,
+                    maxLines = 1
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.8f)
+            )
+        }
+    }
+}
+
+/** A compact occasion tile: tinted badge beside the name, with the count underneath. */
+@Composable
+private fun OccasionTile(category: String, count: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    AppCard(
+        modifier = modifier,
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
+    ) {
+        // Icon beside the name keeps each tile short, so more occasions fit on one screen.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 52.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconBadge(icon = categoryIcon(category), accent = categoryAccent(category), size = 42.dp, iconSize = 22.dp)
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                LocalizedText(
+                    text = category,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = count,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = accentTint(categoryAccent(category)),
+                    maxLines = 1
+                )
             }
         }
     }
@@ -526,37 +636,23 @@ private fun OccasionGrid(onPick: (String) -> Unit) {
 @Composable
 private fun DuaListHeader(category: String, count: Int, onBack: () -> Unit) {
     val language = LocalAppLanguage.current
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    ScreenHeader(
+        title = category,
         modifier = Modifier
-            .fillMaxWidth()
             .padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 4.dp)
-            .testTag("dua_list_header")
-    ) {
-        IconButton(onClick = onBack, modifier = Modifier.testTag("dua_list_back")) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizeUiText("Back", language))
+            .testTag("dua_list_header"),
+        onBack = onBack,
+        backTestTag = "dua_list_back",
+        leading = {
+            IconBadge(icon = categoryIcon(category), accent = categoryAccent(category), size = 40.dp, iconSize = 22.dp)
         }
-        Icon(
-            categoryIcon(category),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp)
-        )
+    ) {
         Spacer(modifier = Modifier.width(8.dp))
-        LocalizedText(
-            text = category,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
+        val accent = accentTint(categoryAccent(category))
+        TonalPill(
             text = countLabel(count, language),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1
+            containerColor = accent.copy(alpha = 0.12f),
+            contentColor = accent
         )
     }
 }
@@ -564,13 +660,22 @@ private fun DuaListHeader(category: String, count: Int, onBack: () -> Unit) {
 /** A small caption naming the part of the dua below it ("Pronunciation", "Translation"). */
 @Composable
 private fun SectionLabel(text: String) {
-    LocalizedText(
-        text = text,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-    Spacer(modifier = Modifier.height(4.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(width = 3.dp, height = 14.dp)
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        LocalizedText(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    Spacer(modifier = Modifier.height(6.dp))
 }
 
 private const val MIN_ARABIC_SCALE = 0.8f
@@ -591,13 +696,18 @@ private fun DuaDetailSheet(
     val title = dua.displayTitle(language)
     val meaning = dua.displayMeaning(language)
     val context = LocalContext.current
+    val duaAudio = rememberDuaSpeech()
+    androidx.compose.runtime.DisposableEffect(dua.id) {
+        onDispose { duaAudio.stop() }
+    }
     val position = siblings.indexOfFirst { it.id == dua.id }
     val scrollState = rememberScrollState()
     // Moving to the next dua starts reading it from the top.
+    com.example.core.analytics.AnalyticsScroll("duas_adhkar_screen", scrollState)
     LaunchedEffect(dua.id) { scrollState.scrollTo(0) }
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("duas_adhkar_screen", "dismiss_dua_detail", onDismiss),
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         // The default sheet colour is Material's lavender tint, not the app's palette.
@@ -619,21 +729,30 @@ private fun DuaDetailSheet(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     if (language != "en" && title == dua.title) {
-                        Text("English", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        com.example.ui.localization.LocalizedText("English", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         GradeBadge(dua)
+                        Icon(
+                            categoryIcon(dua.category),
+                            contentDescription = null,
+                            tint = accentTint(categoryAccent(dua.category)),
+                            modifier = Modifier.size(16.dp)
+                        )
                         LocalizedText(
                             text = dua.category,
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            fontWeight = FontWeight.Medium,
+                            color = accentTint(categoryAccent(dua.category)),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
-                IconButton(onClick = onDismiss) {
+                IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("duas_adhkar_screen", "close_dua_detail", onDismiss)) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = localizeUiText("Close", language)
@@ -649,25 +768,31 @@ private fun DuaDetailSheet(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+            // The Arabic is the centrepiece: a soft emerald panel with a faint geometric motif behind it.
             Surface(
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                shape = MaterialTheme.shapes.large,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 4.dp)) {
+                Column(
+                    modifier = Modifier
+                        .islamicPattern(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f), cell = 40.dp)
+                        .padding(start = 18.dp, end = 18.dp, bottom = 20.dp, top = 4.dp)
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (dua.recommendedCount > 1) RepeatChip(dua.recommendedCount)
                         Spacer(modifier = Modifier.weight(1f))
                         val sizeLabel = localizeUiText("Text size", language)
                         IconButton(
-                            onClick = { onArabicScaleChange((arabicScale - ARABIC_SCALE_STEP).coerceAtLeast(MIN_ARABIC_SCALE)) },
+                            onClick = { com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "dua_text_smaller", "tap"); onArabicScaleChange((arabicScale - ARABIC_SCALE_STEP).coerceAtLeast(MIN_ARABIC_SCALE)) },
                             enabled = arabicScale > MIN_ARABIC_SCALE + 0.01f,
                             modifier = Modifier.testTag("dua_text_smaller")
                         ) {
                             Icon(Icons.Default.TextDecrease, contentDescription = "$sizeLabel −")
                         }
                         IconButton(
-                            onClick = { onArabicScaleChange((arabicScale + ARABIC_SCALE_STEP).coerceAtMost(MAX_ARABIC_SCALE)) },
+                            onClick = { com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "dua_text_larger", "tap"); onArabicScaleChange((arabicScale + ARABIC_SCALE_STEP).coerceAtMost(MAX_ARABIC_SCALE)) },
                             enabled = arabicScale < MAX_ARABIC_SCALE - 0.01f,
                             modifier = Modifier.testTag("dua_text_larger")
                         ) {
@@ -677,29 +802,34 @@ private fun DuaDetailSheet(
                     SelectionContainer {
                         ArabicText(
                             text = dua.arabicText,
-                            fontSize = (26 * arabicScale).sp,
-                            lineHeight = (48 * arabicScale).sp
+                            fontSize = (28 * arabicScale).sp,
+                            lineHeight = (52 * arabicScale).sp
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            DuaAudioControls("dua_${dua.id}", dua.arabicText, duaAudio)
+            Spacer(modifier = Modifier.height(16.dp))
             SelectionContainer {
                 Column {
                     SectionLabel("Pronunciation")
                     Text(
                         text = dua.transliteration,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         fontStyle = FontStyle.Italic,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
                     SectionLabel("Translation")
                     Text(
                         text = meaning.text,
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     meaning.fallbackLanguage?.let { label ->
                         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -730,7 +860,8 @@ private fun DuaDetailSheet(
                         modifier = Modifier.size(18.dp)
                     )
                 },
-                color = MaterialTheme.colorScheme.surfaceVariant
+                // Provenance stays quiet: a faint panel, small type.
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
             ) {
                 LocalizedText(
                     text = "${dua.sourceCollection}, ${dua.sourceReference}",
@@ -750,24 +881,24 @@ private fun DuaDetailSheet(
             Spacer(modifier = Modifier.height(18.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
-                    onClick = { copyDua(context, dua, language) },
+                    onClick = { com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "copy_dua", "tap"); copyDua(context, dua, language) },
                     modifier = Modifier
                         .weight(1f)
                         .testTag("dua_copy_button")
                 ) {
                     Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    LocalizedText("Copy dua", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    LocalizedText("Copy dua", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 }
                 Button(
-                    onClick = { shareDua(context, dua, language) },
+                    onClick = { com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "share_dua", "tap"); shareDua(context, dua, language) },
                     modifier = Modifier
                         .weight(1f)
                         .testTag("dua_share_button")
                 ) {
                     Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    LocalizedText("Share dua", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    LocalizedText("Share dua", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 }
             }
 
@@ -776,14 +907,14 @@ private fun DuaDetailSheet(
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TextButton(
-                        onClick = { onOpen(siblings[position - 1]) },
+                        onClick = { com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "previous_dua", "tap"); onOpen(siblings[position - 1]) },
                         enabled = position > 0,
                         modifier = Modifier
                             .weight(1f)
                             .testTag("dua_previous_button")
                     ) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null)
-                        LocalizedText("Previous", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        LocalizedText("Previous", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     }
                     Text(
                         text = "${position + 1} / ${siblings.size}",
@@ -791,13 +922,13 @@ private fun DuaDetailSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     TextButton(
-                        onClick = { onOpen(siblings[position + 1]) },
+                        onClick = { com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "next_dua", "tap"); onOpen(siblings[position + 1]) },
                         enabled = position < siblings.lastIndex,
                         modifier = Modifier
                             .weight(1f)
                             .testTag("dua_next_button")
                     ) {
-                        LocalizedText("Next", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        LocalizedText("Next", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
                     }
                 }
@@ -812,7 +943,7 @@ private fun InfoPanel(
     color: Color,
     content: @Composable () -> Unit
 ) {
-    Surface(color = color, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+    Surface(color = color, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
             Box(modifier = Modifier.padding(top = 1.dp)) { icon() }
             Spacer(modifier = Modifier.width(10.dp))
@@ -828,7 +959,8 @@ internal fun ArabicText(
     fontSize: TextUnit,
     lineHeight: TextUnit,
     maxLines: Int = Int.MAX_VALUE,
-    textAlign: TextAlign = TextAlign.Right
+    textAlign: TextAlign = TextAlign.Right,
+    color: Color = MaterialTheme.colorScheme.primary
 ) {
     Text(
         text = text,
@@ -840,7 +972,7 @@ internal fun ArabicText(
             textAlign = textAlign,
             textDirection = TextDirection.Rtl
         ),
-        color = MaterialTheme.colorScheme.primary,
+        color = color,
         maxLines = maxLines,
         overflow = TextOverflow.Ellipsis
     )

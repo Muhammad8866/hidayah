@@ -21,7 +21,13 @@ data class HadithBook(
     val volumeCount: Int,
     val remoteUrl: String? = null,
     val sourceUrl: String? = null,
-    val chapters: List<HadithChapter> = emptyList()
+    val chapters: List<HadithChapter> = emptyList(),
+    /** Shown instead of "Volume n of m" when a file is not simply a numbered volume. */
+    val volumeTitle: String? = null,
+    /** Release of the mirror repository that holds this book's byte-identical copy. */
+    val mirrorTag: String = "hadith-pdfs-v1",
+    /** False for books that exist only at their source, so removing them there removes them here. */
+    val mirrored: Boolean = true
 ) {
     val downloadUrl: String
         get() = remoteUrl ?: "https://data2.dawateislami.net/Data/Books/Download/$languageCode/pdf/$publicationYear/$fileId-1.pdf"
@@ -37,9 +43,9 @@ data class HadithBook(
             else -> "$languageCode-${collectionId.replace('_', '-')}-v$volume.pdf"
         }
     val mirrorUrl: String
-        get() = "https://github.com/Muhammad8866/deen-companion-hadith-pdfs/releases/download/hadith-pdfs-v1/$mirrorAssetName"
+        get() = "https://github.com/Muhammad8866/deen-companion-hadith-pdfs/releases/download/$mirrorTag/$mirrorAssetName"
     val downloadUrls: List<String>
-        get() = listOf(mirrorUrl, downloadUrl).distinct()
+        get() = if (mirrored) listOf(mirrorUrl, downloadUrl).distinct() else listOf(downloadUrl)
     val sourcePageUrl: String
         get() = sourceUrl ?: "https://www.dawateislami.net/bookslibrary/$languageCode/$slug"
     fun displayTitle(appLanguage: String): String = nativeTitle?.takeIf { appLanguage == languageCode } ?: romanTitle
@@ -94,7 +100,7 @@ object HadithCatalog {
                 id = "%02d-%s-%d".format(collectionIndex, set.id, volume),
                 collectionId = set.id,
                 collectionName = set.name,
-                romanTitle = "${set.name} — Volume $volume of ${set.pages.size}",
+                romanTitle = "${set.name} — Arabic · Volume $volume of ${set.pages.size}",
                 pageCount = pages,
                 fileId = set.firstFileId + index,
                 slug = "${set.baseSlug}-$volume",
@@ -144,7 +150,7 @@ object HadithCatalog {
                 id = "h%02d-%s-%d".format(collectionIndex, set.id, volume),
                 collectionId = set.id,
                 collectionName = set.name,
-                romanTitle = "${set.name} — Hindi Volume $volume of ${set.driveIds.size}",
+                romanTitle = "${set.name} — Hindi · Volume $volume of ${set.driveIds.size}",
                 languageCode = "hi",
                 languageName = "हिन्दी (Hindi)",
                 pageCount = 0,
@@ -195,12 +201,12 @@ object HadithCatalog {
     )
 
     private val englishBooks = listOf(
-        HadithBook("e-bukhari", "bukhari", "Sahih al-Bukhari", "Sahih al-Bukhari - Complete English Edition",
+        HadithBook("e-bukhari", "bukhari", "Sahih al-Bukhari", "Sahih al-Bukhari — English · Complete edition",
             languageCode = "en", languageName = "English", pageCount = 1700, publicationYear = 2009,
             fileId = 0, slug = "sahih-bukhari-english", volume = 1, volumeCount = 1,
             remoteUrl = "https://www.emaanlibrary.com/wp-content/uploads/2019/10/Sahih_Al-Bukhari.pdf",
             sourceUrl = "https://www.emaanlibrary.com/book/kutub-al-sittah-the-six-books-of-hadith/", chapters = bukhariChapters),
-        HadithBook("e-muslim", "muslim", "Sahih Muslim", "Sahih Muslim - Complete English Edition",
+        HadithBook("e-muslim", "muslim", "Sahih Muslim", "Sahih Muslim — English · Complete edition",
             languageCode = "en", languageName = "English", pageCount = 1800, publicationYear = 2009,
             fileId = 0, slug = "sahih-muslim-english", volume = 1, volumeCount = 1,
             remoteUrl = "https://www.emaanlibrary.com/wp-content/uploads/2019/10/Sahih_Muslim.pdf",
@@ -213,7 +219,8 @@ object HadithCatalog {
     )
 
     private fun englishArchive(id: String, collectionId: String, name: String, file: String, volume: Int = 1, volumeCount: Int = 1) =
-        HadithBook(id, collectionId, name, "$name - English Volume $volume of $volumeCount",
+        HadithBook(id, collectionId, name,
+            if (volumeCount == 1) "$name — English · Complete edition" else "$name — English · Volume $volume of $volumeCount",
             languageCode = "en", languageName = "English", pageCount = 0, publicationYear = 2022,
             fileId = 0, slug = id, volume = volume, volumeCount = volumeCount,
             remoteUrl = "https://archive.org/download/islamic-english-books-collection/$file",

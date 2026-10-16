@@ -29,7 +29,13 @@ internal enum class HajjType(val label: String, val summary: String) {
     }
 }
 
-internal data class RiteDua(val arabic: String, val meaning: String, val reference: String)
+internal data class RiteDua(
+    val arabic: String,
+    val meaning: String,
+    val reference: String,
+    /** Romanised reading for pilgrims who cannot read Arabic yet; devotional, not translated. */
+    val transliteration: String = ""
+)
 
 internal enum class CounterKind(val total: Int, val unit: String, val countLabel: String) {
     TAWAF(7, "Round", "Count round"),
@@ -58,7 +64,7 @@ internal fun counterStage(kind: CounterKind, done: Int): CounterStage {
         CounterKind.TAWAF -> CounterStage(
             when {
                 count >= 7 -> "Tawaf complete. Now pray the two rakat."
-                count < 3 -> "Raml: men walk briskly with short steps"
+                count < 3 -> "Rounds 1–3: men do Raml only in a Tawaf followed by Sa'i"
                 else -> "Walk at a normal pace"
             },
             count, 7
@@ -101,49 +107,57 @@ internal const val TALBIYAH_ARABIC =
 private val talbiyah = RiteDua(
     TALBIYAH_ARABIC,
     "Here I am, O Allah, here I am. Here I am, You have no partner, here I am. All praise, blessings and sovereignty belong to You. You have no partner.",
-    "Sahih al-Bukhari 1549 · Sahih Muslim 1184"
+    "Sahih al-Bukhari 1549 · Sahih Muslim 1184",
+    "Labbayk Allāhumma labbayk, labbayka lā sharīka laka labbayk, inna al-ḥamda wan-niʿmata laka wal-mulk, lā sharīka lak"
 )
 
 private val tawafDua = RiteDua(
     "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ",
     "Our Lord, give us good in this world and good in the Hereafter, and save us from the punishment of the Fire. (Between Rukn Yamani and the Black Stone)",
-    "Sunan Abi Dawud 1892"
+    "Sunan Abi Dawud 1892",
+    "Rabbanā ātinā fid-dunyā ḥasanatan wa fil-ākhirati ḥasanatan wa qinā ʿadhāban-nār"
 )
 
 private val maqamAyah = RiteDua(
     "وَاتَّخِذُوا مِن مَّقَامِ إِبْرَاهِيمَ مُصَلًّى",
     "And take the Station of Ibrahim as a place of prayer.",
-    "Quran 2:125 · Sahih Muslim 1218"
+    "Quran 2:125 · Sahih Muslim 1218",
+    "Wattakhidhū min maqāmi Ibrāhīma muṣallā"
 )
 
 private val safaAyah = RiteDua(
     "إِنَّ الصَّفَا وَالْمَرْوَةَ مِن شَعَائِرِ اللَّهِ",
     "Indeed, Safa and Marwah are among the symbols of Allah. (Recited on first reaching Safa)",
-    "Quran 2:158 · Sahih Muslim 1218"
+    "Quran 2:158 · Sahih Muslim 1218",
+    "Inna aṣ-Ṣafā wal-Marwata min shaʿāʾirillāh"
 )
 
 private val arafahDua = RiteDua(
     "لَا إِلَٰهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ، وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ",
     "None has the right to be worshipped but Allah alone, without partner. His is the dominion and His is the praise, and He has power over all things.",
-    "Jami' at-Tirmidhi 3585"
+    "Jami' at-Tirmidhi 3585",
+    "Lā ilāha illallāhu waḥdahu lā sharīka lah, lahul-mulku wa lahul-ḥamd, wa huwa ʿalā kulli shayʾin qadīr"
 )
 
 private val muzdalifahAyah = RiteDua(
     "فَإِذَا أَفَضْتُم مِّنْ عَرَفَاتٍ فَاذْكُرُوا اللَّهَ عِندَ الْمَشْعَرِ الْحَرَامِ",
     "When you depart from Arafat, remember Allah at al-Mash'ar al-Haram.",
-    "Quran 2:198"
+    "Quran 2:198",
+    "Fa idhā afaḍtum min ʿArafātin fadhkurullāha ʿindal-Mashʿaril-Ḥarām"
 )
 
 private val ramiTakbir = RiteDua(
     "اللَّهُ أَكْبَرُ",
     "Allah is the Greatest. (With every pebble)",
-    "Sahih al-Bukhari 1751"
+    "Sahih al-Bukhari 1751",
+    "Allāhu Akbar"
 )
 
 private val ziyarahAyah = RiteDua(
     "وَلْيَطَّوَّفُوا بِالْبَيْتِ الْعَتِيقِ",
     "And let them circle the Ancient House.",
-    "Quran 22:29"
+    "Quran 22:29",
+    "Walyaṭṭawwafū bil-baytil-ʿatīq"
 )
 
 // ---------------------------------------------------------------- Umrah
@@ -373,7 +387,8 @@ internal val pillarsSection = GuideSection(
         info("Hajj wajib: Muzdalifah, Sa'i, Rami, Qurbani for Qiran and Tamattu', Halq or Qasr, Tawaf al-Wida."),
         info("Umrah: Ihram is the condition and Tawaf is fard; Sa'i and Halq or Qasr are wajib."),
         info("Missing a wajib without a valid excuse makes a Dam due: one goat or sheep slaughtered within the Haram."),
-        info("Crossing the miqat towards Makkah without ihram makes a Dam due, unless you go back and enter ihram there.")
+        info("Crossing the miqat towards Makkah without ihram makes a Dam due, unless you go back and enter ihram there."),
+        info("The madhhabs differ on some details, such as combining prayers at Arafat and the order of the 10th's rites. Follow your own scholar.")
     ),
     "Al-Hidayah, Kitab al-Hajj · Bahar-e-Shariat, Hissa 6"
 )
@@ -419,7 +434,11 @@ internal val mistakesSection = GuideSection(
         dont("Doing Tawaf without wudu"),
         dont("Leaving Arafat before sunset"),
         dont("Throwing large stones, shoes, or all seven pebbles at once"),
-        dont("Spending precious time on the phone instead of dua")
+        dont("Spending precious time on the phone instead of dua"),
+        dont("Starting Sa'i at Marwah, or counting Safa to Marwah and back as one round"),
+        dont("Praying the two rakat of Tawaf at a makruh time — wait until it passes"),
+        dont("Leaving the ihram by cutting only a few hairs"),
+        dont("Assuming the Tawaf counter is right after a break — if unsure, build on the lower number")
     ),
     "Bahar-e-Shariat, Hissa 6"
 )
@@ -457,7 +476,11 @@ internal val preparationChecklist = listOf(
             PrepItem("belt", "Ihram belt and sandals that leave the top of the foot bare"),
             PrepItem("pouch", "Small pouch for pebbles"),
             PrepItem("medicine", "Personal medicines and prescriptions"),
-            PrepItem("umbrella", "Umbrella, water bottle and power bank")
+            PrepItem("umbrella", "Umbrella, water bottle and power bank"),
+            PrepItem("prayer_mat", "Light prayer mat and a small Quran or dua book"),
+            PrepItem("id_card", "ID card or wristband from your group, worn at all times"),
+            PrepItem("sun", "Sunscreen without perfume, and comfortable broken-in footwear"),
+            PrepItem("copies", "Photocopies of passport and visa, kept apart from the originals")
         )
     )
 )

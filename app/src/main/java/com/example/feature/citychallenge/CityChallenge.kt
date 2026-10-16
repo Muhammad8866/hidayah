@@ -10,7 +10,12 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -115,6 +120,13 @@ internal fun weekStart(date: LocalDate): LocalDate = date.with(TemporalAdjusters
 internal fun weekId(date: LocalDate): String =
     "%d-w%02d".format(Locale.ROOT, date.get(IsoFields.WEEK_BASED_YEAR), date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR))
 
+/** Display names: no line breaks or control characters, collapsed spaces, at most [max] chars. */
+internal fun ccCleanName(text: String, max: Int): String =
+    text.replace(Regex("\\p{Cntrl}"), " ").replace(Regex("\\s+"), " ").trim().take(max).trim()
+
+/** Prayer marks that count as offered; "Late" is still a prayer prayed. */
+internal val CC_PRAYED_MARKS = setOf("Jamaat", "Prayed", "Late")
+
 /** Local profile and the week's scores, read from the logs other screens already keep. */
 class CcLocalStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("city_challenge", Context.MODE_PRIVATE)
@@ -154,8 +166,7 @@ class CcLocalStore(context: Context) {
      */
     fun weekScores(today: LocalDate, confidentHifzAyahs: Int): CcScores {
         val days = generateSequence(weekStart(today)) { it.plusDays(1) }.takeWhile { !it.isAfter(today) }.toList()
-        val prayed = setOf("Jamaat", "Prayed")
-        val salah = days.sumOf { d -> PRAYERS.count { tools.getString("prayer_${d}_$it", null) in prayed } }
+        val salah = days.sumOf { d -> PRAYERS.count { tools.getString("prayer_${d}_$it", null) in CC_PRAYED_MARKS } }
         val quran = days.sumOf { min(tools.getInt("quran_$it", 0), CcGoal.QURAN_DAILY_CAP) }
         val dhikr = days.sumOf { min(tools.getInt("dhikr_$it", 0), CcGoal.DHIKR_DAILY_CAP) }
         val baseKey = "hifz_base_${weekId(today)}"
@@ -170,20 +181,97 @@ class CcLocalStore(context: Context) {
     }
 
     /** Days of this week with any salah, Quran or dhikr logged. */
-    fun activeDays(today: LocalDate): Int =
-        generateSequence(weekStart(today)) { it.plusDays(1) }.takeWhile { !it.isAfter(today) }.count { d ->
-            PRAYERS.any { tools.getString("prayer_${d}_$it", null) in setOf("Jamaat", "Prayed") } ||
+    fun activeDays(today: LocalDate): Int = activeDayIndices(today).size
+
+    /** Monday-based indices (0..6) of this week's days that have any salah, Quran or dhikr logged. */
+    fun activeDayIndices(today: LocalDate): Set<Int> =
+        generateSequence(weekStart(today)) { it.plusDays(1) }.takeWhile { !it.isAfter(today) }.filter { d ->
+            PRAYERS.any { tools.getString("prayer_${d}_$it", null) in CC_PRAYED_MARKS } ||
                 tools.getInt("quran_$d", 0) > 0 || tools.getInt("dhikr_$d", 0) > 0
+        }.map { it.dayOfWeek.value - 1 }.toSet()
+
+    /**
+     * True when any upload happened in the last [MIN_PUBLISH_GAP_MS] (the rules reject faster
+     * writes anyway), or these exact totals were already uploaded recently.
+     */
+    fun shouldSkipPublish(signature: String, now: Long = System.currentTimeMillis()): Boolean {
+        val age = now - prefs.getLong("pub_at", 0L)
+        if (prefs.getString("pub_sig", null) == null) return false
+        if (age in 0 until MIN_PUBLISH_GAP_MS) return true
+        return prefs.getString("pub_sig", null) == signature && age in 0 until SAME_SCORE_REPUBLISH_MS
+    }
+
+    fun markPublished(signature: String, now: Long = System.currentTimeMillis()) {
+        prefs.edit().putString("pub_sig", signature).putLong("pub_at", now).apply()
+    }
+
+    fun clearPublished() { prefs.edit().remove("pub_sig").remove("pub_at").apply() }
+
+    /** A leave that could not reach the server yet; retried the next time the screen opens. */
+    var pendingLeave: Pair<String, String>?
+        get() {
+            val city = prefs.getString("pending_leave_city", null) ?: return null
+            val week = prefs.getString("pending_leave_week", null) ?: return null
+            return city to week
         }
+        set(value) {
+            val e = prefs.edit()
+            if (value == null) e.remove("pending_leave_city").remove("pending_leave_week")
+            else e.putString("pending_leave_city", value.first).putString("pending_leave_week", value.second)
+            e.apply()
+        }
+
+    /** Keeps the last loaded board so it can be shown offline, with the time it was fetched. */
+    fun cacheBoard(cityId: String, board: CcBoard, now: Long = System.currentTimeMillis()) {
+        val json = JSONObject()
+            .put("city", cityId).put("week", board.weekId).put("total", board.totalMembers)
+            .put("uid", board.myUid).put("rank", board.myRank ?: -1).put("at", now)
+            .put("members", JSONArray().apply {
+                board.members.take(BOARD_CACHE_LIMIT).forEach { m ->
+                    put(JSONObject().put("u", m.uid).put("n", m.name).put("a", m.area).put("k", m.areaKey)
+                        .put("s", m.scores.salah).put("q", m.scores.quran).put("d", m.scores.dhikr).put("h", m.scores.hifz))
+                }
+            })
+        prefs.edit().putString("board_cache", json.toString()).apply()
+    }
+
+    /** The cached board for [cityId] and [weekId] with its fetch time, or null when none matches. */
+    fun cachedBoard(cityId: String, weekId: String): Pair<CcBoard, Long>? = runCatching {
+        val raw = prefs.getString("board_cache", null) ?: return null
+        val json = JSONObject(raw)
+        if (json.getString("city") != cityId || json.getString("week") != weekId) return null
+        val arr = json.getJSONArray("members")
+        val members = (0 until arr.length()).map { i ->
+            val o = arr.getJSONObject(i)
+            CcMember(o.getString("u"), o.getString("n"), o.getString("a"), o.getString("k"),
+                CcScores(o.optInt("s"), o.optInt("q"), o.optInt("d"), o.optInt("h")))
+        }
+        CcBoard(weekId, members, json.optInt("total", members.size), json.getString("uid"),
+            json.optInt("rank", -1).takeIf { it > 0 }) to json.getLong("at")
+    }.getOrNull()
+
+    fun clearBoardCache() { prefs.edit().remove("board_cache").apply() }
 
     companion object {
         private val PRAYERS = listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")
+        private const val MIN_PUBLISH_GAP_MS = 30_000L
+        private const val SAME_SCORE_REPUBLISH_MS = 10 * 60_000L
+        private const val BOARD_CACHE_LIMIT = 300
+        private val dhikrLock = Any()
 
-        /** Called by the tasbeeh on every count so dhikr reaches the city board. */
+        /**
+         * Called by the tasbeeh on every count so dhikr reaches the city board. Synchronized so
+         * fast taps never lose a count between read and write; a day's total is held under a
+         * sane ceiling far above the board's daily cap.
+         */
         fun addDhikr(context: Context, count: Int = 1) {
+            if (count <= 0) return
             val tools = context.applicationContext.getSharedPreferences("daily_tools", Context.MODE_PRIVATE)
-            val key = "dhikr_${LocalDate.now()}"
-            tools.edit().putInt(key, tools.getInt(key, 0) + count).apply()
+            synchronized(dhikrLock) {
+                val key = "dhikr_${LocalDate.now()}"
+                val next = (tools.getInt(key, 0).toLong() + count).coerceIn(0L, 1_000_000L).toInt()
+                tools.edit().putInt(key, next).apply()
+            }
         }
     }
 }
@@ -222,12 +310,13 @@ class CcRemote(private val context: Context) {
     /** Uploads this week's totals. The rules allow one write per 30 s, so a throttled write is skipped. */
     suspend fun publish(profile: CcProfile, weekId: String, scores: CcScores): Boolean {
         val uid = uid()
+        val capped = capped(scores)
         val data = mapOf(
-            "name" to profile.displayName.trim().take(24),
-            "area" to profile.areaName.trim().ifBlank { OTHER_AREA }.take(40),
+            "name" to ccCleanName(profile.displayName, 24).ifBlank { "?" },
+            "area" to ccCleanName(profile.areaName, 40).ifBlank { OTHER_AREA },
             "areaKey" to profile.areaKey,
-            "salah" to scores.salah, "quran" to scores.quran, "dhikr" to scores.dhikr, "hifz" to scores.hifz,
-            "points" to scores.points,
+            "salah" to capped.salah, "quran" to capped.quran, "dhikr" to capped.dhikr, "hifz" to capped.hifz,
+            "points" to capped.points,
             "updatedAt" to FieldValue.serverTimestamp()
         )
         return runCatching { members(profile.cityId, weekId).document(uid).set(data).awaitCm() }.isSuccess
@@ -247,9 +336,25 @@ class CcRemote(private val context: Context) {
         return CcBoard(weekId, top, total, uid, rank)
     }
 
-    suspend fun leave(cityId: String, weekId: String) {
-        runCatching { members(cityId, weekId).document(uid()).delete().awaitCm() }
+    /** Removes this user's row for [weekId]. Returns false when the server could not be reached. */
+    suspend fun leave(cityId: String, weekId: String): Boolean =
+        runCatching { members(cityId, weekId).document(uid()).delete().awaitCm() }.isSuccess
+
+    /**
+     * Runs a leave outside any screen scope so closing the screen right after tapping Leave
+     * cannot cancel it. A failed leave is remembered in [store] and retried later.
+     */
+    fun leaveInBackground(store: CcLocalStore, cityId: String, weekId: String) {
+        store.pendingLeave = cityId to weekId
+        backgroundScope.launch {
+            if (leave(cityId, weekId) && store.pendingLeave == (cityId to weekId)) store.pendingLeave = null
+        }
     }
+
+    private fun capped(s: CcScores) = CcScores(
+        s.salah.coerceIn(0, CcGoal.SALAH.weeklyCap), s.quran.coerceIn(0, CcGoal.QURAN.weeklyCap),
+        s.dhikr.coerceIn(0, CcGoal.DHIKR.weeklyCap), s.hifz.coerceIn(0, CcGoal.HIFZ.weeklyCap)
+    )
 
     /**
      * Removes this user's board entries for the last year of weeks in [cityId]. Deleting a missing
@@ -278,6 +383,7 @@ class CcRemote(private val context: Context) {
 
     companion object {
         const val TOP_LIMIT = 300L
+        private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         private const val DELETE_WEEKS = 53
     }
 }

@@ -8,7 +8,7 @@ class QuranPdfCatalogTest {
 
     @Test
     fun `every quran has an ordered surah and para index inside its pages`() {
-        assertEquals(7, QuranPdfCatalog.all.size)
+        assertEquals(13, QuranPdfCatalog.all.size)
         assertEquals(QuranPdfCatalog.all.size, QuranPdfCatalog.all.map { it.id }.toSet().size)
         assertEquals(emptyList<String>(), QuranPdfCatalog.all.filter { it.bundled }.map { it.id })
         assertEquals("quran_hindi_kanzul_iman.pdf", QuranPdfCatalog.byId("kanzul_iman")?.fileName)

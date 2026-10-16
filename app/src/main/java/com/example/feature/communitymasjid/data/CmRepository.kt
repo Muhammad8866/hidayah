@@ -2,15 +2,17 @@ package com.example.feature.communitymasjid.data
 
 import android.content.Context
 import com.example.feature.communitymasjid.data.local.CmCommunityRecordEntity
+import com.example.feature.communitymasjid.data.local.CmAreaCacheEntity
 import com.example.feature.communitymasjid.data.local.CmDatabase
 import com.example.feature.communitymasjid.data.local.CmLocalActionEntity
-import com.example.feature.communitymasjid.data.local.CmOsmMosqueEntity
-import com.example.feature.communitymasjid.data.local.CmOsmQueryEntity
+import com.example.feature.communitymasjid.data.local.CmCachedMosqueEntity
+import com.example.feature.communitymasjid.data.local.CmNearbyQueryEntity
 import com.example.feature.communitymasjid.data.remote.CmFirebaseDataSource
 import com.example.feature.communitymasjid.data.remote.CmFirebaseDataSource.Companion.parseTimings
 import com.example.feature.communitymasjid.data.remote.CmFirebaseDataSource.Companion.toMap
 import com.example.feature.communitymasjid.data.remote.CmWriteOutcome
 import com.example.feature.communitymasjid.domain.CmTimingRules
+import com.example.feature.communitymasjid.domain.CmAreaCachePolicy
 import com.example.feature.communitymasjid.model.CmCommunityRecord
 import com.example.feature.communitymasjid.model.CmDownReason
 import com.example.feature.communitymasjid.model.CmHistoryEntry
@@ -19,51 +21,104 @@ import com.example.feature.communitymasjid.model.CmMyVotes
 import com.example.feature.communitymasjid.model.CmPresence
 import com.example.feature.communitymasjid.model.CmTimings
 import com.example.feature.communitymasjid.model.CmUserLocation
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
+import org.json.JSONArray
+import java.util.UUID
 
 /**
- * Single source of truth for the Community Masjid feature. Room is read first; Firestore is
- * only queried when the cached copy is older than its TTL or the user explicitly refreshes.
+ * Single source of truth for the Community Masjid feature. Community discovery is cached by
+ * search area for three days; Google Places content is never written to disk.
  */
 class CmRepository(context: Context) {
     private val dao = CmDatabase.get(context).dao()
     private val remote = CmFirebaseDataSource(context.applicationContext)
 
+    private val googleSearch = CmGoogleSearchGate(context.applicationContext, remote)
+
     val isCommunityConfigured: Boolean get() = remote.isConfigured
 
-    data class NearbyResult(val mosques: List<CmMosque>, val fromCache: Boolean, val error: Throwable?)
+    data class NearbyResult(val mosques: List<CmMosque>, val fromCache: Boolean, val error: Throwable?, val notice: String? = null)
 
-    /** The last saved list, for showing something instantly; distances from [location] or the saved query point. */
+    /** The saved community list for this area, for showing something instantly. */
     suspend fun savedMosques(location: CmUserLocation?): List<CmMosque> {
-        val from = location ?: dao.osmQuery()?.let { CmUserLocation(it.latitude, it.longitude, 0f, it.fetchedAtMs) } ?: return emptyList()
-        return cachedMosques(from)
-    }
-
-    /**
-     * Only masjids added by the community are listed; OpenStreetMap entries are not shown.
-     * If Firestore fails, the last saved community list is returned instead.
-     */
-    suspend fun nearbyMosques(location: CmUserLocation, force: Boolean): NearbyResult {
         val now = System.currentTimeMillis()
-        val cached = cachedMosques(location)
-        if (!remote.isConfigured) return NearbyResult(emptyList(), fromCache = false, error = null)
-        val userResult = runCatching {
-            withTimeout(USER_MOSQUES_TIMEOUT_MS) {
-                remote.fetchUserMosques(location.latitude, location.longitude, SEARCH_RADIUS_M.toDouble())
-            }
-        }
-        val mosques = userResult.getOrElse { return NearbyResult(cached, fromCache = true, error = it) }
-            .sortedBy { it.distanceMetres }
-            .take(MAX_MOSQUES)
-        dao.clearOsmMosques()
-        dao.insertOsmMosques(mosques.map { it.toEntity(now) })
-        dao.upsertOsmQuery(CmOsmQueryEntity(latitude = location.latitude, longitude = location.longitude, fetchedAtMs = now))
-        return NearbyResult(mosques, fromCache = false, error = null)
+        dao.pruneAreaCaches(now - CmAreaCachePolicy.TTL_MS)
+        val from = location ?: dao.areaCaches().firstOrNull()?.let {
+            CmUserLocation(it.latitude, it.longitude, 0f, it.fetchedAtMs)
+        } ?: dao.nearbyQuery()?.let {
+            CmUserLocation(it.latitude, it.longitude, 0f, it.fetchedAtMs)
+        } ?: return emptyList()
+        return areaCache(from, now)?.mosques ?: emptyList()
     }
 
-    private suspend fun cachedMosques(location: CmUserLocation): List<CmMosque> =
-        dao.osmMosques().filter { it.isUserAdded }.map {
+    /** Google results stay in memory; only community entries are stored in Room. */
+    suspend fun nearbyMosques(location: CmUserLocation, force: Boolean): NearbyResult = coroutineScope {
+        val now = System.currentTimeMillis()
+        val cachedEntry = areaCache(location, now)
+        val cached = cachedEntry?.mosques.orEmpty()
+        val googleJob = async {
+            try {
+                Result.success(googleSearch.search(location))
+            } catch (error: kotlinx.coroutines.TimeoutCancellationException) { Result.failure<CmGoogleSearchGate.Result>(error) }
+            catch (error: CancellationException) { throw error }
+            catch (error: Exception) { Result.failure<CmGoogleSearchGate.Result>(error) }
+        }
+        val communityJob = async {
+            if (!remote.isConfigured || (!force && cachedEntry != null)) Result.success(cached) else try {
+                Result.success(withTimeout(USER_MOSQUES_TIMEOUT_MS) {
+                    remote.fetchUserMosques(location.latitude, location.longitude, SEARCH_RADIUS_M.toDouble())
+                })
+            } catch (error: kotlinx.coroutines.TimeoutCancellationException) { Result.failure<List<CmMosque>>(error) }
+            catch (error: CancellationException) { throw error }
+            catch (error: Exception) { Result.failure<List<CmMosque>>(error) }
+        }
+        val googleResult = googleJob.await()
+        val communityResult = communityJob.await()
+        if (communityResult.isSuccess && remote.isConfigured && (force || cachedEntry == null)) {
+            val fetched = communityResult.getOrThrow()
+            dao.upsertAreaCache(CmAreaCacheEntity(
+                areaId = cachedEntry?.areaId ?: UUID.randomUUID().toString(),
+                latitude = location.latitude,
+                longitude = location.longitude,
+                fetchedAtMs = now,
+                mosquesJson = encodeCommunityMosques(fetched)
+            ))
+            dao.clearCachedMosques()
+            dao.insertCachedMosques(fetched.map { it.toEntity(now) })
+            dao.upsertNearbyQuery(CmNearbyQueryEntity(latitude = location.latitude, longitude = location.longitude, fetchedAtMs = now))
+        }
+        val community = communityResult.getOrElse { cached }
+        val listError = googleResult.exceptionOrNull() ?: communityResult.exceptionOrNull()
+        val discovered = googleResult.getOrNull()?.mosques.orEmpty()
+        val mosques = (discovered + community)
+            .distinctBy { it.docId }.sortedBy { it.distanceMetres }.take(MAX_MOSQUES)
+        NearbyResult(mosques, cachedEntry != null || communityResult.isFailure, listError, googleResult.getOrNull()?.notice)
+    }
+
+    private data class AreaHit(val areaId: String, val mosques: List<CmMosque>)
+
+    private suspend fun areaCache(location: CmUserLocation, now: Long): AreaHit? {
+        dao.pruneAreaCaches(now - CmAreaCachePolicy.TTL_MS)
+        val row = dao.areaCaches().firstOrNull { candidate ->
+            CmAreaCachePolicy.isReusable(location, candidate.latitude, candidate.longitude, candidate.fetchedAtMs, now)
+        }
+        if (row != null) {
+            val decoded = runCatching { decodeCommunityMosques(row.mosquesJson, location) }.getOrNull()
+            if (decoded != null) return AreaHit(row.areaId, decoded)
+            dao.deleteAreaCache(row.areaId)
+        }
+        // Keep the last-query snapshot from older app versions usable during its remaining TTL.
+        val old = dao.nearbyQuery() ?: return null
+        if (!CmAreaCachePolicy.isReusable(location, old.latitude, old.longitude, old.fetchedAtMs, now)) return null
+        return AreaHit("legacy", legacyCachedMosques(location))
+    }
+
+    private suspend fun legacyCachedMosques(location: CmUserLocation): List<CmMosque> =
+        dao.cachedMosques().filter { it.isUserAdded }.map {
             CmMosque(
                 docId = it.docId,
                 name = it.name,
@@ -74,7 +129,33 @@ class CmRepository(context: Context) {
                 isUserAdded = it.isUserAdded,
                 addedByUid = it.addedByUid
             )
-        }.sortedBy { it.distanceMetres }
+        }.filter { (it.distanceMetres ?: Double.MAX_VALUE) <= SEARCH_RADIUS_M }
+            .sortedBy { it.distanceMetres }
+
+    private fun encodeCommunityMosques(mosques: List<CmMosque>): String = JSONArray().apply {
+        mosques.filter { it.isUserAdded }.forEach { mosque ->
+            put(JSONObject().put("docId", mosque.docId).put("name", mosque.name)
+                .put("address", mosque.address).put("latitude", mosque.latitude)
+                .put("longitude", mosque.longitude)
+                .put("addedByUid", mosque.addedByUid ?: JSONObject.NULL))
+        }
+    }.toString()
+
+    private fun decodeCommunityMosques(json: String, location: CmUserLocation): List<CmMosque> {
+        val array = JSONArray(json)
+        return (0 until array.length()).map { index ->
+            val item = array.getJSONObject(index)
+            val latitude = item.getDouble("latitude")
+            val longitude = item.getDouble("longitude")
+            CmMosque(
+                docId = item.getString("docId"), name = item.getString("name"),
+                address = item.getString("address"), latitude = latitude, longitude = longitude,
+                distanceMetres = CmTimingRules.distanceMetres(location.latitude, location.longitude, latitude, longitude),
+                isUserAdded = true,
+                addedByUid = item.optString("addedByUid").takeUnless { it.isBlank() || it == "null" }
+            )
+        }.filter { (it.distanceMetres ?: Double.MAX_VALUE) <= SEARCH_RADIUS_M }.sortedBy { it.distanceMetres }
+    }
 
     suspend fun cachedRecords(docIds: List<String>): Map<String, CmCommunityRecord> =
         if (docIds.isEmpty()) emptyMap() else dao.records(docIds).associate { it.docId to it.toModel() }
@@ -131,7 +212,11 @@ class CmRepository(context: Context) {
     suspend fun addMosque(name: String, address: String, location: CmUserLocation, accuracyMetres: Int): CmMosque {
         val mosque = remote.addMosque(name, address, location, accuracyMetres)
         val now = System.currentTimeMillis()
-        dao.insertOsmMosques(listOf(mosque.toEntity(now)))
+        dao.insertCachedMosques(listOf(mosque.toEntity(now)))
+        updateAreaCaches { row, mosques ->
+            if (CmTimingRules.distanceMetres(row.latitude, row.longitude, mosque.latitude, mosque.longitude) <= SEARCH_RADIUS_M)
+                (mosques.filterNot { it.docId == mosque.docId } + mosque) else mosques
+        }
         logAction(KIND_ADD_MOSQUE, mosque.docId)
         return mosque
     }
@@ -147,7 +232,10 @@ class CmRepository(context: Context) {
             if (outcome is CmWriteOutcome.Voted) {
                 logAction(KIND_VOTE, mosque.docId)
                 // A masjid hidden by votes leaves the cached list at once.
-                if (outcome.votedDown) dao.deleteOsmMosque(mosque.docId)
+                if (outcome.votedDown) {
+                    dao.deleteCachedMosque(mosque.docId)
+                    updateAreaCaches { _, mosques -> mosques.filterNot { it.docId == mosque.docId } }
+                }
             }
         }
 
@@ -155,7 +243,16 @@ class CmRepository(context: Context) {
         dao.insertAction(CmLocalActionEntity(kind = kind, mosqueDocId = docId, suggestionId = "", atMs = System.currentTimeMillis()))
     }
 
-    private fun CmMosque.toEntity(now: Long) = CmOsmMosqueEntity(
+    private suspend fun updateAreaCaches(transform: (CmAreaCacheEntity, List<CmMosque>) -> List<CmMosque>) {
+        for (row in dao.areaCaches()) {
+            val mosques = runCatching {
+                decodeCommunityMosques(row.mosquesJson, CmUserLocation(row.latitude, row.longitude, 0f, row.fetchedAtMs))
+            }.getOrNull() ?: continue
+            dao.upsertAreaCache(row.copy(mosquesJson = encodeCommunityMosques(transform(row, mosques))))
+        }
+    }
+
+    private fun CmMosque.toEntity(now: Long) = CmCachedMosqueEntity(
         docId = docId,
         name = name,
         address = address,

@@ -6,7 +6,9 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,13 +32,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.prayer.AstronomicalPrayerCalculator
 import com.example.prayer.PrayerSettingsStore
 import com.example.ui.components.ProvenanceCard
+import com.example.ui.components.pressScale
 import com.example.ui.localization.LocalAppLocale
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizedUiText
@@ -57,10 +63,21 @@ private data class TrackerTimes(val starts: Map<String, Double>, val nowHours: D
 
 @Composable
 internal fun PrayerTrackerScreen(onBack: () -> Unit, modifier: Modifier) {
+    com.example.core.analytics.AnalyticsScreen("prayer_tracker_screen")
+
     val prefs = rememberToolPrefs()
     val store = remember(prefs) { PrayerTrackerStore(prefs) }
     val locale = LocalAppLocale.current
-    val today = remember { LocalDate.now() }
+    // Re-read so a screen left open across midnight moves on to the new day.
+    var today by remember { mutableStateOf(LocalDate.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(30_000)
+            val now = LocalDate.now()
+            if (now != today) today = now
+        }
+    }
+    val haptics = LocalHapticFeedback.current
     var selectedEpochDay by rememberSaveable { mutableLongStateOf(today.toEpochDay()) }
     val selected = LocalDate.ofEpochDay(selectedEpochDay)
     var revision by remember { mutableIntStateOf(0) }
@@ -68,13 +85,17 @@ internal fun PrayerTrackerScreen(onBack: () -> Unit, modifier: Modifier) {
     var showAddDays by rememberSaveable { mutableStateOf(false) }
     var confirmClear by rememberSaveable { mutableStateOf(false) }
     val times = rememberTrackerTimes(selected, today)
+    // Day-month order and separators follow the reader's region.
+    val dayFormat = remember(locale) {
+        DateTimeFormatter.ofPattern(android.text.format.DateFormat.getBestDateTimePattern(locale, "EEEEdMMMM"), locale)
+    }
 
     val cache = remember(revision) { mutableMapOf<LocalDate, TrackerDay>() }
     val dayOf: (LocalDate) -> TrackerDay = { date -> cache.getOrPut(date) { store.day(date) } }
     val day = dayOf(selected)
-    val streak = remember(revision) { currentStreak(today, dayOf) }
-    val best = remember(revision) { bestStreak(today, dayOf) }
-    val stats = remember(revision) { prayerStats(today, dayOf) }
+    val streak = remember(revision, today) { currentStreak(today, dayOf) }
+    val best = remember(revision, today) { bestStreak(today, dayOf) }
+    val stats = remember(revision, today) { prayerStats(today, dayOf) }
     val qaza = remember(revision) { store.qazaBalance() }
     val madeUp = remember(revision) { store.qazaMadeUp }
     val setsPerDay = remember(revision) { store.qazaSetsPerDay }
@@ -120,7 +141,7 @@ internal fun PrayerTrackerScreen(onBack: () -> Unit, modifier: Modifier) {
                             )
                         }
                         Text(
-                            selected.format(DateTimeFormatter.ofPattern("EEEE, d MMMM", locale)),
+                            selected.format(dayFormat),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -131,7 +152,7 @@ internal fun PrayerTrackerScreen(onBack: () -> Unit, modifier: Modifier) {
                         )
                         if (!isToday) {
                             TextButton(
-                                onClick = { select(today) },
+                                onClick = { com.example.core.analytics.AppAnalytics.interaction("prayer_tracker_screen", "go_to_today", "tap"); select(today) },
                                 contentPadding = PaddingValues(horizontal = 0.dp),
                                 modifier = Modifier.height(32.dp).testTag("tracker_back_to_today")
                             ) {
@@ -156,7 +177,8 @@ internal fun PrayerTrackerScreen(onBack: () -> Unit, modifier: Modifier) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (dueUnlogged.isNotEmpty()) {
                         FilledTonalButton(
-                            onClick = {
+                            onClick = { com.example.core.analytics.AppAnalytics.interaction("prayer_tracker_screen", "mark_remaining_prayed", "tap"); 
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                 lastBulk = selected to store.markRemainingPrayed(selected, dueUnlogged)
                                 revision++
                             },
@@ -170,7 +192,7 @@ internal fun PrayerTrackerScreen(onBack: () -> Unit, modifier: Modifier) {
                         Spacer(Modifier.weight(1f))
                     }
                     lastBulk?.takeIf { it.first == selected }?.let { (date, changed) ->
-                        TextButton(onClick = {
+                        TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("prayer_tracker_screen", "undo_bulk_mark", "tap"); 
                             changed.forEach { store.setMark(date, it, null) }
                             lastBulk = null
                             revision++
@@ -194,6 +216,9 @@ internal fun PrayerTrackerScreen(onBack: () -> Unit, modifier: Modifier) {
                     excused = day.excused,
                     accent = accent,
                     onMark = { mark ->
+                        haptics.performHapticFeedback(
+                            if (mark == null) HapticFeedbackType.TextHandleMove else HapticFeedbackType.LongPress
+                        )
                         store.setMark(selected, prayer, mark)
                         lastBulk = null
                         revision++
@@ -233,18 +258,18 @@ internal fun PrayerTrackerScreen(onBack: () -> Unit, modifier: Modifier) {
     if (showAddDays) {
         AddMissedDaysDialog(
             onDismiss = { showAddDays = false },
-            onConfirm = { days -> store.addQazaDays(days); showAddDays = false; revision++ }
+            onConfirm = { days -> com.example.core.analytics.AppAnalytics.interaction("prayer_tracker_screen", "confirm_add_missed_days", "tap"); store.addQazaDays(days); showAddDays = false; revision++ }
         )
     }
     if (confirmClear) {
         AlertDialog(
-            onDismissRequest = { confirmClear = false },
+            onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("prayer_tracker_screen", "dismiss_reset_qaza", "dismiss"); confirmClear = false },
             title = { LocalizedText("Reset Qaza balance?") },
             text = { LocalizedText("All Qaza counts and made-up progress will go back to zero. Your daily logs stay.") },
             confirmButton = {
-                TextButton(onClick = { store.clearQaza(); confirmClear = false; revision++ }) { LocalizedText("Reset") }
+                TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("prayer_tracker_screen", "confirm_reset_qaza", "tap"); store.clearQaza(); confirmClear = false; revision++ }) { LocalizedText("Reset") }
             },
-            dismissButton = { TextButton(onClick = { confirmClear = false }) { LocalizedText("Cancel") } }
+            dismissButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("prayer_tracker_screen", "cancel_reset_qaza", "tap"); confirmClear = false }) { LocalizedText("Cancel") } }
         )
     }
 }
@@ -319,7 +344,7 @@ private fun DateStrip(
     val end = minOf(selected.plusDays(3), today)
     val days = (6 downTo 0).map { end.minusDays(it.toLong()) }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { onSelect(selected.minusDays(7)) }, modifier = Modifier.size(48.dp)) {
+        IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("prayer_tracker_screen", "previous_week", "tap"); onSelect(selected.minusDays(7)) }, modifier = Modifier.size(48.dp)) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = localizedUiText("Previous week"))
         }
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -337,10 +362,10 @@ private fun DateStrip(
                         .background(container)
                         .border(
                             1.dp,
-                            if (date == today && !isSelected) accent else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                            if (date == today && !isSelected) accent else MaterialTheme.colorScheme.outlineVariant,
                             RoundedCornerShape(14.dp)
                         )
-                        .clickable(role = Role.Button) { onSelect(date) }
+                        .clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("prayer_tracker_screen", "select_day", "tap");  onSelect(date) }
                         .padding(vertical = 8.dp)
                         .testTag("tracker_day_$date"),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -358,7 +383,7 @@ private fun DateStrip(
             }
         }
         IconButton(
-            onClick = { onSelect(selected.plusDays(7)) },
+            onClick = { com.example.core.analytics.AppAnalytics.interaction("prayer_tracker_screen", "next_week", "tap"); onSelect(selected.plusDays(7)) },
             enabled = selected < today,
             modifier = Modifier.size(48.dp)
         ) {
@@ -400,7 +425,7 @@ private fun StatPill(icon: ImageVector, text: String, tint: Color, modifier: Mod
         ) {
             Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text(text, style = MaterialTheme.typography.labelLarge, color = tint, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(text, style = MaterialTheme.typography.labelLarge, color = tint, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -445,7 +470,7 @@ private fun PrayerCard(
     val borderColor = when {
         markColor != null -> markColor.copy(alpha = 0.6f)
         isCurrent -> accent
-        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+        else -> MaterialTheme.colorScheme.outlineVariant
     }
     Card(
         modifier = Modifier.fillMaxWidth().testTag("prayer_card_$prayer"),
@@ -458,9 +483,7 @@ private fun PrayerCard(
     ) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = RoundedCornerShape(12.dp), color = (markColor ?: accent).copy(alpha = 0.15f), modifier = Modifier.size(40.dp)) {
-                    Icon(prayerIcon(prayer), contentDescription = null, tint = markColor ?: accent, modifier = Modifier.padding(9.dp))
-                }
+                IconBadge(prayerIcon(prayer), markColor ?: accent, 40.dp)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -503,7 +526,7 @@ private fun PrayerCard(
                             selected = mark == option,
                             enabled = !upcoming,
                             modifier = Modifier.weight(1f).testTag("${option.name.lowercase()}_$prayer"),
-                            onClick = { onMark(if (mark == option) null else option) }
+                            onClick = { com.example.core.analytics.AppAnalytics.interaction("prayer_tracker_screen", "mark_prayer", "tap"); onMark(if (mark == option) null else option) }
                         )
                     }
                 }
@@ -523,16 +546,24 @@ private fun MarkOption(option: PrayerMark, selected: Boolean, enabled: Boolean, 
         label = "markContainer"
     )
     val content = when {
-        selected -> Color.White
+        selected -> MaterialTheme.colorScheme.surface
         enabled -> color
         else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
     }
+    val interaction = remember { MutableInteractionSource() }
     Column(
         modifier
             .heightIn(min = 52.dp)
+            .pressScale(interaction, pressedScale = 0.92f)
             .clip(RoundedCornerShape(12.dp))
             .background(container)
-            .clickable(role = Role.Button, enabled = enabled, onClick = onClick)
+            .clickable(
+                interactionSource = interaction,
+                indication = LocalIndication.current,
+                role = Role.Button,
+                enabled = enabled,
+                onClick = onClick
+            )
             .padding(vertical = 6.dp, horizontal = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -624,8 +655,8 @@ private fun StatsCard(
 
 @Composable
 private fun StatTile(value: String, label: String, color: Color, modifier: Modifier) {
-    Surface(shape = RoundedCornerShape(14.dp), color = color.copy(alpha = 0.10f), modifier = modifier) {
-        Column(Modifier.padding(vertical = 10.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Surface(shape = MaterialTheme.shapes.medium, color = color.copy(alpha = 0.10f), border = BorderStroke(1.dp, color.copy(alpha = 0.18f)), modifier = modifier) {
+        Column(Modifier.padding(vertical = 12.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
             LocalizedText(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -666,7 +697,7 @@ private fun Heatmap(today: LocalDate, selected: LocalDate, accent: Color, dayOf:
                             .clip(RoundedCornerShape(6.dp))
                             .background(fill)
                             .then(if (date == selected) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(6.dp)) else Modifier)
-                            .clickable(role = Role.Button) { onSelect(date) },
+                            .clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("prayer_tracker_screen", "select_calendar_day", "tap");  onSelect(date) },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -755,7 +786,7 @@ private fun QazaCard(
                 Stepper(value = balance.getValue(prayer), onDecrement = { onMakeUp(prayer) }, onIncrement = { onAdd(prayer) })
             }
         }
-        OutlinedButton(onClick = onAddDays, modifier = Modifier.fillMaxWidth().testTag("qaza_add_days")) {
+        OutlinedButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("prayer_tracker_screen", "open_add_missed_days", onAddDays), modifier = Modifier.fillMaxWidth().testTag("qaza_add_days")) {
             Icon(Icons.Default.EditCalendar, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             LocalizedText("Add missed days, months or years")
@@ -785,10 +816,10 @@ private fun QazaCard(
                 )
             }
             Spacer(Modifier.width(12.dp))
-            Switch(checked = autoQaza, onCheckedChange = onAutoQaza, modifier = Modifier.testTag("qaza_auto_switch"))
+            Switch(checked = autoQaza, onCheckedChange = { com.example.core.analytics.AppAnalytics.interaction("prayer_tracker_screen", "toggle_auto_qaza", "toggle"); onAutoQaza(it) }, modifier = Modifier.testTag("qaza_auto_switch"))
         }
         if (total > 0 || madeUp > 0) {
-            TextButton(onClick = onClear, contentPadding = PaddingValues(horizontal = 0.dp)) {
+            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("prayer_tracker_screen", "open_reset_qaza", onClear), contentPadding = PaddingValues(horizontal = 0.dp)) {
                 Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 LocalizedText("Reset Qaza balance")
@@ -806,7 +837,7 @@ private fun AddMissedDaysDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit)
     val days = (amount.toIntOrNull() ?: 0).toLong() * unit.days
     val valid = days in 1..36_500
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("prayer_tracker_screen", "dismiss_add_missed_days", onDismiss),
         icon = { Icon(Icons.Default.EditCalendar, contentDescription = null) },
         title = { LocalizedText("Add missed days") },
         text = {
@@ -820,7 +851,7 @@ private fun AddMissedDaysDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit)
                     onValueChange = { input -> amount = input.filter(Char::isDigit).take(5) },
                     label = { LocalizedText("How many?") },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth().testTag("qaza_days_input")
                 )
@@ -828,7 +859,7 @@ private fun AddMissedDaysDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit)
                     PeriodUnit.entries.forEachIndexed { index, option ->
                         SegmentedButton(
                             selected = unit == option,
-                            onClick = { unit = option },
+                            onClick = { com.example.core.analytics.AppAnalytics.interaction("prayer_tracker_screen", "select_period_unit", "tap"); unit = option },
                             shape = SegmentedButtonDefaults.itemShape(index, PeriodUnit.entries.size)
                         ) { LocalizedText(option.label, maxLines = 1) }
                     }
@@ -847,6 +878,6 @@ private fun AddMissedDaysDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit)
                 LocalizedText("Add")
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { LocalizedText("Cancel") } }
+        dismissButton = { TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("prayer_tracker_screen", "cancel_add_missed_days", onDismiss)) { LocalizedText("Cancel") } }
     )
 }

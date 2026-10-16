@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "30965960026",
-    "project_id": "deen-companion-app",
-    "storage_bucket": "deen-companion-app.firebasestorage.app"
+    "project_number": "379533400732",
+    "project_id": "hidayah-6d0cc",
+    "storage_bucket": "hidayah-6d0cc.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:30965960026:android:db30cb8cda1a4f747f7763",
+        "mobilesdk_app_id": "1:379533400732:android:5f9c3afb11db4e084deb59",
         "android_client_info": {
           "package_name": "com.aistudio.deencompanion.quranj"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCJ5Krl1G7rc3NnScPtEJ1qc_1PCYzHxHA"
+          "current_key": "AIzaSyDLNbwPzsPKp-i-wEEz0HI8ouogHBHCTAk"
         }
       ],
       "services": {

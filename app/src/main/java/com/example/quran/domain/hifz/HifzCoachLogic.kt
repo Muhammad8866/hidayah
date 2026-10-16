@@ -74,6 +74,15 @@ object HifzCoachLogic {
         }
     }
 
+    /** What Today's plan puts first: due revision always comes before new memorisation. */
+    enum class PlanFocus { REVISE, MEMORISE }
+
+    fun planFocus(dueCount: Int): PlanFocus = if (dueCount > 0) PlanFocus.REVISE else PlanFocus.MEMORISE
+
+    /** Practised ayahs of [surah], for the surah progress bar. */
+    fun practisedInSurah(cards: List<SmartHifzCard>, surah: Int): Int =
+        cards.count { it.reference.surah.value == surah && it.attempts > 0 }
+
     /** Strength buckets shown on the home screen. */
     fun isStrong(card: SmartHifzCard): Boolean = card.attempts > 0 && !SmartHifzRevisionPlanner.isWeak(card)
 

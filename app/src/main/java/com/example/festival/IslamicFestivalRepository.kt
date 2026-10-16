@@ -70,26 +70,38 @@ object IslamicFestivalRepository {
             "10th Dhu al-Hijjah. Qurbani from the 10th to the 12th.")
     )
 
+    /** How far ahead the schedule looks, so the next occasions are always listed, even in December. */
+    const val UPCOMING_WINDOW_DAYS = 370
+
     suspend fun load(timeZoneId: String): FestivalSchedule =
         withContext(Dispatchers.Default) {
-            val region = HijriRegion.forTimeZone(timeZoneId)
-            val today = Calendar.getInstance(TimeZone.getTimeZone(timeZoneId))
-            val gYear = today.get(Calendar.YEAR)
-            val todayJdn = HijriCalendarHelper.julianDayNumber(today)
-
-            // The Gregorian year can overlap two Hijri years; check the ones around it.
-            val startHijriYear = HijriCalendarHelper.getHijriDate(
-                (today.clone() as Calendar).apply { set(gYear, Calendar.JANUARY, 1) }, region = region
-            ).year
-            val festivals = (startHijriYear..startHijriYear + 1).flatMap { hy ->
-                FESTIVALS.mapNotNull { def ->
-                    val jdn = HijriCalendarHelper.toJulianDay(hy, def.hijriMonth, def.hijriDay, region)
-                    val (year, month, day) = HijriCalendarHelper.julianDayToGregorian(jdn)
-                    val days = (jdn - todayJdn).toInt()
-                    if (year != gYear) null else IslamicFestival(def, hy, year, month, day, days)
-                }
-            }.sortedWith(compareBy({ it.gregorianMonth }, { it.gregorianDay }, { it.definition.id }))
-
-            FestivalSchedule(festivals = festivals, gregorianYear = gYear, regionLabel = region.label)
+            build(timeZoneId, Calendar.getInstance(TimeZone.getTimeZone(timeZoneId)))
         }
+
+    /**
+     * Every occasion from 1 January of [today]'s Gregorian year up to [UPCOMING_WINDOW_DAYS] ahead,
+     * soonest first. Earlier occasions of this year come back with negative [IslamicFestival.daysRemaining];
+     * an occasion can appear twice (once already passed this year, once upcoming next year).
+     */
+    internal fun build(timeZoneId: String, today: Calendar): FestivalSchedule {
+        val region = HijriRegion.forTimeZone(timeZoneId)
+        val gYear = today.get(Calendar.YEAR)
+        val todayJdn = HijriCalendarHelper.julianDayNumber(today)
+        val januaryFirst = (today.clone() as Calendar).apply { set(gYear, Calendar.JANUARY, 1) }
+        val windowStart = HijriCalendarHelper.julianDayNumber(januaryFirst)
+        val windowEnd = todayJdn + UPCOMING_WINDOW_DAYS
+
+        // The window spans up to three Hijri years; check every one of them.
+        val startHijriYear = HijriCalendarHelper.getHijriDate(januaryFirst, region = region).year
+        val festivals = (startHijriYear..startHijriYear + 2).flatMap { hy ->
+            FESTIVALS.mapNotNull { def ->
+                val jdn = HijriCalendarHelper.toJulianDay(hy, def.hijriMonth, def.hijriDay, region)
+                if (jdn < windowStart || jdn > windowEnd) return@mapNotNull null
+                val (year, month, day) = HijriCalendarHelper.julianDayToGregorian(jdn)
+                IslamicFestival(def, hy, year, month, day, (jdn - todayJdn).toInt())
+            }
+        }.sortedWith(compareBy({ it.daysRemaining }, { it.definition.id }))
+
+        return FestivalSchedule(festivals = festivals, gregorianYear = gYear, regionLabel = region.label)
+    }
 }

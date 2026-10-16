@@ -47,4 +47,18 @@ class HifzCoachLogicTest {
         assertEquals(HifzGrade.FORGOT, HifzCoachLogic.suggestedGrade(null, 5, 10))
         assertEquals(HifzGrade.FORGOT, HifzCoachLogic.suggestedGrade(60, 1, 10))
     }
+
+    @Test
+    fun todaysPlanPutsDueRevisionBeforeNewAyahsAndCountsSurahProgress() {
+        assertEquals(HifzCoachLogic.PlanFocus.REVISE, HifzCoachLogic.planFocus(3))
+        assertEquals(HifzCoachLogic.PlanFocus.MEMORISE, HifzCoachLogic.planFocus(0))
+        val cards = listOf(
+            com.example.quran.domain.hifz.SmartHifzCard(AyahReference.of(1, 1), attempts = 2),
+            com.example.quran.domain.hifz.SmartHifzCard(AyahReference.of(1, 2), attempts = 1),
+            com.example.quran.domain.hifz.SmartHifzCard(AyahReference.of(1, 3), attempts = 0),
+            com.example.quran.domain.hifz.SmartHifzCard(AyahReference.of(2, 1), attempts = 1)
+        )
+        assertEquals(2, HifzCoachLogic.practisedInSurah(cards, 1))
+        assertEquals(1, HifzCoachLogic.practisedInSurah(cards, 2))
+    }
 }

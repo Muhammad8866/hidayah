@@ -118,8 +118,8 @@ internal class PrayerTrackerStore(private val prefs: SharedPreferences) {
 
     val qazaMadeUp: Int get() = prefs.getInt("qaza_made_up_total", 0)
 
-    fun isExcused(date: LocalDate): Boolean =
-        prefs.getBoolean("muslimah_mode", false) && prefs.getBoolean("cycle_$date", false)
+    /** Muslimah mode log, including each day of a period that is still open. */
+    fun isExcused(date: LocalDate): Boolean = MuslimahStore(prefs).isExcused(date)
 
     fun day(date: LocalDate) = TrackerDay(
         date = date,

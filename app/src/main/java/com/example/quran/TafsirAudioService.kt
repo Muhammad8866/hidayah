@@ -18,6 +18,8 @@ import com.example.naat.createPlaybackSession
 import com.example.naat.publish
 import com.example.MainActivity
 import com.example.R
+import com.example.ui.localization.localizeUiText
+import com.example.ui.localization.persistedAppLanguage
 
 class TafsirAudioService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
@@ -90,30 +92,34 @@ class TafsirAudioService : Service() {
         )
 
         private fun buildNotification(context: Context): Notification {
+            val language = persistedAppLanguage(context)
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) manager.createNotificationChannel(
-                NotificationChannel(CHANNEL, "Tafseer playback", NotificationManager.IMPORTANCE_LOW)
+                NotificationChannel(CHANNEL, localizeUiText("Tafseer", language), NotificationManager.IMPORTANCE_LOW)
             )
             val state = TafsirAudioManager.state.value
             val track = TafsirAudioManager.track(state.playingId)
             val open = PendingIntent.getActivity(context, 0,
                 Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            session?.publish(state.isPlaying, track?.let { "${it.surah}. ${QuranAudioManager.surahName(it.surah)}" } ?: "Quran Tafseer", "Sirat ul Jinan")
+            val title = track?.let { if (it.surah > 0) "${it.surah}. ${QuranAudioManager.surahName(it.surah)}" else localizeUiText(it.title, language) }
+                ?: localizeUiText("Tafseer", language)
+            val collection = localizeUiText(track?.collection ?: "Tafseer", language)
+            session?.publish(state.isPlaying, title, collection)
             return NotificationCompat.Builder(context, CHANNEL)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(track?.let { "${it.surah}. ${QuranAudioManager.surahName(it.surah)}" } ?: "Quran Tafseer")
-                .setContentText("Sirat ul Jinan • Dawat-e-Islami")
+                .setContentTitle(title)
+                .setContentText("$collection • Dawat-e-Islami")
                 .setContentIntent(open)
                 .setOngoing(state.isPlaying)
                 .setOnlyAlertOnce(true)
                 .setShowWhen(false)
                 .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
-                .addAction(android.R.drawable.ic_media_previous, "Previous", command(context, ACTION_PREVIOUS))
+                .addAction(android.R.drawable.ic_media_previous, localizeUiText("Previous", language), command(context, ACTION_PREVIOUS))
                 .addAction(if (state.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
-                    if (state.isPlaying) "Pause" else "Play", command(context, ACTION_TOGGLE))
-                .addAction(android.R.drawable.ic_media_next, "Next", command(context, ACTION_NEXT))
-                .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", command(context, ACTION_STOP))
+                    localizeUiText(if (state.isPlaying) "Pause" else "Play", language), command(context, ACTION_TOGGLE))
+                .addAction(android.R.drawable.ic_media_next, localizeUiText("Next", language), command(context, ACTION_NEXT))
+                .addAction(android.R.drawable.ic_menu_close_clear_cancel, localizeUiText("Stop", language), command(context, ACTION_STOP))
                 .build()
         }
     }

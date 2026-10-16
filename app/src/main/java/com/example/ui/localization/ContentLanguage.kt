@@ -11,6 +11,11 @@ data class DisplayMeaning(val text: String, val fallbackLanguage: String? = null
 
 private val ROMAN_FALLBACK_LANGUAGES = setOf("hinglish", "hi", "ur")
 
+private fun hasWholeContentTranslation(text: String, language: String): Boolean =
+    text.none { it in 'A'..'Z' || it in 'a'..'z' } ||
+        localizePhrase(text, language) != text ||
+        WorldDraftPhrases.forLanguage(language).containsKey(text)
+
 fun bilingualContent(roman: String, english: String, languageCode: String): DisplayMeaning {
     if (languageCode == "en") return DisplayMeaning(english)
     if (languageCode == "hinglish") return DisplayMeaning(roman)
@@ -18,6 +23,7 @@ fun bilingualContent(roman: String, english: String, languageCode: String): Disp
     if (english.none { it in 'A'..'Z' || it in 'a'..'z' }) return DisplayMeaning(english)
     localizePhrase(roman, languageCode).takeIf { it != roman }?.let { return DisplayMeaning(it) }
     localizePhrase(english, languageCode).takeIf { it != english }?.let { return DisplayMeaning(it) }
+    if (WorldDraftPhrases.forLanguage(languageCode).containsKey(english)) return DisplayMeaning(english)
     return if (languageCode in ROMAN_FALLBACK_LANGUAGES) DisplayMeaning(roman, "Hinglish (Roman Hindi)")
         else DisplayMeaning(english, "English")
 }
@@ -25,5 +31,5 @@ fun bilingualContent(roman: String, english: String, languageCode: String): Disp
 /** Keep a long-form answer or lesson in one language when any sentence lacks a translation. */
 fun completeContentLanguage(languageCode: String, phrases: Collection<String>): String =
     if (languageCode != "en" && phrases.filter(String::isNotBlank).all {
-            localizePhrase(it, languageCode) != it
+            hasWholeContentTranslation(it, languageCode)
         }) languageCode else "en"

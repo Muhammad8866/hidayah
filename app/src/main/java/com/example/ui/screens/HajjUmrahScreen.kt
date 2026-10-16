@@ -22,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -38,8 +39,18 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.components.ProvenanceCard
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizedUiText
+import com.example.ui.localization.LocalAppLanguage
+import com.example.ui.localization.localizeUiTemplate
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.semantics
+import com.example.ui.theme.ArabicFontFamily
 
-private enum class HajjTab(val label: String) { UMRAH("Umrah"), HAJJ("Hajj"), ESSENTIALS("Essentials") }
+private enum class HajjTab(val label: String) { UMRAH("Umrah"), HAJJ("Hajj"), COUNTER("Counter"), ESSENTIALS("Essentials") }
 
 private const val KEY_TAB = "hajj_tab"
 private const val KEY_TYPE = "hajj_type"
@@ -49,6 +60,8 @@ private fun countKey(journey: String, stepId: String) = "hajj_count_${journey}_$
 
 @Composable
 internal fun HajjUmrahScreen(onBack: () -> Unit, modifier: Modifier) {
+    com.example.core.analytics.AnalyticsScreen("hajj_umrah_screen")
+
     val prefs = rememberToolPrefs()
     var tab by rememberSaveable {
         mutableStateOf(HajjTab.entries.firstOrNull { it.name == prefs.getString(KEY_TAB, null) } ?: HajjTab.UMRAH)
@@ -61,7 +74,7 @@ internal fun HajjUmrahScreen(onBack: () -> Unit, modifier: Modifier) {
                 HajjTab.entries.forEachIndexed { index, option ->
                     SegmentedButton(
                         selected = tab == option,
-                        onClick = { tab = option; prefs.edit().putString(KEY_TAB, option.name).apply() },
+                        onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "select_hajj_tab", "tap", item = option.name); tab = option; prefs.edit().putString(KEY_TAB, option.name).apply() },
                         shape = SegmentedButtonDefaults.itemShape(index, HajjTab.entries.size),
                         modifier = Modifier.testTag("hajj_tab_${option.name.lowercase()}")
                     ) { LocalizedText(option.label, maxLines = 1) }
@@ -87,6 +100,7 @@ internal fun HajjUmrahScreen(onBack: () -> Unit, modifier: Modifier) {
                     ProvenanceCard(sourceText = "Hajj is Arafah.", collectionOrReference = "Jami' at-Tirmidhi 889")
                 }
             }
+            HajjTab.COUNTER -> item(key = "quick_counter") { QuickCounterCard(prefs, accent) }
             HajjTab.ESSENTIALS -> essentialsContent(prefs, accent)
         }
         item(key = "fiqh_note") {
@@ -120,7 +134,8 @@ private fun JourneyTracker(
     var done by remember(journey) { mutableStateOf(prefs.getStringSet(doneKey(journey), emptySet()).orEmpty().toSet()) }
     val next = nextPendingStep(steps, done)
     var expanded by rememberSaveable(journey) { mutableStateOf(next?.id) }
-    var confirmReset by rememberSaveable { mutableStateOf(false) }
+    var confirmReset by rememberSaveable(journey) { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
 
     fun save(updated: Set<String>) {
         done = updated
@@ -129,8 +144,10 @@ private fun JourneyTracker(
 
     fun toggle(step: RiteStep) {
         if (step.id in done) {
+            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             save(done - step.id)
         } else {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             val updated = done + step.id
             save(updated)
             expanded = nextPendingStep(steps, updated)?.id
@@ -139,6 +156,7 @@ private fun JourneyTracker(
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         JourneyHero(heading, steps, done, next, accent, onReset = { confirmReset = true })
+        StepJumpRow(steps, done, expanded, accent) { expanded = it }
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             steps.forEachIndexed { index, step ->
                 StepCard(
@@ -159,11 +177,11 @@ private fun JourneyTracker(
 
     if (confirmReset) {
         AlertDialog(
-            onDismissRequest = { confirmReset = false },
+            onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "dismiss_reset_journey", "dismiss"); confirmReset = false },
             title = { LocalizedText("Start again?") },
             text = { LocalizedText("This clears the ticked steps and round counters for this guide.") },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "confirm_reset_journey", "tap");
                     val editor = prefs.edit().remove(doneKey(journey))
                     steps.forEach { editor.remove(countKey(journey, it.id)) }
                     editor.apply()
@@ -172,7 +190,7 @@ private fun JourneyTracker(
                     confirmReset = false
                 }) { LocalizedText("Reset") }
             },
-            dismissButton = { TextButton(onClick = { confirmReset = false }) { LocalizedText("Cancel") } }
+            dismissButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "cancel_reset_journey", "tap"); confirmReset = false }) { LocalizedText("Cancel") } }
         )
     }
 }
@@ -199,8 +217,9 @@ private fun JourneyHero(
                     modifier = Modifier.testTag("hajj_progress")
                 )
                 if (next != null) {
+                    val language = LocalAppLanguage.current
                     Text(
-                        "${localizedUiText("Next step")}: ${localizedUiText(next.title)}",
+                        localizeUiTemplate("Next step: {step}", language, mapOf("step" to localizedUiText(next.title))),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -229,7 +248,7 @@ private fun JourneyHero(
             modifier = Modifier.padding(top = 10.dp)
         )
         if (completed > 0) {
-            TextButton(onClick = onReset, contentPadding = PaddingValues(horizontal = 0.dp)) {
+            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("hajj_umrah_screen", "open_reset_journey", onReset), contentPadding = PaddingValues(horizontal = 0.dp)) {
                 Icon(Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
                 LocalizedText("Start again")
@@ -255,7 +274,7 @@ private fun StepCard(
         when {
             isDone -> SuccessGreen.copy(alpha = 0.55f)
             isNext -> accent
-            else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+            else -> MaterialTheme.colorScheme.outlineVariant
         },
         label = "stepBorder"
     )
@@ -272,11 +291,12 @@ private fun StepCard(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .clickable(role = Role.Button, onClick = onToggleExpand)
+                    .clickable(role = Role.Button, onClick = com.example.core.analytics.AppAnalytics.trackAction("hajj_umrah_screen", "toggle_step", onToggleExpand))
+                    .heightIn(min = 56.dp)
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                StepBadge(number, isDone, accent)
+                StepBadge(number, isDone, isNext, accent)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -318,14 +338,14 @@ private fun StepCard(
                     }
                     step.dua?.let { DuaBlock(it, accent) }
                     if (isDone) {
-                        OutlinedButton(onClick = onToggleDone, modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("hajj_umrah_screen", "toggle_step_done", onToggleDone), modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             LocalizedText("Mark as not done")
                         }
                     } else {
                         Button(
-                            onClick = onToggleDone,
+                            onClick = com.example.core.analytics.AppAnalytics.trackAction("hajj_umrah_screen", "toggle_step_done", onToggleDone),
                             modifier = Modifier.fillMaxWidth().testTag("hajj_done_${step.id}"),
                             colors = ButtonDefaults.buttonColors(containerColor = accent)
                         ) {
@@ -341,22 +361,8 @@ private fun StepCard(
 }
 
 @Composable
-private fun StepBadge(number: Int, isDone: Boolean, accent: Color) {
-    val color = if (isDone) SuccessGreen else accent
-    Surface(
-        shape = CircleShape,
-        color = if (isDone) SuccessGreen else accent.copy(alpha = 0.15f),
-        border = BorderStroke(1.5.dp, color),
-        modifier = Modifier.size(34.dp)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            if (isDone) {
-                Icon(Icons.Default.Check, contentDescription = localizedUiText("Done"), tint = Color.White, modifier = Modifier.size(20.dp))
-            } else {
-                Text("$number", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = accent)
-            }
-        }
-    }
+private fun StepBadge(number: Int, isDone: Boolean, isNext: Boolean, accent: Color) {
+    StepNumberBadge(number, accent, filled = isNext, done = isDone, size = 34.dp)
 }
 
 @Composable
@@ -377,7 +383,7 @@ private fun Chip(text: String, color: Color) {
 private fun RulingChip(ruling: RiteRuling) {
     val color = when (ruling) {
         RiteRuling.SHART, RiteRuling.FARD -> MaterialTheme.colorScheme.error
-        RiteRuling.WAJIB -> Color(0xFFB7791F)
+        RiteRuling.WAJIB -> themedAccent(Color(0xFFB7791F))
         RiteRuling.SUNNAH -> SuccessGreen
     }
     Chip(ruling.label, color)
@@ -401,14 +407,24 @@ private fun DuaBlock(dua: RiteDua, accent: Color) {
                 dua.arabic,
                 modifier = Modifier.fillMaxWidth(),
                 style = TextStyle(
-                    fontSize = 22.sp,
-                    lineHeight = 40.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontFamily = ArabicFontFamily,
+                    fontSize = 24.sp,
+                    lineHeight = 46.sp,
                     textAlign = TextAlign.Center,
                     textDirection = TextDirection.Rtl
                 ),
                 color = MaterialTheme.colorScheme.primary
             )
+            if (dua.transliteration.isNotBlank()) {
+                Text(
+                    dua.transliteration,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
             LocalizedText(dua.meaning, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(dua.reference, style = MaterialTheme.typography.labelSmall, color = accent)
         }
@@ -427,6 +443,7 @@ private fun RoundCounter(
     onMarkDone: () -> Unit
 ) {
     val haptics = LocalHapticFeedback.current
+    var confirmCounterReset by rememberSaveable(storageKey) { mutableStateOf(false) }
     var count by remember(storageKey) { mutableIntStateOf(prefs.getInt(storageKey, 0).coerceIn(0, kind.total)) }
     fun update(value: Int) {
         count = value.coerceIn(0, kind.total)
@@ -437,8 +454,9 @@ private fun RoundCounter(
     val progress by animateFloatAsState(count.toFloat() / kind.total, label = "counter")
 
     Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        shape = MaterialTheme.shapes.large,
+        color = accent.copy(alpha = 0.06f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.16f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -470,7 +488,7 @@ private fun RoundCounter(
             if (kind == CounterKind.RAMI_THREE && !finished) {
                 LinearProgressIndicator(
                     progress = { stage.subCount.toFloat() / stage.subTotal },
-                    modifier = Modifier.fillMaxWidth(0.6f).height(6.dp),
+                    modifier = Modifier.fillMaxWidth(0.6f).height(6.dp).clip(CircleShape),
                     color = accent,
                     trackColor = accent.copy(alpha = 0.15f),
                     strokeCap = StrokeCap.Round,
@@ -490,16 +508,17 @@ private fun RoundCounter(
                 fontWeight = FontWeight.SemiBold,
                 color = if (finished) SuccessGreen else MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.testTag("hajj_counter_hint")
+                modifier = Modifier.testTag("hajj_counter_hint").semantics { liveRegion = LiveRegionMode.Polite }
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                FilledTonalIconButton(onClick = { update(count - 1) }, enabled = count > 0, modifier = Modifier.size(52.dp)) {
+            // The middle button takes the space that is left, so the row also fits narrow phones.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                FilledTonalIconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "round_undo", "tap"); update(count - 1) }, enabled = count > 0, modifier = Modifier.size(52.dp)) {
                     Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = localizedUiText("Undo"))
                 }
                 if (finished && canMarkDone) {
                     Button(
-                        onClick = onMarkDone,
-                        modifier = Modifier.height(52.dp).widthIn(min = 180.dp),
+                        onClick = com.example.core.analytics.AppAnalytics.trackAction("hajj_umrah_screen", "mark_rounds_done", onMarkDone),
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -508,14 +527,14 @@ private fun RoundCounter(
                     }
                 } else {
                     Button(
-                        onClick = {
+                        onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "round_count", "tap");
                             update(count + 1)
                             haptics.performHapticFeedback(
                                 if (count >= kind.total) HapticFeedbackType.LongPress else HapticFeedbackType.TextHandleMove
                             )
                         },
                         enabled = !finished,
-                        modifier = Modifier.height(52.dp).widthIn(min = 180.dp).testTag("hajj_counter_add"),
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("hajj_counter_add"),
                         colors = ButtonDefaults.buttonColors(containerColor = accent)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -523,7 +542,7 @@ private fun RoundCounter(
                         LocalizedText(kind.countLabel)
                     }
                 }
-                FilledTonalIconButton(onClick = { update(0) }, enabled = count > 0, modifier = Modifier.size(52.dp)) {
+                FilledTonalIconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "round_reset", "tap"); confirmCounterReset = true }, enabled = count > 0, modifier = Modifier.size(52.dp)) {
                     Icon(Icons.Default.Replay, contentDescription = localizedUiText("Reset"))
                 }
             }
@@ -533,6 +552,9 @@ private fun RoundCounter(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+    if (confirmCounterReset) {
+        ResetCounterDialog(onConfirm = { update(0); confirmCounterReset = false }, onDismiss = { confirmCounterReset = false })
     }
 }
 
@@ -546,7 +568,7 @@ private fun HajjTypePicker(selected: HajjType, accent: Color, onSelect: (HajjTyp
             HajjType.entries.forEachIndexed { index, type ->
                 SegmentedButton(
                     selected = selected == type,
-                    onClick = { onSelect(type) },
+                    onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "select_hajj_type", "tap", item = type.name); onSelect(type) },
                     shape = SegmentedButtonDefaults.itemShape(index, HajjType.entries.size),
                     modifier = Modifier.testTag("hajj_type_${type.name.lowercase()}")
                 ) { LocalizedText(type.label, maxLines = 1) }
@@ -585,7 +607,7 @@ private fun CollapsibleCard(
         Row(
             Modifier
                 .fillMaxWidth()
-                .clickable(role = Role.Button) { expanded = !expanded }
+                .clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "toggle_guide_card", "tap", item = testTag); expanded = !expanded }
                 .padding(16.dp)
                 .testTag(testTag),
             verticalAlignment = Alignment.CenterVertically
@@ -628,7 +650,7 @@ private fun PreparationCard(prefs: SharedPreferences, accent: Color) {
     ) {
         LinearProgressIndicator(
             progress = { readyCount.toFloat() / total },
-            modifier = Modifier.fillMaxWidth().height(8.dp),
+            modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
             color = accent,
             trackColor = accent.copy(alpha = 0.15f),
             strokeCap = StrokeCap.Round,
@@ -641,13 +663,13 @@ private fun PreparationCard(prefs: SharedPreferences, accent: Color) {
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .clickable(role = Role.Button) {
+                        .clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "toggle_preparation_item", "tap");
                             ready = if (checked) ready - item.id else ready + item.id
                             prefs.edit().putStringSet(KEY_PREP, ready).apply()
                         },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Checkbox(checked = checked, onCheckedChange = null, modifier = Modifier.padding(8.dp))
+                    Checkbox(checked = checked, onCheckedChange = null, modifier = Modifier.padding(horizontal = 8.dp, vertical = 14.dp))
                     LocalizedText(
                         item.text,
                         style = MaterialTheme.typography.bodyMedium,
@@ -707,7 +729,8 @@ private fun MadinahCard(accent: Color) {
             RiteDua(
                 MADINAH_SALAM_ARABIC,
                 "Blessings and peace be upon you, O Messenger of Allah.",
-                "Quran 49:2–3 · Muwatta Imam Malik (Ibn Umar RA) · Bahar-e-Shariat, Hissa 6"
+                "Quran 49:2–3 · Muwatta Imam Malik (Ibn Umar RA) · Bahar-e-Shariat, Hissa 6",
+                "Aṣ-ṣalātu was-salāmu ʿalayka yā Rasūlallāh"
             ),
             accent
         )
@@ -718,5 +741,194 @@ private fun MadinahCard(accent: Color) {
                 Text(place.reference, style = MaterialTheme.typography.labelSmall, color = accent)
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------- Quick jump
+
+@Composable
+private fun StepJumpRow(
+    steps: List<RiteStep>,
+    done: Set<String>,
+    expanded: String?,
+    accent: Color,
+    onJump: (String) -> Unit
+) {
+    if (steps.size < 2) return
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        steps.forEachIndexed { index, step ->
+            val isDone = step.id in done
+            FilterChip(
+                selected = expanded == step.id,
+                onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "jump_to_step", "tap", item = step.id); onJump(step.id) },
+                label = { Text("${index + 1}. ${localizedUiText(step.title)}", maxLines = 1) },
+                leadingIcon = if (isDone) {
+                    { Icon(Icons.Default.Check, contentDescription = localizedUiText("Done"), tint = SuccessGreen, modifier = Modifier.size(16.dp)) }
+                } else null,
+                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = accent.copy(alpha = 0.18f)),
+                modifier = Modifier.heightIn(min = 40.dp).testTag("hajj_jump_${step.id}")
+            )
+        }
+    }
+}
+
+@Composable
+private fun ResetCounterDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { LocalizedText("Reset the counter?") },
+        text = { LocalizedText("The count goes back to zero. Use this only when you start a new Tawaf, Sa'i or day of Rami.") },
+        confirmButton = { TextButton(onClick = onConfirm) { LocalizedText("Reset") } },
+        dismissButton = { TextButton(onClick = onDismiss) { LocalizedText("Cancel") } }
+    )
+}
+
+// ---------------------------------------------------------------- Standalone Tawaf / Sa'i counter
+
+private const val KEY_QUICK_KIND = "hajj_quick_kind"
+private fun quickKey(kind: CounterKind) = "hajj_quick_${kind.name.lowercase()}"
+
+/**
+ * A full-width counter for use while walking: the whole pad is one big tap target,
+ * each tap gives haptic feedback and the hint says where to go next.
+ */
+@Composable
+private fun QuickCounterCard(prefs: SharedPreferences, accent: Color) {
+    val haptics = LocalHapticFeedback.current
+    val language = LocalAppLanguage.current
+    val kinds = listOf(CounterKind.TAWAF, CounterKind.SAI)
+    var kind by rememberSaveable {
+        mutableStateOf(kinds.firstOrNull { it.name == prefs.getString(KEY_QUICK_KIND, null) } ?: CounterKind.TAWAF)
+    }
+    var count by remember(kind) { mutableIntStateOf(prefs.getInt(quickKey(kind), 0).coerceIn(0, kind.total)) }
+    var confirmReset by rememberSaveable { mutableStateOf(false) }
+    val finished = count >= kind.total
+    val stage = counterStage(kind, count)
+    val tint = if (finished) SuccessGreen else accent
+
+    fun update(value: Int) {
+        count = value.coerceIn(0, kind.total)
+        prefs.edit().putInt(quickKey(kind), count).apply()
+    }
+
+    ToolCard {
+        SectionTitle("Tawaf and Sa'i counter")
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            kinds.forEachIndexed { index, option ->
+                SegmentedButton(
+                    selected = kind == option,
+                    onClick = {
+                        com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "select_quick_counter", "tap", item = option.name)
+                        kind = option
+                        prefs.edit().putString(KEY_QUICK_KIND, option.name).apply()
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(index, kinds.size),
+                    modifier = Modifier.testTag("hajj_quick_${option.name.lowercase()}")
+                ) { LocalizedText(if (option == CounterKind.TAWAF) "Tawaf" else "Sa'i", maxLines = 1) }
+            }
+        }
+        LocalizedText(
+            if (kind == CounterKind.TAWAF) "Each round starts and ends at the Black Stone line. Tap once as you pass it."
+            else "Safa to Marwah is one round, Marwah to Safa is the next. Tap once on reaching each hill.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        val padLabel = localizeUiTemplate(
+            "{count} of {total} rounds done. Tap to count the next round.",
+            language,
+            mapOf("count" to count.toString(), "total" to kind.total.toString())
+        )
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = tint.copy(alpha = 0.12f),
+            border = BorderStroke(2.dp, tint),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 220.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .clickable(enabled = !finished, role = Role.Button) {
+                    com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "quick_count", "tap", item = kind.name)
+                    update(count + 1)
+                    haptics.performHapticFeedback(
+                        if (count >= kind.total) HapticFeedbackType.LongPress else HapticFeedbackType.TextHandleMove
+                    )
+                }
+                .semantics { contentDescription = padLabel }
+                .testTag("hajj_quick_pad")
+        ) {
+            Column(
+                Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)
+            ) {
+                Text(
+                    "⁦$count / ${kind.total}⁩",
+                    style = MaterialTheme.typography.displayMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = tint,
+                    modifier = Modifier.testTag("hajj_quick_value")
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    repeat(kind.total) { i ->
+                        Box(
+                            Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(if (i < count) tint else accent.copy(alpha = 0.2f))
+                        )
+                    }
+                }
+                LocalizedText(
+                    stage.hint,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                )
+                if (!finished) {
+                    LocalizedText(
+                        "Tap anywhere here",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(
+                onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "quick_undo", "tap"); update(count - 1) },
+                enabled = count > 0,
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                LocalizedText("Undo")
+            }
+            OutlinedButton(
+                onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "quick_reset", "tap"); confirmReset = true },
+                enabled = count > 0,
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp)
+            ) {
+                Icon(Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                LocalizedText("Reset")
+            }
+        }
+        LocalizedText(
+            "If you lose count, build on the number you are sure of.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        LocalizedText(
+            "Saved automatically, even if you close the app.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    if (confirmReset) {
+        ResetCounterDialog(onConfirm = { update(0); confirmReset = false }, onDismiss = { confirmReset = false })
     }
 }

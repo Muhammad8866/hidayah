@@ -67,12 +67,42 @@ object SmartHifzRevisionPlanner {
         val completed = todaySessions.sumOf { it.completedTasks }
         val weightedAccuracy = todaySessions.sumOf { it.accuracy * it.completedTasks }
         return SmartHifzDailySummary(
-            dueCards = cards.filter { HifzSpacedRepetitionScheduler.isDue(it.schedule, nowEpochMs) }
+            dueCards = cards.filter { isDueToday(it, nowEpochMs) }
                 .sortedWith(compareBy<SmartHifzCard> { !isWeak(it) }.thenBy { it.averageAccuracy }),
             completedToday = completed,
             accuracyToday = if (completed == 0) 0 else weightedAccuracy / completed,
             streakDays = streak(sessions, nowEpochMs)
         )
+    }
+
+    /**
+     * Revision is planned by calendar day, not by the minute: an ayah practised at 9 pm with a one-day
+     * interval belongs to tomorrow's plan from the morning, instead of appearing only after 9 pm.
+     */
+    fun isDueToday(card: SmartHifzCard, nowEpochMs: Long): Boolean {
+        val schedule = card.schedule
+        if (schedule.repetitions == 0 && schedule.lastReviewedEpochMs == 0L) return true
+        return dayKey(schedule.nextReviewEpochMs) <= dayKey(nowEpochMs)
+    }
+
+    /**
+     * Adds one graded ayah to the history, folding it into that day's entry. History is kept per day,
+     * so the stored list covers [keepDays] days of streak regardless of how many ayahs are practised.
+     */
+    fun addSession(
+        sessions: List<HifzRevisionSession>,
+        session: HifzRevisionSession,
+        keepDays: Int = 400
+    ): List<HifzRevisionSession> {
+        val byDay = (sessions + session).groupBy { dayKey(it.reviewedAtEpochMs) }
+        return byDay.toSortedMap().values.map { day ->
+            val tasks = day.sumOf { it.completedTasks }
+            HifzRevisionSession(
+                reviewedAtEpochMs = day.maxOf { it.reviewedAtEpochMs },
+                completedTasks = tasks,
+                accuracy = if (tasks == 0) 0 else day.sumOf { it.accuracy * it.completedTasks } / tasks
+            )
+        }.takeLast(keepDays)
     }
 
     fun dayKey(epochMs: Long): Long {

@@ -10,11 +10,27 @@ S15 = [2, 3, 51, 78, 107, 129, 152, 178, 188, 209, 222, 236, 250, 256, 262, 268,
        591, 592, 593, 595, 596, 597, 598, 598, 599, 601, 601, 602, 603, 603, 604, 604, 605, 605, 606, 606,
        607, 607, 608, 608, 608, 609, 609, 609, 609, 610, 610, 610, 611, 611]
 BIG_P = [1, 28, 56, 84, 112, 140, 168, 196, 224, 252, 280, 308, 336, 364, 392, 420, 448, 476, 504, 532, 558, 586, 612, 640, 666, 696, 726, 756, 786, 818]
+HINDI_P = [8, 53, 93, 131, 167, 204, 240, 277, 312, 350, 385, 423, 459, 496, 531, 569, 607, 640, 678, 715, 749, 786, 824, 861, 893, 929, 968, 1007, 1046, 1086]
+# Other languages of Kanzul Iman: surah and para pages read from each PDF's own index and page headers.
+K = lambda k: json.load(open(os.path.join(S, f'kanz_{k}.json')))
 books = [
+    ('deeniyat_11', 'Quraan-E-Karim (11 Lines)', 'Deeniyat edition, original 11-line pages', 'quran_deeniyat_11_lines.pdf', False,
+     K('deeniyat_11')['surahs'], K('deeniyat_11')['paras'], None),
     # id, title, subtitle, file, bundled, surahs, paras, source path
     ('kanzul_iman', 'Kanzul Iman (Hindi Tarjuma)', 'Quran with Hindi translation by Imam Ahmad Raza Khan', 'quran_hindi_kanzul_iman.pdf', False,
-     L('kanz'), [8, 53, 93, 131, 167, 204, 240, 277, 312, 350, 385, 423, 459, 496, 531, 569, 607, 640, 678, 715, 749, 786, 824, 861, 893, 929, 968, 1007, 1046, 1086],
-     os.path.join(S, 'kanz.pdf')),
+     L('kanz'), HINDI_P,
+     os.path.join(S, '..', '..', 'hindi_quran_pdf', 'src', 'main', 'assets', 'quran_hindi_kanzul_iman.pdf')),
+    # The Urdu print is the Hindi one page for page, with three fewer pages before Al-Fatihah.
+    ('kanzul_iman_ur', 'Kanzul Iman (Urdu)', 'Urdu translation by Imam Ahmad Raza Khan with Khazain-ul-Irfan tafsir', 'quran_urdu_kanzul_iman.pdf', False,
+     [p - 3 for p in L('kanz')], [p - 3 for p in HINDI_P], None),
+    ('kanzul_iman_en', 'Kanzul Iman (English)', 'The Treasure of Faith, English translation of Kanzul Iman', 'quran_english_kanzul_iman.pdf', False,
+     K('en')['surahs'], K('en')['paras'], None),
+    ('kanzul_iman_gu', 'Kanzul Iman (Gujarati)', 'Gujarati script tarjuma with Khazain-ul-Irfan tafsir', 'quran_gujarati_kanzul_iman.pdf', False,
+     K('gu')['surahs'], K('gu')['paras'], None),
+    ('kanzul_iman_bn', 'Kanzul Iman (Bangla)', 'Bangla translation of Kanzul Iman with Khazain-ul-Irfan tafsir', 'quran_bangla_kanzul_iman.pdf', False,
+     K('bn')['surahs'], K('bn')['paras'], None),
+    ('kanzul_iman_roman', 'Kanzul Iman (Roman Urdu)', 'Arabic with Kanzul Iman in Roman Urdu', 'quran_roman_kanzul_iman.pdf', False,
+     K('roman')['surahs'], K('roman')['paras'], None),
     ('standard_15', 'Hafizi Quran (15 Lines)', 'Standard Indo-Pak mushaf, used for hifz', '15-Line-Standard-Quran-PDF.pdf', False,
      S15, [2, 23, 43, 63, 83, 103, 123, 143, 163, 183, 203, 223, 243, 263, 283, 303, 323, 343, 363, 383, 403, 423, 443, 463, 483, 503, 523, 543, 563, 587], None),
     ('tajweed_13', 'Tajweedi Quran (13 Lines)', 'Colour-coded tajweed rules, Indo-Pak script', '13-Line-Quran-with-Tajweed-rule.pdf', False,

@@ -30,13 +30,21 @@ class PrayerTimesWidget : AppWidgetProvider() {
                 Intent.ACTION_MY_PACKAGE_REPLACED)) refresh(context)
     }
 
+    override fun onEnabled(context: Context) {
+        com.example.core.analytics.AppAnalytics.widget("added")
+        com.example.core.analytics.AnalyticsProfile.sync(context)
+    }
+
     override fun onDisabled(context: Context) {
         val alarm = context.getSystemService(AlarmManager::class.java)
         alarm?.cancel(refreshIntent(context))
+        com.example.core.analytics.AppAnalytics.widget("removed")
+        com.example.core.analytics.AnalyticsProfile.sync(context)
     }
 
     companion object {
         private const val ACTION_REFRESH = "com.example.prayer.WIDGET_REFRESH"
+        private const val OPEN_APP_REQUEST = 2
 
         fun refresh(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
@@ -54,6 +62,7 @@ class PrayerTimesWidget : AppWidgetProvider() {
             val config = PrayerSettingsStore.loadConfig(prefs)
             val language = persistedAppLanguage(context)
             val locale = appLocale(language)
+            AstronomicalPrayerCalculator.use24HourClock = android.text.format.DateFormat.is24HourFormat(context)
             fun tr(text: String) = localizeUiText(text, language)
             val result = if (hasCity) runCatching {
                 AstronomicalPrayerCalculator.calculateTimes(today, city.latitude, city.longitude, config) to
@@ -69,16 +78,19 @@ class PrayerTimesWidget : AppWidgetProvider() {
             } ?: result?.second?.let {
                 "Fajr" to AstronomicalPrayerCalculator.formatHoursToTimeInMillis(tomorrow, it.fajrHours)
             }
-            val launch = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java),
+            val launch = PendingIntent.getActivity(context, OPEN_APP_REQUEST,
+                Intent(context, MainActivity::class.java).putExtra(
+                    PrayerNotificationReceiver.EXTRA_LAUNCH_SOURCE, PrayerNotificationReceiver.SOURCE_WIDGET),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             ids.forEach { id ->
                 val views = RemoteViews(context.packageName, R.layout.prayer_widget)
                 views.setTextViewText(R.id.widget_location, if (hasCity) city.name else tr("Choose city in app"))
                 views.setTextViewText(R.id.widget_next, tr(next?.first ?: "Prayer times unavailable"))
+                // Same clock style as the rows and the app, so 24-hour phones never see "a.m.".
                 views.setTextViewText(R.id.widget_next_time, next?.second?.let {
-                    java.text.SimpleDateFormat("h:mm a", locale).apply {
-                        timeZone = zone
-                    }.format(java.util.Date(it))
+                    val at = (today.clone() as Calendar).apply { timeInMillis = it }
+                    val hours = at.get(Calendar.HOUR_OF_DAY) + at.get(Calendar.MINUTE) / 60.0
+                    AstronomicalPrayerCalculator.formatHoursToAmPm(hours, locale)
                 } ?: tr("Open app to check your location"))
                 val rowIds = intArrayOf(R.id.widget_fajr, R.id.widget_dhuhr, R.id.widget_asr,
                     R.id.widget_maghrib, R.id.widget_isha)

@@ -10,7 +10,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.test.core.app.ApplicationProvider
@@ -86,7 +85,6 @@ class HomeScreenScreenshotTest {
     fun quickActionsRevealEveryTool() {
         showHome()
         composeRule.onNodeWithTag("action_adhkar").assertExists()
-        composeRule.onNodeWithTag("quick_actions_toggle").performClick()
         composeRule.onNodeWithTag("home_screen_scroll").performScrollToNode(hasTestTag("action_zakat"))
         composeRule.onNodeWithTag("action_zakat").assertExists()
     }

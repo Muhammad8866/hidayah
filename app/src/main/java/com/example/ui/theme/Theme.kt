@@ -44,11 +44,11 @@ private val DarkColorScheme = darkColorScheme(
     surfaceContainerHigh = DarkSurfaceVariant,
     surfaceContainerHighest = DarkSurfaceHighest,
     outline = OutlineDark,
-    outlineVariant = OutlineDark
+    outlineVariant = OutlineVariantDark
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = EmeraldDark,
+    primary = EmeraldPrimary,
     onPrimary = CreamSurface,
     primaryContainer = EmeraldContainerLight,
     onPrimaryContainer = EmeraldDark,
@@ -67,7 +67,7 @@ private val LightColorScheme = lightColorScheme(
     onSurface = TextPrimaryLight,
     surfaceVariant = CreamSurfaceVariant,
     onSurfaceVariant = TextSecondaryLight,
-    surfaceTint = EmeraldDark,
+    surfaceTint = EmeraldPrimary,
     surfaceDim = CreamSurfaceVariant,
     surfaceBright = CreamSurface,
     surfaceContainerLowest = CreamSurface,
@@ -76,7 +76,7 @@ private val LightColorScheme = lightColorScheme(
     surfaceContainerHigh = CreamSurfaceVariant,
     surfaceContainerHighest = CreamSurfaceHighest,
     outline = OutlineLight,
-    outlineVariant = OutlineLight
+    outlineVariant = OutlineVariantLight
 )
 
 val AppShapes = Shapes(

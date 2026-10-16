@@ -7,12 +7,18 @@ import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
-import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Build
-import android.os.PowerManager
 import com.example.core.audio.PlaybackSpeed
-import com.example.core.audio.applySpeed
+import com.example.core.net.FastNet
+import com.example.core.net.StreamPlayer
+import com.example.core.net.playerMillis
 import androidx.core.content.ContextCompat
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,12 +27,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
 
 data class QuranAudioState(
@@ -36,6 +41,8 @@ data class QuranAudioState(
     val downloaded: Set<Int> = emptySet(),
     val progress: Map<Int, Int> = emptyMap(),
     val error: String? = null,
+    /** True from the moment Play is tapped until the stream is ready, so the UI can show a spinner. */
+    val isBuffering: Boolean = false,
     /** Playback position of [playingSurah] in milliseconds. */
     val positionMs: Int = 0,
     /** Duration of [playingSurah] in milliseconds; 0 while still unknown. */
@@ -62,12 +69,10 @@ object QuranAudioManager {
 
     private lateinit var appContext: Context
     private lateinit var audioDir: File
-    private val client = OkHttpClient()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private var player: MediaPlayer? = null
+    private var player: ExoPlayer? = null
     private var queue: List<Int> = emptyList()
     private var queueIndex = 0
-    private var pendingSeekMs = 0
     private var ticker: Job? = null
     private var focusRequest: AudioFocusRequest? = null
     private var noisyRegistered = false
@@ -99,8 +104,9 @@ object QuranAudioManager {
     }
 
     fun setSpeed(speed: Float) {
+        com.example.core.analytics.AppAnalytics.media("quran_audio", "speed_change")
         _state.value = _state.value.copy(speed = speed)
-        player?.takeIf { _state.value.isPlaying }?.applySpeed(speed)
+        player?.setPlaybackSpeed(speed)
         if (::appContext.isInitialized) {
             appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putFloat(KEY_SPEED, speed).apply()
         }
@@ -117,6 +123,7 @@ object QuranAudioManager {
         if (queue.isEmpty()) return
         TafsirAudioManager.stop()
         com.example.naat.NaatAudioManager.stop()
+        com.example.azan.AzanAudioManager.stop()
         queueIndex = 0
         prepare(queue.first(), startPositionMs)
     }
@@ -129,19 +136,21 @@ object QuranAudioManager {
     }
 
     fun pause() {
-        player?.takeIf { it.isPlaying }?.pause()
+        com.example.core.analytics.AppAnalytics.media("quran_audio", "pause")
+        player?.pause()
         stopTicker()
         rememberPosition()
-        _state.value = _state.value.copy(isPlaying = false)
+        _state.value = _state.value.copy(isPlaying = false, isBuffering = false)
         QuranAudioService.update(contextOrNull)
     }
 
     fun resume() {
+        com.example.core.analytics.AppAnalytics.media("quran_audio", "resume")
         val current = player ?: return resumeLast()
         if (!requestFocus()) return
         contextOrNull?.let(QuranAudioService::start)
-        current.start()
-        current.applySpeed(_state.value.speed)
+        if (current.playbackState == Player.STATE_IDLE) current.prepare()
+        current.play()
         startTicker()
         _state.value = _state.value.copy(isPlaying = true)
         QuranAudioService.update(contextOrNull)
@@ -152,69 +161,87 @@ object QuranAudioManager {
     }
 
     fun next() {
+        com.example.core.analytics.AppAnalytics.media("quran_audio", "next")
         if (queueIndex + 1 < queue.size) prepare(queue[++queueIndex])
         else _state.value.playingSurah?.takeIf { it < 114 }?.let { playQueue(listOf(it + 1)) }
     }
 
     fun previous() {
+        com.example.core.analytics.AppAnalytics.media("quran_audio", "previous")
         if (queueIndex > 0) prepare(queue[--queueIndex])
         else _state.value.playingSurah?.takeIf { it > 1 }?.let { playQueue(listOf(it - 1)) }
     }
 
     fun seekTo(positionMs: Int) {
-        player?.seekTo(positionMs)
+        com.example.core.analytics.AppAnalytics.media("quran_audio", "seek")
+        player?.seekTo(positionMs.toLong())
         _state.value = _state.value.copy(positionMs = positionMs)
         rememberPosition(positionMs)
     }
 
     private fun prepare(surah: Int, startPositionMs: Int = 0) {
+        com.example.core.analytics.AppAnalytics.media("quran_audio", "play")
+        com.example.core.analytics.AppAnalytics.content("quran_audio", "surah_$surah", "play")
         if (!requestFocus()) return
-        pendingSeekMs = startPositionMs
         player?.release()
         stopTicker()
         contextOrNull?.let(QuranAudioService::start)
-        player = MediaPlayer().apply {
-            setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .setUsage(AudioAttributes.USAGE_MEDIA).build()
-            )
-            setWakeMode(appContext, PowerManager.PARTIAL_WAKE_LOCK)
-            setDataSource(audioFile(surah).takeIf(File::exists)?.absolutePath ?: audioUrl(surah))
-            setOnPreparedListener {
-                if (pendingSeekMs > 0) it.seekTo(pendingSeekMs)
-                it.start()
-                it.applySpeed(_state.value.speed)
-                _state.value = _state.value.copy(
-                    playingSurah = surah, isPlaying = true, error = null,
-                    positionMs = pendingSeekMs, durationMs = it.duration.coerceAtLeast(0)
-                )
-                pendingSeekMs = 0
-                startTicker()
-                QuranAudioService.update(contextOrNull)
-            }
-            setOnCompletionListener {
-                rememberPosition(0)
-                if (++queueIndex < queue.size) prepare(queue[queueIndex])
-                else {
-                    stopTicker()
-                    _state.value = _state.value.copy(isPlaying = false, positionMs = 0)
+        val candidate = StreamPlayer.build(appContext)
+        player = candidate
+        // Audio focus is requested by hand above, so the player must not take it too.
+        candidate.setAudioAttributes(
+            androidx.media3.common.AudioAttributes.Builder()
+                .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                .setUsage(C.USAGE_MEDIA).build(), false
+        )
+        candidate.setWakeMode(C.WAKE_MODE_NETWORK)
+        candidate.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (player !== candidate) return
+                com.example.core.analytics.AppAnalytics.playbackState("quran_audio", playbackState)
+                if (playbackState == Player.STATE_BUFFERING) {
+                    _state.value = _state.value.copy(isBuffering = true)
+                } else if (playbackState == Player.STATE_READY) {
+                    _state.value = _state.value.copy(
+                        playingSurah = surah, isPlaying = candidate.playWhenReady, error = null, isBuffering = false,
+                        positionMs = candidate.currentPosition.playerMillis(),
+                        durationMs = candidate.duration.playerMillis()
+                    )
+                    if (candidate.playWhenReady) startTicker()
                     QuranAudioService.update(contextOrNull)
+                } else if (playbackState == Player.STATE_ENDED) {
+                    rememberPosition(0)
+                    if (++queueIndex < queue.size) prepare(queue[queueIndex])
+                    else {
+                        stopTicker()
+                        candidate.pause()
+                        candidate.seekTo(0)
+                        _state.value = _state.value.copy(isPlaying = false, isBuffering = false, positionMs = 0)
+                        QuranAudioService.update(contextOrNull)
+                    }
                 }
             }
-            setOnErrorListener { _, _, _ ->
+
+            override fun onPlayerError(error: PlaybackException) {
+                if (player !== candidate) return
+                com.example.core.analytics.AppAnalytics.mediaState("quran_audio", "failed", "playback_error")
                 stopTicker()
                 _state.value = _state.value.copy(
-                    isPlaying = false,
+                    isPlaying = false, isBuffering = false,
                     error = "Audio could not be played. Check your internet connection or download."
                 )
                 QuranAudioService.update(contextOrNull)
-                true
             }
-            prepareAsync()
-        }
+        })
+        candidate.setMediaItem(MediaItem.fromUri(
+            audioFile(surah).takeIf(File::exists)?.let(Uri::fromFile) ?: Uri.parse(audioUrl(surah))
+        ))
+        if (startPositionMs > 0) candidate.seekTo(startPositionMs.toLong())
+        candidate.setPlaybackSpeed(_state.value.speed)
+        candidate.prepare()
+        candidate.play()
         _state.value = _state.value.copy(
-            playingSurah = surah, isPlaying = false, error = null,
+            playingSurah = surah, isPlaying = false, error = null, isBuffering = true,
             positionMs = startPositionMs, durationMs = 0,
             resumeSurah = surah, resumePositionMs = startPositionMs
         )
@@ -228,10 +255,10 @@ object QuranAudioManager {
         ticker = scope.launch {
             while (true) {
                 val current = player ?: break
-                val position = runCatching { current.currentPosition }.getOrDefault(0)
+                val position = current.currentPosition.playerMillis()
                 _state.value = _state.value.copy(
                     positionMs = position,
-                    durationMs = runCatching { current.duration }.getOrDefault(0).coerceAtLeast(0)
+                    durationMs = current.duration.playerMillis()
                 )
                 rememberPosition(position)
                 delay(1000)
@@ -269,8 +296,8 @@ object QuranAudioManager {
     private val focusListener = AudioManager.OnAudioFocusChangeListener { change ->
         when (change) {
             AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> pause()
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> player?.setVolume(0.2f, 0.2f)
-            AudioManager.AUDIOFOCUS_GAIN -> player?.setVolume(1f, 1f)
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> player?.volume = 0.2f
+            AudioManager.AUDIOFOCUS_GAIN -> player?.volume = 1f
         }
     }
 
@@ -314,26 +341,16 @@ object QuranAudioManager {
             _state.value = _state.value.copy(downloading = _state.value.downloading + surah, error = null)
             val result = downloadSlots.withPermit { withContext(Dispatchers.IO) {
                 runCatching {
-                    val request = Request.Builder().url(audioUrl(surah)).build()
-                    client.newCall(request).execute().use { response ->
-                        if (!response.isSuccessful) error("HTTP ${response.code}")
-                        val body = response.body ?: error("Empty audio")
-                        val temp = File(audioDir, "%03d.part".format(surah))
-                        val total = body.contentLength()
-                        body.byteStream().use { input -> temp.outputStream().use { output ->
-                            val buffer = ByteArray(DEFAULT_BUFFER_SIZE); var copied = 0L; var shown = -1
-                            while (true) {
-                                val count = input.read(buffer); if (count < 0) break
-                                output.write(buffer, 0, count); copied += count
-                                val percent = if (total > 0) (copied * 100 / total).toInt() else -1
-                                if (percent >= 0 && percent != shown) {
-                                    shown = percent
-                                    _state.value = _state.value.copy(progress = _state.value.progress + (surah to percent))
-                                }
-                            }
-                        } }
-                        if (!temp.renameTo(audioFile(surah))) error("Could not save audio")
+                    val temp = File(audioDir, "%03d.part".format(surah))
+                    var shown = -1
+                    FastNet.download(audioUrl(surah), temp) { copied, total ->
+                        val percent = if (total > 0) (copied * 100 / total).toInt() else -1
+                        if (percent >= 0 && percent != shown) {
+                            shown = percent
+                            _state.update { it.copy(progress = it.progress + (surah to percent)) }
+                        }
                     }
+                    if (!temp.renameTo(audioFile(surah))) error("Could not save audio")
                 }
             } }
             downloadJobs.remove(surah)
@@ -351,6 +368,13 @@ object QuranAudioManager {
 
     fun downloadAll(surahs: List<Int>) = surahs.distinct().forEach(::download)
 
+    /** Stops a running download; the partial file is discarded and the row goes back to "Download". */
+    fun cancelDownload(surah: Int) {
+        val job = downloadJobs.remove(surah) ?: return
+        job.cancel()
+        _state.update { it.copy(downloading = it.downloading - surah, progress = it.progress - surah) }
+    }
+
     fun delete(surah: Int) {
         if (_state.value.playingSurah == surah) stop()
         audioFile(surah).delete()
@@ -360,11 +384,12 @@ object QuranAudioManager {
     fun clearError() { _state.value = _state.value.copy(error = null) }
 
     fun stop() {
+        com.example.core.analytics.AppAnalytics.media("quran_audio", "stop")
         rememberPosition()
         stopTicker()
         player?.release(); player = null
         abandonFocus()
-        _state.value = _state.value.copy(playingSurah = null, isPlaying = false, positionMs = 0, durationMs = 0)
+        _state.value = _state.value.copy(playingSurah = null, isPlaying = false, isBuffering = false, positionMs = 0, durationMs = 0)
         if (::appContext.isInitialized) QuranAudioService.stop(appContext)
     }
 

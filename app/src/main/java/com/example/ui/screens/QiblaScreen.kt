@@ -1,19 +1,38 @@
 package com.example.ui.screens
 
+import androidx.compose.material.icons.filled.LocationOff
+import com.example.ui.components.StateMessage
+import com.example.ui.components.ScreenHeader
 import android.hardware.SensorManager
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CompassCalibration
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material3.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.Brush
+import com.example.ui.components.AppCard
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -28,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.example.prayer.QiblaGuidance
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizedUiText
+import com.example.ui.theme.GoldAccent
 import com.example.viewmodel.MainUiState
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -40,15 +60,18 @@ fun QiblaScreen(
     onUseCurrentLocation: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    com.example.core.analytics.AnalyticsScreen("qibla_screen")
+
     if (!uiState.hasConfirmedLocation) {
-        Column(modifier = modifier.fillMaxSize().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center) {
-            LocalizedText("Choose a city on Home or use device location for Qibla direction.",
-                style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
-            onUseCurrentLocation?.let { callback ->
-                Spacer(Modifier.height(16.dp))
-                Button(onClick = callback) { LocalizedText("Use device location") }
+        Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
+            ScreenHeader("Qibla Direction", onBack = onBack, backTestTag = "qibla_back_btn")
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                StateMessage(
+                    icon = Icons.Default.LocationOff,
+                    title = "Choose a city on Home or use device location for Qibla direction.",
+                    actionText = "Use device location".takeIf { onUseCurrentLocation != null },
+                    onAction = onUseCurrentLocation
+                )
             }
         }
         return
@@ -72,37 +95,67 @@ fun QiblaScreen(
         else -> "Waiting for compass"
     }
 
+    // A short buzz the moment the phone lines up with the Kaaba, so eyes can stay on the dial.
+    val haptics = LocalHapticFeedback.current
+    LaunchedEffect(aligned) { if (aligned) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
+
     Column(
-        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState())
+        modifier = modifier.fillMaxSize().verticalScroll(com.example.core.analytics.rememberAnalyticsScrollState("qibla_screen"))
             .padding(horizontal = 20.dp, vertical = 16.dp).testTag("qibla_screen"),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            if (onBack != null) {
-                IconButton(onClick = onBack, modifier = Modifier.testTag("qibla_back_btn")) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiText("Back"))
-                }
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                LocalizedText("Qibla Direction", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        ScreenHeader(
+            title = "Qibla Direction",
+            subtitle = if (uiState.isLiveLocation) "Current location · ${uiState.selectedCity.name}"
+            else "City location · ${uiState.selectedCity.name}",
+            onBack = onBack,
+            backTestTag = "qibla_back_btn"
+        )
+
+        Spacer(Modifier.height(20.dp))
+        // The guidance sits in a status pill whose colour says at a glance: aligned, needs calibration, or turning.
+        val needsCalibration = !aligned && (sensorUnreliable || sensorLow)
+        val pillColor by animateColorAsState(
+            when {
+                aligned -> MaterialTheme.colorScheme.primaryContainer
+                needsCalibration -> MaterialTheme.colorScheme.tertiaryContainer
+                else -> MaterialTheme.colorScheme.surfaceVariant
+            },
+            label = "qiblaPill"
+        )
+        val pillContent = when {
+            aligned -> MaterialTheme.colorScheme.onPrimaryContainer
+            needsCalibration -> MaterialTheme.colorScheme.onTertiaryContainer
+            else -> MaterialTheme.colorScheme.onSurface
+        }
+        Surface(shape = CircleShape, color = pillColor) {
+            Row(
+                Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = when {
+                        aligned -> Icons.Default.CheckCircle
+                        needsCalibration -> Icons.Default.CompassCalibration
+                        else -> Icons.Default.Explore
+                    },
+                    contentDescription = null,
+                    tint = if (aligned) MaterialTheme.colorScheme.primary else pillContent,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.width(10.dp))
                 LocalizedText(
-                    text = if (uiState.isLiveLocation) "Current location · ${uiState.selectedCity.name}"
-                    else "City location · ${uiState.selectedCity.name}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = direction,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = pillContent,
+                    textAlign = TextAlign.Center,
+                    // Long translations wrap inside the pill instead of pushing the icon out.
+                    modifier = Modifier.weight(1f, fill = false).testTag("qibla_guidance")
                 )
             }
         }
-
-        Spacer(Modifier.height(24.dp))
-        LocalizedText(
-            text = direction,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = if (aligned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.testTag("qibla_guidance")
-        )
+        Spacer(Modifier.height(8.dp))
         LocalizedText(
             text = if (turn != null) "Point the top of your phone toward the Kaaba"
             else "${bearing.roundToInt()}° clockwise from true north",
@@ -112,18 +165,20 @@ fun QiblaScreen(
         )
 
         Spacer(Modifier.height(22.dp))
-        QiblaDial((turn ?: bearing).toFloat(), -(trueHeading ?: 0.0).toFloat(), turn != null, aligned)
+        QiblaDial(
+            pointerDegrees = rememberSmoothAngle((turn ?: bearing).toFloat()),
+            northDegrees = rememberSmoothAngle(-(trueHeading ?: 0.0).toFloat()),
+            live = turn != null,
+            aligned = aligned,
+            description = localizedUiText(direction)
+        )
         Spacer(Modifier.height(22.dp))
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
-        ) {
-            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Metric("Qibla bearing", "${bearing.roundToInt()}°", "true north", Modifier.weight(1f))
+        AppCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Metric("Qibla bearing", "${bearing.roundToInt()}°", "true north", Modifier.weight(1f).padding(horizontal = 4.dp).testTag("qibla_bearing"))
                 VerticalDivider(modifier = Modifier.height(42.dp))
-                Metric("Kaaba distance", "${uiState.distanceToMakkahKm.roundToLong()} km", "great circle", Modifier.weight(1f))
+                Metric("Kaaba distance", "${uiState.distanceToMakkahKm.roundToLong()} km", "great circle", Modifier.weight(1f).padding(horizontal = 4.dp))
             }
         }
 
@@ -148,7 +203,7 @@ fun QiblaScreen(
         }
         if (!uiState.isLiveLocation && onUseCurrentLocation != null) {
             Spacer(Modifier.height(8.dp))
-            TextButton(onClick = onUseCurrentLocation) {
+            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("qibla_screen", "use_current_location", onUseCurrentLocation), modifier = Modifier.heightIn(min = 48.dp)) {
                 Icon(Icons.Default.GpsFixed, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 LocalizedText("Use current location")
@@ -161,21 +216,24 @@ fun QiblaScreen(
 @Composable
 private fun Metric(label: String, value: String, detail: String, modifier: Modifier = Modifier) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        LocalizedText(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        LocalizedText(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-        LocalizedText(detail, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        LocalizedText(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+        LocalizedText(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, textAlign = TextAlign.Center, maxLines = 1)
+        LocalizedText(detail, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
     }
 }
 
 @Composable
 private fun InfoCard(icon: @Composable () -> Unit, title: String, body: String) {
-    Card(
+    AppCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.55f),
+        outlined = false,
+        contentPadding = PaddingValues(16.dp)
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
-            Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) { icon() }
+        Row(verticalAlignment = Alignment.Top) {
+            CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onTertiaryContainer) {
+                Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) { icon() }
+            }
             Spacer(Modifier.width(12.dp))
             Column {
                 LocalizedText(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -186,19 +244,49 @@ private fun InfoCard(icon: @Composable () -> Unit, title: String, body: String) 
     }
 }
 
+/**
+ * Follows a compass angle without jitter and without spinning the long way round when the
+ * reading crosses north (359° -> 1°). The returned value is unwrapped, which is fine for rotate().
+ */
 @Composable
-private fun QiblaDial(pointerDegrees: Float, northDegrees: Float, live: Boolean, aligned: Boolean) {
+private fun rememberSmoothAngle(target: Float): Float {
+    val unwrapped = remember { mutableFloatStateOf(target) }
+    LaunchedEffect(target) {
+        // Shortest signed turn from where the dial is pointing to the new reading.
+        val diff = target - unwrapped.floatValue
+        unwrapped.floatValue += ((diff % 360f) + 540f) % 360f - 180f
+    }
+    val animated by animateFloatAsState(
+        targetValue = unwrapped.floatValue,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow),
+        label = "compassAngle"
+    )
+    return animated
+}
+
+@Composable
+private fun QiblaDial(pointerDegrees: Float, northDegrees: Float, live: Boolean, aligned: Boolean, description: String) {
     val primary = MaterialTheme.colorScheme.primary
     val outline = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+    val face = MaterialTheme.colorScheme.surface
+    val faceGlow = MaterialTheme.colorScheme.primaryContainer
+    // The outer ring warms to gold while the phone faces the Kaaba.
+    val ringColor by animateColorAsState(if (aligned) GoldAccent else outline, label = "qiblaRing")
     Box(
-        modifier = Modifier.fillMaxWidth(0.86f).widthIn(max = 330.dp).aspectRatio(1f).testTag("compass_dial"),
+        modifier = Modifier.fillMaxWidth(0.86f).widthIn(max = 330.dp).aspectRatio(1f)
+            .semantics(mergeDescendants = true) { contentDescription = description }
+            .testTag("compass_dial"),
         contentAlignment = Alignment.Center
     ) {
         Box(Modifier.fillMaxSize().rotate(northDegrees)) {
             Canvas(Modifier.fillMaxSize()) {
                 val center = Offset(size.width / 2, size.height / 2)
                 val radius = size.minDimension / 2 - 10.dp.toPx()
-                drawCircle(outline, radius, center, style = Stroke(2.dp.toPx()))
+                drawCircle(
+                    Brush.radialGradient(listOf(face, faceGlow.copy(alpha = 0.55f)), center = center, radius = radius),
+                    radius, center
+                )
+                drawCircle(ringColor, radius, center, style = Stroke(if (aligned) 4.dp.toPx() else 2.dp.toPx()))
                 drawCircle(outline.copy(alpha = 0.25f), radius * 0.75f, center, style = Stroke(1.dp.toPx()))
                 repeat(36) { index ->
                     val angle = Math.toRadians(index * 10.0)
@@ -208,10 +296,11 @@ private fun QiblaDial(pointerDegrees: Float, northDegrees: Float, live: Boolean,
                     drawLine(if (index % 9 == 0) primary else outline, start, end, if (index % 9 == 0) 2.dp.toPx() else 1.dp.toPx())
                 }
             }
+            // West and east are physical sides of the dial, so they must not swap in RTL languages.
             Box(Modifier.fillMaxSize().padding(29.dp), contentAlignment = Alignment.TopCenter) { LocalizedText("N", fontWeight = FontWeight.Bold, color = primary) }
             Box(Modifier.fillMaxSize().padding(29.dp), contentAlignment = Alignment.BottomCenter) { LocalizedText("S", fontWeight = FontWeight.Bold, color = outline) }
-            Box(Modifier.fillMaxSize().padding(29.dp), contentAlignment = Alignment.CenterStart) { LocalizedText("W", fontWeight = FontWeight.Bold, color = outline) }
-            Box(Modifier.fillMaxSize().padding(29.dp), contentAlignment = Alignment.CenterEnd) { LocalizedText("E", fontWeight = FontWeight.Bold, color = outline) }
+            Box(Modifier.fillMaxSize().padding(29.dp), contentAlignment = AbsoluteAlignment.CenterLeft) { LocalizedText("W", fontWeight = FontWeight.Bold, color = outline) }
+            Box(Modifier.fillMaxSize().padding(29.dp), contentAlignment = AbsoluteAlignment.CenterRight) { LocalizedText("E", fontWeight = FontWeight.Bold, color = outline) }
         }
 
         Canvas(Modifier.fillMaxSize().rotate(pointerDegrees)) {
@@ -224,7 +313,7 @@ private fun QiblaDial(pointerDegrees: Float, northDegrees: Float, live: Boolean,
                 lineTo(center.x + 13.dp.toPx(), baseY)
                 close()
             }
-            drawPath(needle, if (aligned) Color(0xFFD4AF37) else primary)
+            drawPath(needle, if (aligned) GoldAccent else primary)
             drawCircle(primary, 7.dp.toPx(), center)
         }
         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface, shadowElevation = 3.dp,

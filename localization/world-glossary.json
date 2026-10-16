@@ -1,0 +1,26 @@
+{
+  "fa": {
+    "Auto":"خودکار","Done":"انجام شد","Fast":"روزه","Fajr":"فجر","Dhuhr":"ظهر","Asr":"عصر","Maghrib":"مغرب","Isha":"عشا","Fard":"فرض","Nafl":"نفل","Witr":"وتر","Dua":"دعا","Duas":"دعاها","Adhkar":"اذکار","Tasbeeh":"تسبیح","Zakat":"زکات","Hajj":"حج","Umrah":"عمره","Allah":"الله","Badr":"بدر","Best":"بهترین","All":"همه","Man":"مرد","Woman":"زن","Men":"مردان","Women":"زنان","rak‘at":"رکعت","{school} school":"مذهب {school}","{h}h {m}m":"{h} ساعت و {m} دقیقه",
+    "My counter":"شمارنده من","Your counters":"شمارنده‌های شما","Counter name":"نام شمارنده","The Opening":"گشایش",
+    "Upon Leaving the House":"هنگام بیرون رفتن از خانه",
+    "When stepping out of the house, for Allah's protection.":"هنگام بیرون رفتن از خانه، برای طلب محافظت خداوند.",
+    "O Allah, I seek refuge in You from worry and grief, from helplessness and laziness, from miserliness and cowardice, from the burden of debt and from being overpowered by people.":"خدایا، از نگرانی و اندوه، ناتوانی و تنبلی، بخل و ترس، سنگینی بدهی و چیره شدن مردم بر من، به تو پناه می‌برم.",
+    "Sayyid al-Istighfar (Chief of Forgiveness)":"سید الاستغفار (برترین دعای آمرزش‌خواهی)",
+    "Supplication for Parents":"دعا برای پدر و مادر",
+    "My Lord, have mercy on them both as they raised me when I was small.":"پروردگارا، بر آن دو رحمت آور، همان‌گونه که مرا در کودکی پرورش دادند.",
+    "All praise is for Allah, who gave us life after He had caused us to die, and to Him is the return.":"ستایش از آنِ خدایی است که پس از آنکه ما را میراند، زنده‌مان کرد، و بازگشت به سوی اوست."
+  },
+  "tr": {"Auto":"Otomatik","Done":"Tamamlandı","Fast":"Oruç","Fajr":"Sabah","Dhuhr":"Öğle","Asr":"İkindi","Maghrib":"Akşam","Isha":"Yatsı","Fard":"Farz","Nafl":"Nafile","Witr":"Vitir","Dua":"Dua","Duas":"Dualar","Adhkar":"Zikirler","Tasbeeh":"Tesbih","Zakat":"Zekât","Hajj":"Hac","Umrah":"Umre","Allah":"Allah","Badr":"Bedir","rak‘at":"rekât","{school} school":"{school} mezhebi","{h}h {m}m":"{h} sa {m} dk"},
+  "id": {"Auto":"Otomatis","Done":"Selesai","Fast":"Puasa","Fajr":"Subuh","Dhuhr":"Zuhur","Asr":"Asar","Maghrib":"Magrib","Isha":"Isya","Fard":"Fardu","Nafl":"Nafl","Witr":"Witir","Dua":"Doa","Duas":"Doa-doa","Adhkar":"Zikir","Tasbeeh":"Tasbih","Zakat":"Zakat","Hajj":"Haji","Umrah":"Umrah","Allah":"Allah","Badr":"Badar","rak‘at":"rakaat","{school} school":"mazhab {school}","{h}h {m}m":"{h} jam {m} menit"},
+  "es": {"Auto":"Automático","Done":"Listo","Fast":"Ayuno","Fajr":"Fajr","Dhuhr":"Dhuhr","Asr":"Asr","Maghrib":"Maghrib","Isha":"Isha","Fard":"Obligatorio","Nafl":"Voluntario","Witr":"Witr","Dua":"Súplica","Duas":"Súplicas","Adhkar":"Recuerdos de Allah","Tasbeeh":"Tasbih","Zakat":"Zakat","Hajj":"Hayy","Umrah":"Umrah","Allah":"Allah","Badr":"Badr","rak‘at":"rakat","{school} school":"escuela {school}","{h}h {m}m":"{h} h {m} min"},
+  "ru": {"Auto":"Автоматически","Done":"Готово","Fast":"Пост","Fajr":"Фаджр","Dhuhr":"Зухр","Asr":"Аср","Maghrib":"Магриб","Isha":"Иша","Fard":"Фард","Nafl":"Нафль","Witr":"Витр","Dua":"Дуа","Duas":"Дуа","Adhkar":"Азкары","Tasbeeh":"Тасбих","Zakat":"Закят","Hajj":"Хадж","Umrah":"Умра","Allah":"Аллах","Badr":"Бадр","rak‘at":"ракаат","{school} school":"мазхаб {school}","{h}h {m}m":"{h} ч {m} мин"},
+  "zh": {
+    "Auto":"自动","Done":"完成","Fast":"斋戒","Fajr":"晨礼","Dhuhr":"晌礼","Asr":"晡礼","Maghrib":"昏礼","Isha":"宵礼","Fard":"主命","Nafl":"副功","Witr":"奇数拜","Dua":"祈祷","Duas":"祈祷","Adhkar":"赞念","Tasbeeh":"赞颂","Zakat":"天课","Hajj":"朝觐","Umrah":"副朝","Allah":"安拉","Badr":"白德尔","rak‘at":"拜","{school} school":"{school}学派","{h}h {m}m":"{h}小时{m}分钟",
+    "My counter":"我的计数器","Your counters":"你的计数器","Counter":"计数器","Counters":"计数器",
+    "New counter":"新建计数器","Edit counter":"编辑计数器","Counter name":"计数器名称",
+    "Current count":"当前计数","Count per tap":"每次点击的计数","Delete counter":"删除计数器",
+    "Counter deleted":"计数器已删除","The Opening":"开端","The Cow":"黄牛"
+  },
+  "it": {"Auto":"Automatico","Done":"Fatto","Fast":"Digiuno","Fajr":"Fajr","Dhuhr":"Dhuhr","Asr":"Asr","Maghrib":"Maghrib","Isha":"Isha","Fard":"Obbligatorio","Nafl":"Facoltativo","Witr":"Witr","Dua":"Supplica","Duas":"Suppliche","Adhkar":"Ricordi di Allah","Tasbeeh":"Tasbih","Zakat":"Zakat","Hajj":"Hajj","Umrah":"Umrah","Allah":"Allah","Badr":"Badr","rak‘at":"rakat","{school} school":"scuola {school}","{h}h {m}m":"{h} h {m} min"},
+  "ja": {"Auto":"自動","Done":"完了","Fast":"断食","Fajr":"ファジュル","Dhuhr":"ズフル","Asr":"アスル","Maghrib":"マグリブ","Isha":"イシャー","Fard":"義務","Nafl":"任意","Witr":"ウィトル","Dua":"ドゥアー","Duas":"ドゥアー","Adhkar":"ズィクル","Tasbeeh":"タスビーフ","Zakat":"ザカート","Hajj":"ハッジ","Umrah":"ウムラ","Allah":"アッラー","Badr":"バドル","rak‘at":"ラカア","{school} school":"{school}学派","{h}h {m}m":"{h}時間{m}分"}
+}

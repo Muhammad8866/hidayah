@@ -8,10 +8,28 @@ plugins {
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
   alias(libs.plugins.google.services)
+  alias(libs.plugins.firebase.crashlytics)
+}
+
+// New UI copy is translated once at build time and bundled for offline lookup.
+// The API credential is read only by Python from TRANSLATION_API_KEY.
+val autoTranslationDir = layout.buildDirectory.dir("generated/autoTranslations")
+val generateAutoTranslations = tasks.register<Exec>("generateAutoTranslations") {
+  group = "localization"
+  description = "Translate new UI phrases into every registered app language"
+  workingDir(rootDir)
+  commandLine(providers.gradleProperty("translationPython").getOrElse("python"),
+    "tools/auto_translate.py", "--output", autoTranslationDir.get().asFile.absolutePath)
+}
+tasks.configureEach {
+  if (name == "preBuild" || name.startsWith("ksp") || name.startsWith("compile")) {
+    dependsOn(generateAutoTranslations)
+  }
 }
 
 android {
   namespace = "com.example"
+  sourceSets.getByName("main").kotlin.srcDir(autoTranslationDir.get().asFile)
   assetPacks += listOf(":hindi_quran_pdf")
   sourceSets.getByName("debug").assets.srcDir("${rootDir}/hindi_quran_pdf/src/main/assets")
   compileSdk { version = release(36) { minorApiLevel = 1 } }
@@ -20,8 +38,8 @@ android {
     applicationId = "com.aistudio.deencompanion.quranj"
     minSdk = 24
     targetSdk = 36
-    versionCode = 3
-    versionName = "1.2"
+    versionCode = 4
+    versionName = "1.3"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -79,6 +97,7 @@ googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.W
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
 dependencies {
+  implementation("com.google.android.libraries.places:places:5.1.1")
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
   // implementation(libs.accompanist.permissions)
@@ -107,6 +126,10 @@ dependencies {
   // Firestore + Anonymous Auth are used only by the Community Masjid feature.
   implementation(libs.firebase.firestore)
   implementation(libs.firebase.auth)
+  implementation(libs.firebase.analytics)
+  // Crash reports and automatic app-start/frame traces; no network-instrumentation plugin.
+  implementation(libs.firebase.crashlytics)
+  implementation(libs.firebase.perf)
 
   // Uncomment ALL FOUR of the following dependencies together to use Firebase Auth and Google
   // Sign-In via Credential Manager:
@@ -127,6 +150,8 @@ dependencies {
     implementation(libs.pdfbox.android)
   implementation(libs.play.services.location)
   implementation("com.google.android.play:asset-delivery:2.3.0")
+  // Mandatory (immediate) in-app updates from Google Play.
+  implementation("com.google.android.play:app-update:2.1.0")
   implementation(libs.retrofit)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)

@@ -1,0 +1,344 @@
+{
+  "method": "Original source MP3s retained without transcoding",
+  "recordings": [
+    {
+      "asset": "adhkar_audio/dua_allahumma_bika_asbahna.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_05.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 10.32,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "a8ac73ea06fbe603d54d9735b3a5ab107743524b0815a02bb98c09eb317532f9"
+    },
+    {
+      "asset": "adhkar_audio/dua_allahumma_bika_amsayna.mp3",
+      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-08.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 10.833,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "7548ec94a898cd83b49a29f1fc9f49dad550b41ed047e871f53d6d9d75259e08"
+    },
+    {
+      "asset": "adhkar_audio/dua_sayyidul_istighfar.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_06.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 25.632,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "b7ee5680ac97ad418c63f3b7b0435f9460a86b63f398fa1b904b08922fb1ba44"
+    },
+    {
+      "asset": "adhkar_audio/dua_morning_witness.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_07.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 18.216,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "c43f5c9e7bf8e6732ac906eb9b6fc6685446740f38ded031eb7ccfb405936671"
+    },
+    {
+      "asset": "adhkar_audio/dua_evening_witness.mp3",
+      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-11.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 22.048,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "7dfffddf6565c95b476002f614eb493729a6d369420219bfa8562832d0590842"
+    },
+    {
+      "asset": "adhkar_audio/dua_morning_blessing.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_08.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 11.448,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "53edbb5a8375bf1092134fd4c9e2286d9f008dc739cf1c2c9960c1f672c28327"
+    },
+    {
+      "asset": "adhkar_audio/dua_evening_blessing.mp3",
+      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-13.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 12.969,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "e55d91edc1737a68a33804b5081f8c583b2826dffc87c4ac8e086391705058ad"
+    },
+    {
+      "asset": "adhkar_audio/dua_hasbiyallah.mp3",
+      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-15.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 10.986,
+      "bitrate": 127999,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "fb245f84d9dc0332802525e7dcaec3ded981699bcfda033edd8e28d4729a62cb"
+    },
+    {
+      "asset": "adhkar_audio/dua_bismillah_la_yadurru.mp3",
+      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-18.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 10.223,
+      "bitrate": 127999,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "0274ec2c47537e15367b9dc681b19061f431ad5529202ac4c64d7b252dd0844c"
+    },
+    {
+      "asset": "adhkar_audio/dua_raditu_billahi.mp3",
+      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-19.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 10.757,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "30185f6de248696b33722fd93af54fdddffcabfaaead9f6fd8dd0a0ce4519edf"
+    },
+    {
+      "asset": "adhkar_audio/dua_ya_hayyu_aslih.mp3",
+      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-20.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 13.351,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "3c49306b5fc820dceae900bb98101ff8aaa0de9ed1c075b395555c513d47d887"
+    },
+    {
+      "asset": "adhkar_audio/dua_fitratil_islam.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_17.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 20.904,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "fa3985b1a86da9512fb23ed98a7fcd5fae4344ae7a5b2f80b8d5fddcb89c8552"
+    },
+    {
+      "asset": "adhkar_audio/dua_amsayna_fitrah.mp3",
+      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-24.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 22.404,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "32b9379e6f874140a8ef6a71b0bfe2615dadae7c5f43f0afd1f357fc235cbfa5"
+    },
+    {
+      "asset": "adhkar_audio/dua_subhanallah_wa_bihamdihi.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_18.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 3.36,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "d1cbaba921741b8d50ce0440aaf33d49ee05d50818ae20e1f44e77ddef928add"
+    },
+    {
+      "asset": "adhkar_audio/dua_subhanallah_adada_khalqihi.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_21.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 9.144,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "762082a248aa4b392806b419f6c9ebf01d2bec74edce922c21030cbfe8f5f1b1"
+    },
+    {
+      "asset": "adhkar_audio/dua_kalimat_tammat.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_24.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
+      "durationSeconds": 6.0,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "7537c5053567ad2678bdd180e2c66a2b67f8fd6f1f66cc1307ee8ddbbeb694a0"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_astaghfirullah_atubu.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_23.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 4.824,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "71747c202ce7fea32efc11e7e13fb6aefc840351e5f5aab92f39717c1efc4ba3"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_bad_dream.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/042_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 4.512,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "bb0964fae17ca930d437a491787254b842d7675f17007b6a05f8fda63b7452e9"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_before_sleep.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/028_07.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 4.848,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "9dde868f579d61faf9c31bb3ce8dfb6d15af781d29177e173062da382cfc88bd"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_beneficial_knowledge.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/025_10.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 8.544,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "3dce567caa9a77713ea48a568bfc86eeb8a1c7b9ac874c74e1040b5c9408234d"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_fear_people.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/036_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 7.296,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "509fa0921dec44d9afab928ad5e4c7b94d5b8a08c8d0dddf873292cbbf9ca9a9"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_majlis_kaffarah.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/009_03.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.455,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "9610bcb117763063bdc700659093279bae0ebbdcbbc0d38b679011abc9d954cf"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_ma_qaddamtu_akhkhartu.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/024_04.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 17.424,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "a37ad869d3baf9dd01442ed0db383af839ffc949fb104a8a4bff8fee09162a67"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_seeing_afflicted.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/083_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.048,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "2d8333499b431873951da99f04e2a2f8a516188c8c35d2b21d9a9488601e2d97"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_shirk_protection.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/092_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 8.256,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "dda841db7fdd6207352c7cad281093432b726a87bd86c3eb1e2778e28562906e"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_sleep_atamana.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/028_10.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 12.528,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "3960018aa25ca8fa6c55d2ecc7f6d432e26aea51f4359c928cdee62db69f26b9"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_sleep_qina_adhab.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/028_06.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 14.616,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "a2c8b1cc6d2075d45f662f9303a7b33f5f8a807fe6277426190ba1f7ec026c5b"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_tahleel_100.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_19.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 11.616,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "0cbc4c9f0f86f20f8c1c33aa7d07cb8235619e609f218492b320f611ec12226f"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_visiting_sick.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/049_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 5.04,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "0635337e7d1f36914398f7682840eb8b7e99994135d619e6f857e6c164ae7aaa"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_waking_afani.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/001_03.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 8.399,
+      "bitrate": 192000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "bd661381a587cca5cfc7c98961cd4e1f772381c4be88027ae1485c3334195dc3"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_waking_up.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/001_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.096,
+      "bitrate": 192000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "193c41984ab59099d8f6c42c1025336b1afeae8f73ea8e37a5e193ce645e58db"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_abu_bakr.mp3",
+      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/24-invocation-Après-le-dernier-Tachahhud-juste-avant-les-salutations-03.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-apres-le-dernier-tachahhud-juste-avant-les-salutations/",
+      "durationSeconds": 14.718,
+      "bitrate": 127999,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "c43e310468681d43169c099102246fbf89b327156493821a33548f433c8bbdae"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_salawat.mp3",
+      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/23-invocation-La-prière-sur-le-Prophète-après-lattestation-de-foi-1.mp3",
+      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-la-priere-sur-le-prophete-apres-lattestation-de-foi/",
+      "durationSeconds": 23.707,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "42ce5d2ecf00de8abed526c10b2c8ff3e20deef6a53f3677e0a94ab363091936"
+    }
+  ],
+  "excluded": {
+    "dua_afini_fi_badani": "Source contains body and kufr duas together",
+    "dua_kufr_faqr": "Source contains body and kufr duas together",
+    "dua_afiyah_morning": "Source contains the longer complete dua",
+    "dua_alimal_ghayb": "Source includes an extra final sentence",
+    "dua_morning_asbahna": "Source contains the longer complete dua",
+    "dua_evening_amsayna": "Source contains the longer complete dua",
+    "dua_tahleel_10_fajr": "Source lacks the app's yuhyi wa yumit phrase"
+  }
+}

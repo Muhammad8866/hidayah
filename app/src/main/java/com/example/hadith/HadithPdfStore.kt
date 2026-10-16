@@ -5,7 +5,20 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
-import android.util.LruCache
+import android.os.Build
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.ProxyFileDescriptorCallback
+import android.os.storage.StorageManager
+import android.system.ErrnoException
+import android.system.OsConstants
+import com.example.core.net.Connectivity
+import com.example.core.net.FastNet
+import com.example.core.net.RangeFile
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -16,13 +29,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
+import com.example.core.pdf.PdfPageCache
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionGoTo
 import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.destination.PDPageDestination
 import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -38,12 +53,13 @@ object HadithPdfStore {
     private const val PREFS = "hadith_pdf_reader"
     private const val MAX_ATTEMPTS = 3
     private lateinit var appContext: Context
-    private val client = OkHttpClient.Builder()
+    private val client = FastNet.client.newBuilder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(45, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .build()
     private val fileLocks = ConcurrentHashMap<String, Mutex>()
+    private val outlineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _progress = MutableStateFlow<Map<String, Float>>(emptyMap())
     val progress: StateFlow<Map<String, Float>> = _progress.asStateFlow()
@@ -55,14 +71,34 @@ object HadithPdfStore {
         if (!::appContext.isInitialized) {
             appContext = context.applicationContext
             PDFBoxResourceLoader.init(appContext)
+            PdfPageCache.init(appContext)
         }
     }
+
+    /** Bumped whenever a reading position or bookmark changes, so library screens can refresh. */
+    private val _readingChanges = MutableStateFlow(0)
+    val readingChanges: StateFlow<Int> = _readingChanges.asStateFlow()
 
     fun lastPage(book: HadithBook): Int = prefs().getInt("last_${book.id}", 0)
 
     fun saveLastPage(book: HadithBook, index: Int) {
         prefs().edit().putInt("last_${book.id}", index)
             .putLong("opened_${book.id}", System.currentTimeMillis()).apply()
+        _readingChanges.update { it + 1 }
+    }
+
+    /** Zero-based pages the reader marked in [book], in page order. */
+    fun bookmarks(book: HadithBook): List<Int> =
+        prefs().getString("bookmarks_${book.id}", "").orEmpty()
+            .split(',').mapNotNull { it.trim().toIntOrNull() }.filter { it >= 0 }.distinct().sorted()
+
+    /** Adds or removes a bookmark on [page]; returns true when the page is now bookmarked. */
+    fun toggleBookmark(book: HadithBook, page: Int): Boolean {
+        val current = bookmarks(book)
+        val next = if (page in current) current - page else (current + page).sorted()
+        prefs().edit().putString("bookmarks_${book.id}", next.joinToString(",")).apply()
+        _readingChanges.update { it + 1 }
+        return page in next
     }
 
     fun lastOpened(book: HadithBook): Long = prefs().getLong("opened_${book.id}", 0L)
@@ -71,12 +107,12 @@ object HadithPdfStore {
         file.isFile && verifiedMarker(file).readTextOrNull() == file.length().toString()
     }
 
-    suspend fun download(book: HadithBook): Result<Unit> = runCatching {
+    suspend fun download(book: HadithBook): Result<Unit> = pdfResult { withContext(Dispatchers.IO) {
         lockFor(book).withLock {
             if (isDownloaded(book)) return@withLock
             val cached = cachedFile(book)
             val target = savedFile(book)
-            if (isRenderablePdf(cached)) {
+            if (isVerifiedPdf(cached)) {
                 withContext(Dispatchers.IO) { copyVerified(cached, target) }
             } else {
                 fetch(book, target)
@@ -84,35 +120,75 @@ object HadithPdfStore {
             }
         }
         _changes.update { it + 1 }
-    }
+    } }
 
     fun delete(book: HadithBook) {
         Documents.close(book.id)
         savedFile(book).delete()
         cachedFile(book).delete()
+        File(appContext.cacheDir, "pdf_ranges/${book.id}").deleteRecursively()
+        verifiedMarker(cachedFile(book)).delete()
         verifiedMarker(savedFile(book)).delete()
+        outlineFile(savedFile(book)).delete()
+        outlineFile(cachedFile(book)).delete()
         File(savedFile(book).path + ".part").delete()
         File(cachedFile(book).path + ".part").delete()
         _changes.update { it + 1 }
     }
 
-    suspend fun open(book: HadithBook): Result<Document> = runCatching {
-        val file = localFile(book)
-        withContext(Dispatchers.IO) { Documents.open(book, file) }
+    suspend fun open(book: HadithBook): Result<Document> = pdfResult {
+        withContext(Dispatchers.IO) {
+            lockFor(book).withLock {
+                Documents.existing(book.id)?.let { return@withLock it }
+                val saved = savedFile(book)
+                val cached = cachedFile(book)
+                when {
+                    isDownloaded(book) -> Documents.open(book, saved)
+                    isVerifiedPdf(cached) -> Documents.open(book, cached)
+                    // Nothing local and no connection: fail at once so the reader can explain
+                    // and retry on reconnect, instead of waiting out several connect timeouts.
+                    !Connectivity.isOnline.value -> throw IOException("Offline")
+                    Build.VERSION.SDK_INT >= 26 -> {
+                        try { Documents.stream(book) }
+                        catch (cancelled: CancellationException) { throw cancelled }
+                        catch (_: Exception) { fetch(book, cached); Documents.open(book, cached) }
+                    }
+                    else -> { fetch(book, cached); Documents.open(book, cached) }
+                }
+            }
+        }
     }
 
     /** Returns a validated original PDF, fetching it when needed for external sharing. */
-    suspend fun shareFile(book: HadithBook): Result<File> = runCatching { localFile(book) }
+    suspend fun shareFile(book: HadithBook): Result<File> = pdfResult { withContext(Dispatchers.IO) { localFile(book) } }
+
+    fun release(book: HadithBook, document: Document) { Documents.release(book.id, document) }
+
+    /** Bookmarks need the full PDF; fetch them only when the reader asks for the index. */
+    suspend fun loadChapters(book: HadithBook, document: Document): Result<Unit> = pdfResult {
+        if (document.chapters.isEmpty()) {
+            withContext(Dispatchers.IO) {
+                val file = localFile(book)
+                document.chapterState.value = Documents.chapters(file).ifEmpty { book.chapters }
+            }
+        }
+    }
+
+    private suspend fun <T> pdfResult(block: suspend () -> T): Result<T> = try {
+        Result.success(block())
+    } catch (cancelled: CancellationException) { throw cancelled }
+      catch (error: Exception) { Result.failure(error) }
 
     private suspend fun localFile(book: HadithBook): File = lockFor(book).withLock {
         savedFile(book).takeIf { isDownloaded(book) }?.let { return@withLock it }
         val cached = cachedFile(book)
-        if (!isRenderablePdf(cached)) fetch(book, cached)
+        if (!isVerifiedPdf(cached)) fetch(book, cached)
         cached
     }
 
     /** Resumes a partial official-source download when the server supports byte ranges. */
     private suspend fun fetch(book: HadithBook, target: File) = withContext(Dispatchers.IO) {
+        if (!Connectivity.isOnline.value) throw IOException("Offline")
         target.parentFile?.mkdirs()
         val part = File(target.path + ".part")
         var lastError: Throwable? = null
@@ -121,6 +197,21 @@ object HadithPdfStore {
         try {
             for ((sourceIndex, activeUrl) in book.downloadUrls.withIndex()) {
                 if (sourceIndex > 0) part.delete()
+                // Several connections at once when nothing is saved yet; the resumable
+                // single-connection loop below takes over if that does not complete.
+                if (!complete && part.length() == 0L) {
+                    try {
+                        FastNet.download(activeUrl, part) { received, total ->
+                            if (total > 0L) _progress.update { it + (book.id to (received.toDouble() / total).toFloat().coerceIn(0f, 1f)) }
+                        }
+                        complete = isRenderablePdf(part)
+                        if (!complete) part.delete()
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (error: Exception) {
+                        lastError = error
+                    }
+                }
                 repeat(MAX_ATTEMPTS) {
                 if (complete) return@repeat
                 val offset = part.length()
@@ -180,6 +271,7 @@ object HadithPdfStore {
             if (!complete) throw lastError ?: IOException("Could not download PDF")
             target.delete()
             check(part.renameTo(target)) { "Could not store ${book.romanTitle}" }
+            markVerified(target)
         } finally {
             _progress.update { it - book.id }
         }
@@ -205,6 +297,10 @@ object HadithPdfStore {
         }.getOrDefault(false)
     }
 
+    private fun isVerifiedPdf(file: File): Boolean =
+        (file.isFile && verifiedMarker(file).readTextOrNull() == file.length().toString()) ||
+            isRenderablePdf(file).also { if (it) markVerified(file) }
+
     private fun hasPdfHeader(file: File): Boolean = runCatching {
         file.inputStream().buffered().use { input ->
             val header = ByteArray(5)
@@ -215,6 +311,8 @@ object HadithPdfStore {
     private fun markVerified(file: File) = verifiedMarker(file).writeText(file.length().toString())
 
     private fun verifiedMarker(file: File) = File(file.path + ".verified")
+
+    private fun outlineFile(file: File) = File(file.path + ".outline")
 
     private fun File.readTextOrNull(): String? = runCatching(File::readText).getOrNull()
 
@@ -231,15 +329,18 @@ object HadithPdfStore {
     class Document internal constructor(
         private val renderer: PdfRenderer,
         private val descriptor: ParcelFileDescriptor,
-        val chapters: List<HadithChapter>
+        chapters: List<HadithChapter>
     ) {
+        internal val chapterState = MutableStateFlow(chapters)
+        val chapters: List<HadithChapter> get() = chapterState.value
+        val chapterUpdates: StateFlow<List<HadithChapter>> = chapterState.asStateFlow()
         val pageCount: Int = renderer.pageCount
         private val lock = Mutex()
         @Volatile private var closed = false
-        /** Unique per opened document, so entries in the store-wide [PageCache] never collide. */
-        private val cacheId = PageCache.nextId()
+        /** Unique per opened document, so entries in the app-wide [PdfPageCache] never collide. */
+        private val cacheId = PdfPageCache.nextId()
 
-        fun cached(index: Int, width: Int): Bitmap? = PageCache.get(cacheId, index, width)
+        fun cached(index: Int, width: Int): Bitmap? = PdfPageCache.get(cacheId, index, width)
 
         suspend fun render(index: Int, width: Int): Bitmap? {
             cached(index, width)?.let { return it }
@@ -254,47 +355,100 @@ object HadithPdfStore {
                                 page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                             }
                         }
-                    }.getOrNull()?.also { PageCache.put(cacheId, index, width, it) }
+                    }.getOrNull()?.also { PdfPageCache.put(cacheId, index, width, it) }
                 }
             }
         }
 
         internal fun close() {
             closed = true
-            PageCache.evict(cacheId)
-            runCatching(renderer::close)
-            runCatching(descriptor::close)
+            outlineScope.launch {
+                lock.withLock {
+                    PdfPageCache.evict(cacheId)
+                    runCatching(renderer::close)
+                    runCatching(descriptor::close)
+                }
+            }
         }
-    }
-
-    /**
-     * One bounded bitmap cache shared by every open document. Each book used to keep its own
-     * cache of up to a fifth of the heap, so opening a few books could exhaust memory.
-     */
-    private object PageCache {
-        private var counter = 0L
-        private val memory = object : LruCache<Triple<Long, Int, Int>, Bitmap>((Runtime.getRuntime().maxMemory() / 6).toInt()) {
-            override fun sizeOf(key: Triple<Long, Int, Int>, value: Bitmap): Int = value.byteCount
-        }
-
-        @Synchronized fun nextId(): Long = ++counter
-        fun get(id: Long, index: Int, width: Int): Bitmap? = memory.get(Triple(id, index, width))
-        fun put(id: Long, index: Int, width: Int, bitmap: Bitmap) { memory.put(Triple(id, index, width), bitmap) }
-        fun evict(id: Long) = memory.snapshot().keys.filter { it.first == id }.forEach { memory.remove(it) }
     }
 
     private object Documents {
-        private val open = mutableMapOf<String, Pair<File, Document>>()
+        private val open = ConcurrentHashMap<String, Pair<File, Document>>()
 
-        @Synchronized
+        fun existing(id: String): Document? = open[id]?.second
+        fun chapters(file: File): List<HadithChapter> = savedOutline(file)
+
+        fun release(id: String, document: Document) {
+            val entry = open[id]
+            if (entry?.second === document && open.remove(id, entry)) {
+                document.close()
+            }
+        }
+
+        @android.annotation.TargetApi(26)
+        fun stream(book: HadithBook): Document {
+            val range = RangeFile(book.downloadUrl, File(appContext.cacheDir, "pdf_ranges/${book.id}"))
+            val length = range.prepare()
+            val thread = HandlerThread("pdf-range-${book.id}").apply { start() }
+            var descriptor: ParcelFileDescriptor? = null
+            try {
+                descriptor = appContext.getSystemService(StorageManager::class.java).openProxyFileDescriptor(
+                    ParcelFileDescriptor.MODE_READ_ONLY,
+                    object : ProxyFileDescriptorCallback() {
+                        override fun onGetSize(): Long = length
+                        override fun onRead(offset: Long, size: Int, data: ByteArray): Int = try {
+                            range.read(offset, size, data)
+                        } catch (_: IOException) { throw ErrnoException("PDF range", OsConstants.EIO) }
+                        override fun onRelease() { thread.quitSafely() }
+                    }, Handler(thread.looper)
+                )
+                return Document(PdfRenderer(descriptor), descriptor, book.chapters).also {
+                    open[book.id] = File(appContext.cacheDir, "pdf_ranges/${book.id}") to it
+                }
+            } catch (error: Throwable) {
+                descriptor?.close()
+                thread.quitSafely()
+                throw error
+            }
+        }
+
         fun open(book: HadithBook, file: File): Document {
             open[book.id]?.let { (existingFile, document) ->
                 if (existingFile == file) return document
                 document.close()
             }
-            val chapters = extractOutline(file).ifEmpty { book.chapters }
             val descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-            return Document(PdfRenderer(descriptor), descriptor, chapters).also { open[book.id] = file to it }
+            val document = try { Document(PdfRenderer(descriptor), descriptor, book.chapters) }
+                catch (error: Throwable) { descriptor.close(); throw error }
+            open[book.id] = file to document
+            outlineScope.launch {
+                document.chapterState.value = savedOutline(file).ifEmpty { book.chapters }
+            }
+            return document
+        }
+
+        /**
+         * Parsing a large PDF for its bookmarks takes seconds, so the result is kept beside the
+         * file and reused for as long as the file's size is unchanged.
+         */
+        private fun savedOutline(file: File): List<HadithChapter> {
+            val saved = outlineFile(file)
+            runCatching {
+                val json = JSONObject(saved.readText())
+                if (json.getLong("size") == file.length()) {
+                    val items = json.getJSONArray("chapters")
+                    return List(items.length()) { index ->
+                        items.getJSONObject(index).let { HadithChapter(it.getString("title"), it.getInt("page")) }
+                    }
+                }
+            }
+            return extractOutline(file).also { chapters ->
+                runCatching {
+                    val items = JSONArray()
+                    chapters.forEach { items.put(JSONObject().put("title", it.title).put("page", it.page)) }
+                    saved.writeText(JSONObject().put("size", file.length()).put("chapters", items).toString())
+                }
+            }
         }
 
         private fun extractOutline(file: File): List<HadithChapter> = runCatching {
@@ -318,7 +472,6 @@ object HadithPdfStore {
             }
         }.getOrDefault(emptyList())
 
-        @Synchronized
         fun close(id: String) {
             open.remove(id)?.second?.close()
         }

@@ -2,8 +2,27 @@ package com.example.feature.communitymasjid.ui
 
 import android.app.TimePickerDialog
 import android.text.format.DateFormat
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EditCalendar
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import com.example.ui.localization.localizedUiText
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,6 +30,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -31,7 +51,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.feature.communitymasjid.domain.CmTimingRules
 import com.example.feature.communitymasjid.model.CmPrayer
@@ -41,6 +64,7 @@ import com.example.ui.localization.LocalizedText
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /** Formats a stored "HH:mm" value in the device's 12h/24h preference. */
 @Composable
@@ -56,11 +80,28 @@ internal fun cmFormatHm(hm: String?, is24h: Boolean): String {
     val hour = minutes / 60
     val suffix = if (hour < 12) "AM" else "PM"
     val displayHour = if (hour % 12 == 0) 12 else hour % 12
-    return "%d:%02d %s".format(displayHour, minutes % 60, suffix)
+    // Latin digits, matching the 24-hour branch above.
+    return "%d:%02d %s".format(Locale.ROOT, displayHour, minutes % 60, suffix)
 }
 
-internal fun cmFormatDate(epochMs: Long?): String =
-    epochMs?.let { SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault()).format(Date(it)) } ?: "—"
+/** Date and time in the order the user's region writes them, honouring the device's 12h/24h setting. */
+internal fun cmFormatDate(epochMs: Long?, is24h: Boolean = false, locale: Locale = Locale.getDefault()): String {
+    epochMs ?: return "—"
+    val pattern = DateFormat.getBestDateTimePattern(locale, if (is24h) "d MMM yyyy Hm" else "d MMM yyyy hm")
+    return SimpleDateFormat(pattern, locale).format(Date(epochMs))
+}
+
+private val cmImperialRegions = setOf("US", "GB", "LR", "MM")
+
+/** Metres/kilometres, or feet/miles in the few regions that use them on the road. */
+internal fun cmFormatDistance(metres: Double, locale: Locale): String {
+    if (locale.country.uppercase(Locale.ROOT) in cmImperialRegions) {
+        val miles = metres / 1609.344
+        return if (miles < 0.1) "%d ft".format(locale, (metres * 3.28084).roundToInt())
+        else "%.1f mi".format(locale, miles)
+    }
+    return if (metres < 1000) "%d m".format(locale, metres.roundToInt()) else "%.1f km".format(locale, metres / 1000)
+}
 
 @Composable
 internal fun CmStatusBadge(text: String, container: androidx.compose.ui.graphics.Color, content: androidx.compose.ui.graphics.Color) {
@@ -75,41 +116,73 @@ internal fun CmStatusBadge(text: String, container: androidx.compose.ui.graphics
     }
 }
 
-/** Prayer | Azan | Jamaat table. Values that differ from [compareTo] are highlighted. */
+/**
+ * Prayer | Azan | Jamaat table. Values that differ from [compareTo] are highlighted, and the
+ * [highlight] row (the next Jamaat) is tinted so it can be found at a glance.
+ */
 @Composable
-internal fun CmTimingTable(timings: CmTimings, compareTo: CmTimings? = null) {
+internal fun CmTimingTable(timings: CmTimings, compareTo: CmTimings? = null, highlight: CmPrayer? = null) {
     Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp)) {
             LocalizedText("Prayer", Modifier.weight(1.2f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             LocalizedText("Azan", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             LocalizedText("Jamaat", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+        HorizontalDivider(Modifier.padding(bottom = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
+        val nextLabel = localizedUiText("Next prayer")
         CmPrayer.entries.forEach { prayer ->
             val time = timings[prayer] ?: return@forEach
             val old = compareTo?.get(prayer)
-            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                LocalizedText(prayer.label, Modifier.weight(1.2f), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            val isNext = prayer == highlight
+            val onRow = if (isNext) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.small)
+                    .background(if (isNext) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                    .then(if (isNext) Modifier.semantics { stateDescription = nextLabel } else Modifier)
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(Modifier.weight(1.2f), verticalAlignment = Alignment.CenterVertically) {
+                    if (isNext) {
+                        Box(Modifier.padding(end = 6.dp).size(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
+                    }
+                    LocalizedText(prayer.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = onRow, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
                 if (prayer.hasAzan) {
-                    CmTimeCell(time.azan, changed = compareTo != null && old?.azan != time.azan, modifier = Modifier.weight(1f))
+                    CmTimeCell(time.azan, changed = compareTo != null && old?.azan != time.azan, modifier = Modifier.weight(1f), color = onRow)
                 } else {
                     Text("—", Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                CmTimeCell(time.jamaat, changed = compareTo != null && old?.jamaat != time.jamaat, modifier = Modifier.weight(1f), bold = true)
+                CmTimeCell(time.jamaat, changed = compareTo != null && old?.jamaat != time.jamaat, modifier = Modifier.weight(1f), bold = true, color = onRow)
             }
         }
     }
 }
 
 @Composable
-private fun CmTimeCell(hm: String, changed: Boolean, modifier: Modifier, bold: Boolean = false) {
+private fun CmTimeCell(hm: String, changed: Boolean, modifier: Modifier, bold: Boolean = false, color: Color = MaterialTheme.colorScheme.onSurface) {
     Text(
         text = cmDisplayTime(hm),
         modifier = modifier,
         style = MaterialTheme.typography.bodyMedium,
         fontWeight = if (bold || changed) FontWeight.Bold else FontWeight.Normal,
-        color = if (changed) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
+        color = if (changed) MaterialTheme.colorScheme.tertiary else color,
+        maxLines = 1
     )
+}
+
+/** Time chooser button: tonal once a time is set, outlined while it is still "--:--". */
+@Composable
+private fun CmTimeButton(hm: String?, onClick: () -> Unit) {
+    val content: @Composable RowScope.() -> Unit = {
+        Text(cmDisplayTime(hm), maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+    }
+    val modifier = Modifier.width(92.dp).heightIn(min = 48.dp)
+    val padding = PaddingValues(horizontal = 4.dp)
+    if (hm != null && CmTimingRules.isValidHm(hm)) FilledTonalButton(onClick = onClick, modifier = modifier, contentPadding = padding, content = content)
+    else OutlinedButton(onClick = onClick, modifier = modifier, contentPadding = padding, content = content)
 }
 
 /** Editor for new timings; validation runs live so invalid timings can't be submitted. */
@@ -153,58 +226,85 @@ internal fun CmSuggestDialog(
     }
 
     AlertDialog(
-        onDismissRequest = { if (!isSubmitting) onDismiss() },
+        onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("cm_timing_components", "dismiss_timings_editor", "dismiss"); if (!isSubmitting) onDismiss() },
+        icon = { Icon(Icons.Filled.EditCalendar, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
         title = { LocalizedText("Update Timings", fontWeight = FontWeight.Bold) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                LocalizedText(
-                    "New timings are shown to everyone right away. If ${CmTimingRules.VOTE_THRESHOLD}+ people at the masjid vote them wrong, the previous timings come back.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Icon(Icons.Filled.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 1.dp).size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    LocalizedText(
+                        "New timings are shown to everyone right away. If ${CmTimingRules.VOTE_THRESHOLD}+ people at the masjid vote them wrong, the previous timings come back.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
                 Row(Modifier.fillMaxWidth()) {
                     Spacer(Modifier.weight(1f))
-                    LocalizedText("Azan", Modifier.width(92.dp), style = MaterialTheme.typography.labelMedium)
+                    LocalizedText("Azan", Modifier.width(92.dp), style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.width(6.dp))
-                    LocalizedText("Jamaat", Modifier.width(92.dp), style = MaterialTheme.typography.labelMedium)
+                    LocalizedText("Jamaat", Modifier.width(92.dp), style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 CmPrayer.entries.forEach { prayer ->
                     if (prayer.isOptional) {
                         if (prayer == CmPrayer.optional.first()) {
-                            HorizontalDivider(Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                            HorizontalDivider(Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
                         }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp)
+                                .toggleable(value = included[prayer] == true, role = Role.Switch, onValueChange = { included[prayer] = it }),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             LocalizedText("Include ${prayer.label}", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                            Switch(checked = included[prayer] == true, onCheckedChange = { included[prayer] = it })
+                            Spacer(Modifier.width(8.dp))
+                            Switch(checked = included[prayer] == true, onCheckedChange = null)
                         }
                         if (included[prayer] != true) return@forEach
                     }
-                    Row(Modifier.fillMaxWidth().heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
-                        LocalizedText(prayer.label, Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+                        LocalizedText(prayer.label, Modifier.weight(1f).padding(end = 6.dp), fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         if (prayer.hasAzan) {
-                            OutlinedButton(onClick = { pick(azan[prayer]) { azan[prayer] = it } }, modifier = Modifier.width(92.dp)) {
-                                Text(cmDisplayTime(azan[prayer]), maxLines = 1, style = MaterialTheme.typography.labelMedium)
-                            }
+                            CmTimeButton(azan[prayer]) { com.example.core.analytics.AppAnalytics.interaction("cm_timing_components", "pick_azan_time", "tap"); pick(azan[prayer]) { azan[prayer] = it } }
                         } else {
-                            Text("—", Modifier.width(92.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("—", Modifier.width(92.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                         }
                         Spacer(Modifier.width(6.dp))
-                        OutlinedButton(onClick = { pick(jamaat[prayer] ?: azan[prayer]) { jamaat[prayer] = it } }, modifier = Modifier.width(92.dp)) {
-                            Text(cmDisplayTime(jamaat[prayer]), maxLines = 1, style = MaterialTheme.typography.labelMedium)
-                        }
+                        CmTimeButton(jamaat[prayer]) { com.example.core.analytics.AppAnalytics.interaction("cm_timing_components", "pick_jamaat_time", "tap"); pick(jamaat[prayer] ?: azan[prayer]) { jamaat[prayer] = it } }
                     }
                 }
-                if (attempted || built != null) {
-                    problems.forEach {
-                        Text("• $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                // Problems sit in one tinted block so they read as "fix these before submitting".
+                AnimatedVisibility(visible = (attempted || built != null) && problems.isNotEmpty()) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(MaterialTheme.colorScheme.errorContainer)
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        problems.forEach {
+                            LocalizedText("• $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+                        }
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 enabled = !isSubmitting,
-                onClick = {
+                onClick = { com.example.core.analytics.AppAnalytics.interaction("cm_timing_components", "submit_timings", "tap");
                     attempted = true
                     if (built != null && problems.isEmpty()) onSubmit(built)
                 }
@@ -213,6 +313,6 @@ internal fun CmSuggestDialog(
                 else LocalizedText("Submit")
             }
         },
-        dismissButton = { TextButton(enabled = !isSubmitting, onClick = onDismiss) { LocalizedText("Cancel") } }
+        dismissButton = { TextButton(enabled = !isSubmitting, onClick = com.example.core.analytics.AppAnalytics.trackAction("community_masjid_screen", "cancel_timings_editor", onDismiss)) { LocalizedText("Cancel") } }
     )
 }

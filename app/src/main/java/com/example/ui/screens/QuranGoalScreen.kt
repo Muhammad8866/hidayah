@@ -2,6 +2,8 @@
 
 package com.example.ui.screens
 
+import com.example.ui.localization.LocalAppLanguage
+import com.example.ui.localization.localizeUiTemplate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,6 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
@@ -27,6 +31,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.quran.PdfQuran
 import com.example.ui.localization.LocalAppLocale
@@ -37,12 +42,16 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle as DateTextStyle
+import java.time.temporal.TemporalAdjusters
+import java.time.temporal.WeekFields
 import kotlin.math.ceil
 
 private enum class LogDay(val label: String, val offset: Long) { TODAY("Today", 0), YESTERDAY("Yesterday", 1) }
 
 @Composable
 internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifier: Modifier) {
+    com.example.core.analytics.AnalyticsScreen("quran_goal_screen")
+
     val context = LocalContext.current
     val store = remember { quranGoalStore(context) }
     val locale = LocalAppLocale.current
@@ -75,7 +84,10 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
     val dateFormat = remember(locale) { DateTimeFormatter.ofPattern("d MMM yyyy", locale) }
 
     fun log(delta: Int) {
-        if (store.log(logDate, delta, today)) celebrate = true
+        if (store.log(logDate, delta, today)) {
+            com.example.core.analytics.AppAnalytics.milestone("quran_goal", "khatm_completed")
+            celebrate = true
+        }
         revision++
     }
 
@@ -119,12 +131,12 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                     }
                 }
                 Spacer(Modifier.height(14.dp))
-                Button(onClick = onOpenQuran, modifier = Modifier.fillMaxWidth().testTag("quran_goal_open_reader")) {
+                Button(onClick = com.example.core.analytics.AppAnalytics.trackAction("quran_goal_screen", "open_quran_reader", onOpenQuran), modifier = Modifier.fillMaxWidth().testTag("quran_goal_open_reader")) {
                     Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(
                         "${localizedUiText("Continue reading")} · ${localizedUiText("Para")} ${madaniParaOf(position + 1)}, ${localizedUiText("Page")} ${position + 1}",
-                        maxLines = 1
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -134,28 +146,27 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
         item(key = "log") {
             ToolCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    SectionTitle("Log your reading")
-                    Spacer(Modifier.weight(1f))
+                    Box(Modifier.weight(1f).padding(end = 8.dp)) { SectionTitle("Log your reading") }
                     SingleChoiceSegmentedButtonRow {
                         LogDay.entries.forEachIndexed { index, day ->
                             SegmentedButton(
                                 selected = logDay == day,
-                                onClick = { logDay = day },
+                                onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "select_log_day", "tap", item = day.name); logDay = day },
                                 shape = SegmentedButtonDefaults.itemShape(index, LogDay.entries.size),
                                 icon = {}
-                            ) { LocalizedText(day.label, maxLines = 1, style = MaterialTheme.typography.labelMedium) }
+                            ) { LocalizedText(day.label, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium) }
                         }
                     }
                 }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    FilledTonalIconButton(onClick = { log(-1) }, enabled = logPages > 0, modifier = Modifier.size(52.dp).testTag("quran_remove_page")) {
+                    FilledTonalIconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "remove_page", "tap"); log(-1) }, enabled = logPages > 0, modifier = Modifier.size(52.dp).testTag("quran_remove_page")) {
                         Icon(Icons.Default.Remove, contentDescription = localizedUiText("Decrease"))
                     }
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("$logPages", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = accent)
                         LocalizedText(if (logPages == 1) "page" else "pages", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    FilledIconButton(onClick = { log(1) }, modifier = Modifier.size(52.dp).testTag("quran_add_page")) {
+                    FilledIconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "add_page", "tap"); log(1) }, modifier = Modifier.size(52.dp).testTag("quran_add_page")) {
                         Icon(Icons.Default.Add, contentDescription = localizedUiText("Increase"))
                     }
                 }
@@ -165,10 +176,10 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                     QuickAdd(localizedUiText("½ Para"), Modifier.weight(1f)) { log(PARA_PAGES / 2) }
                     QuickAdd(localizedUiText("1 Para"), Modifier.weight(1f)) { log(PARA_PAGES) }
                 }
-                OutlinedButton(onClick = { customPages = true }, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "open_custom_pages", "tap"); customPages = true }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    LocalizedText("Enter number of pages", maxLines = 1)
+                    LocalizedText("Enter number of pages", maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -197,15 +208,15 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                     GoalNote(Icons.Default.Schedule, "${localizedUiText("At your current pace, this khatm ends on")} ${forecast.format(dateFormat)}", accent)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton(onClick = { editPosition = true }, modifier = Modifier.weight(1f)) {
+                    FilledTonalButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "open_edit_position", "tap"); editPosition = true }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Default.EditLocationAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        LocalizedText("Set position", maxLines = 1)
+                        LocalizedText("Set position", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    OutlinedButton(onClick = { confirmReset = true }, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "open_reset_khatm", "tap"); confirmReset = true }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        LocalizedText("Start new khatm", maxLines = 1)
+                        LocalizedText("Start new khatm", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
@@ -219,14 +230,14 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                     QuranGoalMode.entries.forEachIndexed { index, option ->
                         SegmentedButton(
                             selected = mode == option,
-                            onClick = {
+                            onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "select_goal_mode", "tap", item = option.name);
                                 store.mode = option
                                 if (option == QuranGoalMode.FINISH_BY && store.finishBy == null) store.finishBy = today.plusDays(29)
                                 revision++
                             },
                             shape = SegmentedButtonDefaults.itemShape(index, QuranGoalMode.entries.size)
                         ) {
-                            LocalizedText(if (option == QuranGoalMode.PAGES) "Pages per day" else "Finish by date", maxLines = 1)
+                            LocalizedText(if (option == QuranGoalMode.PAGES) "Pages per day" else "Finish by date", maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -239,7 +250,7 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                         listOf(1, 2, 4, 10, 20).forEach { preset ->
                             FilterChip(
                                 selected = target == preset,
-                                onClick = { store.dailyGoal = preset; revision++ },
+                                onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "select_daily_goal", "tap", item = "pages_$preset"); store.dailyGoal = preset; revision++ },
                                 label = { Text(if (preset == PARA_PAGES) localizedUiText("1 Para") else "$preset") }
                             )
                         }
@@ -252,7 +263,7 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                     )
                 } else {
                     Surface(
-                        onClick = { pickDate = true },
+                        onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "open_finish_date_picker", "tap"); pickDate = true },
                         shape = RoundedCornerShape(14.dp),
                         color = accent.copy(alpha = 0.10f),
                         modifier = Modifier.fillMaxWidth()
@@ -271,7 +282,7 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                         listOf(7 to "1 week", 30 to "30 days", 60 to "2 months", 90 to "3 months", 365 to "1 year").forEach { (days, label) ->
                             FilterChip(
                                 selected = finishBy == today.plusDays(days - 1L),
-                                onClick = { store.finishBy = today.plusDays(days - 1L); revision++ },
+                                onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "select_finish_preset", "tap", item = "days_$days"); store.finishBy = today.plusDays(days - 1L); revision++ },
                                 label = { LocalizedText(label) }
                             )
                         }
@@ -310,7 +321,7 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Verified, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
-                            Text("${localizedUiText("Khatm")} ${completed - index}", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                            Text(localizeUiTemplate("Khatm {number}", LocalAppLanguage.current, mapOf("number" to "${completed - index}")), fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(end = 8.dp))
                             Text(date.format(dateFormat), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
@@ -332,7 +343,7 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                     Spacer(Modifier.width(12.dp))
                     Switch(
                         checked = autoLog,
-                        onCheckedChange = { store.readerAutoLog = it; revision++ },
+                        onCheckedChange = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "toggle_reader_auto_log", "toggle"); store.readerAutoLog = it; revision++ },
                         modifier = Modifier.testTag("quran_reader_auto")
                     )
                 }
@@ -372,33 +383,33 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
             }
         )
         DatePickerDialog(
-            onDismissRequest = { pickDate = false },
+            onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "dismiss_finish_date_picker", "dismiss"); pickDate = false },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "confirm_finish_date", "tap");
                     state.selectedDateMillis?.let { store.finishBy = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
                     revision++
                     pickDate = false
                 }) { LocalizedText("Done") }
             },
-            dismissButton = { TextButton(onClick = { pickDate = false }) { LocalizedText("Cancel") } }
+            dismissButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "cancel_finish_date", "tap"); pickDate = false }) { LocalizedText("Cancel") } }
         ) { DatePicker(state = state) }
     }
 
     if (confirmReset) {
         AlertDialog(
-            onDismissRequest = { confirmReset = false },
+            onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "dismiss_reset_khatm", "dismiss"); confirmReset = false },
             title = { LocalizedText("Start new khatm?") },
             text = { LocalizedText("This khatm goes back to page 1. Completed khatms, daily logs and streak stay.") },
             confirmButton = {
-                TextButton(onClick = { store.startNewKhatm(); revision++; confirmReset = false }) { LocalizedText("Reset") }
+                TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "confirm_reset_khatm", "tap"); store.startNewKhatm(); revision++; confirmReset = false }) { LocalizedText("Reset") }
             },
-            dismissButton = { TextButton(onClick = { confirmReset = false }) { LocalizedText("Cancel") } }
+            dismissButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "cancel_reset_khatm", "tap"); confirmReset = false }) { LocalizedText("Cancel") } }
         )
     }
 
     if (celebrate) {
         AlertDialog(
-            onDismissRequest = { celebrate = false },
+            onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "dismiss_khatm_celebration", "dismiss"); celebrate = false },
             icon = { Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(40.dp)) },
             title = { LocalizedText("Khatm complete. MashaAllah!", textAlign = TextAlign.Center) },
             text = {
@@ -407,7 +418,7 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                     textAlign = TextAlign.Center
                 )
             },
-            confirmButton = { TextButton(onClick = { celebrate = false }) { LocalizedText("Alhamdulillah") } }
+            confirmButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "close_khatm_celebration", "tap"); celebrate = false }) { LocalizedText("Alhamdulillah") } }
         )
     }
 }
@@ -418,7 +429,7 @@ private fun GoalPill(icon: ImageVector, text: String, accent: Color) {
         Row(Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(4.dp))
-            Text(text, style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(text, style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -428,22 +439,27 @@ private fun GoalNote(icon: ImageVector, text: String, tint: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
-        Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
     }
 }
 
 @Composable
 private fun QuickAdd(label: String, modifier: Modifier, onClick: () -> Unit) {
-    FilledTonalButton(onClick = onClick, modifier = modifier.heightIn(min = 44.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
-        Text(label, maxLines = 1, style = MaterialTheme.typography.labelLarge)
+    FilledTonalButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("quran_goal_screen", "quick_add_pages", onClick), modifier = modifier.heightIn(min = 44.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
+        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge)
     }
 }
 
 @Composable
 private fun MiniStat(value: String, label: String, modifier: Modifier) {
-    Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), modifier = modifier) {
-        Column(Modifier.padding(vertical = 10.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+        modifier = modifier
+    ) {
+        Column(Modifier.padding(vertical = 12.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             LocalizedText(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, maxLines = 2)
         }
     }
@@ -453,9 +469,10 @@ private fun MiniStat(value: String, label: String, modifier: Modifier) {
 @Composable
 private fun ParaTrack(position: Int, accent: Color) {
     val currentPara = madaniParaOf(position + 1)
+    val shown by androidx.compose.animation.core.animateFloatAsState(position.toFloat() / MADANI_PAGES, label = "khatmProgress")
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         LinearProgressIndicator(
-            progress = { position.toFloat() / MADANI_PAGES },
+            progress = { shown },
             modifier = Modifier.fillMaxWidth().height(10.dp).clip(CircleShape),
             color = accent,
             trackColor = accent.copy(alpha = 0.15f),
@@ -489,11 +506,12 @@ private fun ParaTrack(position: Int, accent: Color) {
     }
 }
 
-/** Five weeks of reading, Monday first; full colour when that day's goal was met. */
+/** Five weeks of reading, starting on the locale's first weekday; full colour when that day's goal was met. */
 @Composable
 private fun ReadingHeatmap(today: LocalDate, accent: Color, dayOf: (LocalDate) -> Pair<Int, Int>) {
     val locale = LocalAppLocale.current
-    val start = today.minusDays(today.dayOfWeek.value - 1L).minusWeeks(4)
+    val firstDay = remember(locale) { WeekFields.of(locale).firstDayOfWeek }
+    val start = today.with(TemporalAdjusters.previousOrSame(firstDay)).minusWeeks(4)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (offset in 0L until 7L) {
@@ -557,7 +575,7 @@ private fun NumberDialog(title: String, label: String, max: Int, onDismiss: () -
     var text by rememberSaveable { mutableStateOf("") }
     val value = text.toIntOrNull()?.takeIf { it in 1..max }
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("quran_goal_screen", "dismiss_custom_pages", onDismiss),
         title = { LocalizedText(title) },
         text = {
             OutlinedTextField(
@@ -565,12 +583,14 @@ private fun NumberDialog(title: String, label: String, max: Int, onDismiss: () -
                 onValueChange = { new -> text = new.filter(Char::isDigit).take(3) },
                 label = { LocalizedText(label) },
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isError = text.isNotEmpty() && value == null,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { value?.let(onConfirm) }),
                 modifier = Modifier.fillMaxWidth().testTag("quran_custom_pages")
             )
         },
-        confirmButton = { TextButton(onClick = { value?.let(onConfirm) }, enabled = value != null) { LocalizedText("Add") } },
-        dismissButton = { TextButton(onClick = onDismiss) { LocalizedText("Cancel") } }
+        confirmButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "confirm_custom_pages", "tap"); value?.let(onConfirm) }, enabled = value != null) { LocalizedText("Add") } },
+        dismissButton = { TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("quran_goal_screen", "cancel_custom_pages", onDismiss)) { LocalizedText("Cancel") } }
     )
 }
 
@@ -590,13 +610,13 @@ private fun PositionDialog(current: Int, onDismiss: () -> Unit, onConfirm: (Int)
         pageText = "$page"
     }
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("quran_goal_screen", "dismiss_position_dialog", onDismiss),
         title = { LocalizedText("Where are you in the Quran?") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (readerPage != null) {
                     Surface(
-                        onClick = { select(readerPage) },
+                        onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "position_use_reader_page", "tap"); select(readerPage) },
                         shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.primaryContainer,
                         modifier = Modifier.fillMaxWidth()
@@ -625,10 +645,10 @@ private fun PositionDialog(current: Int, onDismiss: () -> Unit, onConfirm: (Int)
                         Box(
                             Modifier
                                 .weight(1f)
-                                .height(36.dp)
+                                .height(44.dp)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                                .clickable(role = Role.Button) { select(MADANI_PARA_STARTS[para - 1]) },
+                                .clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "position_pick_para", "tap", item = "para_$para"); select(MADANI_PARA_STARTS[para - 1]) },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -647,12 +667,13 @@ private fun PositionDialog(current: Int, onDismiss: () -> Unit, onConfirm: (Int)
                     },
                     label = { LocalizedText("Page (1–604)") },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { onConfirm(page - 1) }),
                     modifier = Modifier.fillMaxWidth().testTag("quran_position_page")
                 )
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(page - 1) }) { LocalizedText("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { LocalizedText("Cancel") } }
+        confirmButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "save_position", "tap"); onConfirm(page - 1) }) { LocalizedText("Save") } },
+        dismissButton = { TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("quran_goal_screen", "cancel_position_dialog", onDismiss)) { LocalizedText("Cancel") } }
     )
 }

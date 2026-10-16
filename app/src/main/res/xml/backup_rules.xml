@@ -3,4 +3,10 @@
     <!-- Preserve preferences, bookmarks, Hifz progress and notes through backup/restore. -->
     <include domain="sharedpref" path="." />
     <include domain="database" path="." />
+    <!-- First-launch state belongs to one install; a reinstall asks for the language again. -->
+    <exclude domain="sharedpref" path="install_state.xml" />
+    <exclude domain="sharedpref" path="analytics_consent.xml" />
+    <exclude domain="sharedpref" path="cm_search_budget.xml" />
+    <!-- Community masjid data is a server cache tied to an anonymous account; it is not backed up. -->
+    <exclude domain="database" path="community_masjid.db" />
 </full-backup-content>

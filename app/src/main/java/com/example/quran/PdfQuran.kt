@@ -5,15 +5,26 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
-import android.util.LruCache
+import android.os.Build
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.ProxyFileDescriptorCallback
+import android.os.storage.StorageManager
+import android.system.ErrnoException
+import android.system.OsConstants
+import com.example.core.pdf.PdfPageCache
+import com.example.core.net.RangeFile
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +32,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
+import com.example.core.net.FastNet
 import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
@@ -34,7 +45,8 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * Stores and renders the Quran PDFs of [QuranPdfCatalog]. Files are kept byte for byte as
  * published. The Hindi edition is delivered on demand by Google Play; other editions are fetched
- * from [QuranPdf.url]. Every copy is checked against its SHA-256 before it is rendered.
+ * from [QuranPdf.url]. Complete downloads are checked against SHA-256. Online reading on Android
+ * 8+ requests only the PDF ranges needed by the renderer and does not create an offline copy.
  */
 object PdfQuran {
 
@@ -43,16 +55,18 @@ object PdfQuran {
     /** Under [SLOW_MIN_BYTES] in [SLOW_WINDOW_NANOS] (about 17 KB/s) counts as stalled. */
     private const val SLOW_WINDOW_NANOS = 30_000_000_000L
     private const val SLOW_MIN_BYTES = 512L * 1024
-    private const val PARALLEL_PARTS = 4
+    private const val PARALLEL_PARTS = 6
     private const val PROGRESS_INTERVAL_NANOS = 200_000_000L
     private const val MIN_PARALLEL_BYTES = 4L * 1024 * 1024
     private lateinit var appContext: Context
-    private val client = OkHttpClient.Builder()
+    private val client = FastNet.client.newBuilder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .build()
     private val fileLocks = ConcurrentHashMap<String, Mutex>()
+    private val bundledAvailability = ConcurrentHashMap<String, Boolean>()
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Download progress 0..1 per book id while a fetch is running. */
     private val _progress = MutableStateFlow<Map<String, Float>>(emptyMap())
@@ -65,8 +79,9 @@ object PdfQuran {
     fun init(context: Context) {
         if (::appContext.isInitialized) return
         appContext = context.applicationContext
+        PdfPageCache.init(appContext)
         // Pages of the earlier Tajweedi reader are no longer used.
-        File(appContext.filesDir, "tajweedi_mushaf").deleteRecursively()
+        cleanupScope.launch { File(appContext.filesDir, "tajweedi_mushaf").deleteRecursively() }
     }
 
     fun lastPage(book: QuranPdf): Int = prefs().getInt("last_${book.id}", 0)
@@ -136,13 +151,14 @@ object PdfQuran {
         savedFile(book).takeIf { it.length() == book.sizeBytes }?.let { return@withLock it }
         val cached = cachedFile(book)
         if (cached.length() == book.sizeBytes) return@withLock cached
-        if (isHindiEdition(book)) {
+        if (book.bundled || isHindiEdition(book)) {
+            val fallback = File(appContext.cacheDir, "quran_pdfs/${book.fileName}.bundled")
+            if (fallback.length() == book.sizeBytes) return@withLock fallback
             if (bundledFileExists(book)) {
-                val fallback = File(appContext.cacheDir, "quran_pdfs/${book.fileName}.bundled")
                 withContext(Dispatchers.IO) { store(appContext.assets.open(book.fileName), book, fallback) }
                 return@withLock fallback
             }
-            verifiedPackFile(book)?.let {
+            (if (isHindiEdition(book)) verifiedPackFile(book) else null)?.let {
                 _changes.update { it + 1 }
                 return@withLock it
             }
@@ -160,9 +176,9 @@ object PdfQuran {
         }
     }
 
-    private fun bundledFileExists(book: QuranPdf): Boolean = runCatching {
-        appContext.assets.open(book.fileName).use { true }
-    }.getOrDefault(false)
+    private fun bundledFileExists(book: QuranPdf): Boolean = bundledAvailability.getOrPut(book.id) {
+        runCatching { appContext.assets.open(book.fileName).use { true } }.getOrDefault(false)
+    }
 
     /**
      * Downloads [book] into [target]. GitHub's CDN can stall for minutes on parts of a file it has
@@ -189,7 +205,7 @@ object PdfQuran {
     }
 
     /**
-     * Fetches four independent byte ranges. Release-assets supports ranges and parallel requests
+     * Fetches [PARALLEL_PARTS] independent byte ranges. Release-assets supports ranges and parallel requests
      * avoid one slow CDN connection limiting a large PDF. Existing partial downloads are retained.
      */
     private suspend fun downloadRemaining(book: QuranPdf, part: File) {
@@ -391,10 +407,30 @@ object PdfQuran {
         }
     }
 
-    /** Opens [book] for rendering. */
+    /** Opens a remote edition from seekable HTTP ranges when possible. */
     suspend fun open(book: QuranPdf): Result<Document> = runCatching {
-        val file = localFile(book)
-        withContext(Dispatchers.IO) { Documents.open(book.id, file) }
+        withContext(Dispatchers.IO) {
+            lockFor(book).withLock {
+                Documents.existing(book.id)?.let { return@withLock it }
+                val local = savedFile(book).takeIf { it.length() == book.sizeBytes }
+                    ?: cachedFile(book).takeIf { it.length() == book.sizeBytes }
+                if (local != null) return@withLock Documents.open(book.id, local)
+                // Reading the Hindi edition must not wait for Play to deliver its entire pack.
+                // An already installed pack is still used for offline reading.
+                val installedHindiPack = isHindiEdition(book) &&
+                    HindiQuranAssetPack.file(appContext)?.length() == book.sizeBytes
+                if (Build.VERSION.SDK_INT >= 26 && !installedHindiPack && !book.bundled) {
+                    try {
+                        return@withLock Documents.stream(book)
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) {
+                        // A source without reliable ranges still uses the complete verified file.
+                    }
+                }
+            }
+            Documents.open(book.id, localFile(book))
+        }
     }
 
     /** Returns the verified original PDF, downloading it when needed for external sharing. */
@@ -409,10 +445,10 @@ object PdfQuran {
         val pageCount: Int = renderer.pageCount
         private val lock = Mutex()
         @Volatile private var closed = false
-        /** Unique per opened document, so entries in the store-wide [PageCache] never collide. */
-        private val cacheId = PageCache.nextId()
+        /** Unique per opened document, so entries in the app-wide [PdfPageCache] never collide. */
+        private val cacheId = PdfPageCache.nextId()
 
-        fun cached(index: Int, width: Int): Bitmap? = PageCache.get(cacheId, index, width)
+        fun cached(index: Int, width: Int): Bitmap? = PdfPageCache.get(cacheId, index, width)
 
         /** Renders one page [width] pixels wide, keeping the page's own aspect ratio. */
         suspend fun render(index: Int, width: Int): Bitmap? {
@@ -428,38 +464,53 @@ object PdfQuran {
                                 page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                             }
                         }
-                    }.getOrNull()?.also { PageCache.put(cacheId, index, width, it) }
+                    }.getOrNull()?.also { PdfPageCache.put(cacheId, index, width, it) }
                 }
             }
         }
 
         internal fun close() {
             closed = true
-            PageCache.evict(cacheId)
+            PdfPageCache.evict(cacheId)
             runCatching { renderer.close() }
             runCatching { descriptor.close() }
         }
     }
 
     /** Keeps each opened book's renderer so going back to the list and in again is instant. */
-    /**
-     * One bounded bitmap cache shared by every open document. Each book used to keep its own
-     * cache of up to a fifth of the heap, so opening a few books could exhaust memory.
-     */
-    private object PageCache {
-        private var counter = 0L
-        private val memory = object : LruCache<Triple<Long, Int, Int>, Bitmap>((Runtime.getRuntime().maxMemory() / 6).toInt()) {
-            override fun sizeOf(key: Triple<Long, Int, Int>, value: Bitmap): Int = value.byteCount
-        }
-
-        @Synchronized fun nextId(): Long = ++counter
-        fun get(id: Long, index: Int, width: Int): Bitmap? = memory.get(Triple(id, index, width))
-        fun put(id: Long, index: Int, width: Int, bitmap: Bitmap) { memory.put(Triple(id, index, width), bitmap) }
-        fun evict(id: Long) = memory.snapshot().keys.filter { it.first == id }.forEach { memory.remove(it) }
-    }
-
     private object Documents {
         private val open = mutableMapOf<String, Pair<File, Document>>()
+
+        @Synchronized fun existing(id: String): Document? = open[id]?.second
+
+        @android.annotation.TargetApi(26)
+        @Synchronized fun stream(book: QuranPdf): Document {
+            val directory = File(appContext.cacheDir, "quran_pdf_ranges/${book.id}")
+            val range = RangeFile(book.url, directory)
+            val length = range.prepare()
+            if (length != book.sizeBytes) throw IOException("PDF source size changed")
+            val thread = HandlerThread("quran-range-${book.id}").apply { start() }
+            var descriptor: ParcelFileDescriptor? = null
+            try {
+                descriptor = appContext.getSystemService(StorageManager::class.java).openProxyFileDescriptor(
+                    ParcelFileDescriptor.MODE_READ_ONLY,
+                    object : ProxyFileDescriptorCallback() {
+                        override fun onGetSize(): Long = length
+                        override fun onRead(offset: Long, size: Int, data: ByteArray): Int = try {
+                            range.read(offset, size, data)
+                        } catch (_: IOException) { throw ErrnoException("Quran PDF range", OsConstants.EIO) }
+                        override fun onRelease() { thread.quitSafely() }
+                    }, Handler(thread.looper)
+                )
+                val document = Document(PdfRenderer(descriptor), descriptor)
+                open[book.id] = directory to document
+                return document
+            } catch (error: Throwable) {
+                descriptor?.close()
+                thread.quitSafely()
+                throw error
+            }
+        }
 
         @Synchronized fun open(id: String, file: File): Document {
             open[id]?.let { (openedFile, document) -> if (openedFile == file) return document else document.close() }
