@@ -12,12 +12,9 @@ import android.hardware.GeomagneticField
 import android.location.Location
 import android.os.SystemClock
 import android.location.Geocoder
-import com.example.feature.citychallenge.CcLocalStore
 import android.os.Build
 import android.os.LocaleList
-import com.google.android.gms.tasks.CancellationTokenSource
 import androidx.core.content.ContextCompat
-import com.google.android.gms.location.*
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room
@@ -273,10 +270,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val languageSelectionDoneKey = "language_selection_done"
     private val featureTourDoneKey = "feature_tour_done"
 
-    private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
+    private val liveLocation = com.example.core.platform.liveLocationSource(application)
     private val sensorManager = application.getSystemService(SensorManager::class.java)
-    private var locationCallback: LocationCallback? = null
-    private var currentLocationRequest: CancellationTokenSource? = null
     @Volatile private var liveLocationGeneration = 0L
     @Volatile private var useLiveLocation = PrayerSettingsStore.useLiveLocation(appPreferences)
     private var rotationSensor: Sensor? = null
@@ -586,20 +581,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         useLiveLocation = false
         PrayerSettingsStore.saveUseLiveLocation(appPreferences, false)
         liveLocationGeneration++
-        currentLocationRequest?.cancel()
-        currentLocationRequest = null
-        locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
-        locationCallback = null
+        liveLocation.stop()
         _uiState.update { it.copy(isLiveLocation = false, magneticDeclination = cityDeclination(it.selectedCity), locationIssue = null) }
     }
 
     /** Stops GPS while the app is in the background; [startLiveLocation] resumes it on return. */
-    fun pauseLiveLocation() {
-        currentLocationRequest?.cancel()
-        currentLocationRequest = null
-        locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
-        locationCallback = null
-    }
+    fun pauseLiveLocation() = liveLocation.stop()
 
     fun usesLiveLocation(): Boolean = useLiveLocation
 
@@ -624,40 +611,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             _uiState.update { it.copy(locationIssue = null) }
         }
-        val priority = if (fineGranted) Priority.PRIORITY_HIGH_ACCURACY else Priority.PRIORITY_BALANCED_POWER_ACCURACY
-
-        if (locationCallback == null) {
-            locationCallback = object : LocationCallback() {
-                override fun onLocationResult(result: LocationResult) {
-                    val location = result.lastLocation ?: return
-                    updateLiveLocation(location)
-                }
-            }
-            val request = LocationRequest.Builder(priority, 30_000)
-                .setMinUpdateIntervalMillis(10_000).setWaitForAccurateLocation(false).build()
-            // Permission can be revoked between the check above and this call; the dashboard then keeps its city.
-            runCatching {
-                fusedLocationClient.requestLocationUpdates(request, locationCallback!!, android.os.Looper.getMainLooper())
-            }.onFailure { locationCallback = null }
-        }
-
-        // Ask for a fresh fix whenever the app returns to the foreground. If Android
-        // location was just switched on this updates the dashboard without a tap.
-        currentLocationRequest?.cancel()
-        val cancellationTokenSource = CancellationTokenSource().also { currentLocationRequest = it }
-        runCatching {
-            fusedLocationClient.getCurrentLocation(priority, cancellationTokenSource.token)
-                .addOnSuccessListener { location ->
-                    location?.let { updateLiveLocation(it) }
-                }
-        }
-
-        // Fall back to Android's cached fix while a fresh one is being acquired.
-        runCatching {
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                location?.let { updateLiveLocation(it) }
-            }
-        }
+        liveLocation.start(fineGranted) { updateLiveLocation(it) }
     }
 
     private fun updateLiveLocation(location: Location) {
@@ -1098,7 +1052,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .putInt("tasbeeh_count", next)
             .putInt("tasbeeh_rounds", rounds)
             .apply()
-        CcLocalStore.addDhikr(getApplication())
+        com.example.feature.citychallenge.CcLocalStore.addDhikr(getApplication())
         _uiState.update { it.copy(tasbeehCount = next, tasbeehRounds = rounds) }
     }
 
@@ -1372,8 +1326,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         GeomagneticField(city.latitude.toFloat(), city.longitude.toFloat(), 0f, System.currentTimeMillis()).declination
 
     override fun onCleared() {
-        currentLocationRequest?.cancel()
-        locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
+        liveLocation.stop()
         stopCompass()
         super.onCleared()
     }

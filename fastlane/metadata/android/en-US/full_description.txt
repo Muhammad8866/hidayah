@@ -1,0 +1,17 @@
+Hidayah is a daily Islamic companion that works offline and respects your privacy.
+
+<b>Features</b>
+<ul>
+<li>Accurate prayer times calculated on the device, with several calculation methods, Asr madhhab and high-latitude rules</li>
+<li>Azan and prayer notifications, and a home-screen prayer times widget</li>
+<li>Qibla compass</li>
+<li>Quran reader with translations, tafsir audio, word-by-word learning, Hifz coach and reading goals</li>
+<li>Duas, Adhkar, Rabbana duas, Kalimas and a tasbeeh / tally counter</li>
+<li>Hadith collections, Islamic books, Names of Allah and of the Prophet</li>
+<li>Islamic calendar, festivals, Ramadan and Roza tracker, Zakat calculator, Hajj and Umrah guide</li>
+<li>Qaida and Tajweed lessons, quizzes and more</li>
+<li>Available in more than 50 languages</li>
+</ul>
+
+<b>F-Droid build</b>
+This build contains no analytics, crash reporting or Google Play services. Location uses Android's own location service. The Community Masjid and City Challenge features need an online backend and are only part of the Google Play version.

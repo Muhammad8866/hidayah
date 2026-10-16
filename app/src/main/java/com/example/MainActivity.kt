@@ -133,49 +133,15 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
 
-    private val appUpdateManager by lazy {
-        com.google.android.play.core.appupdate.AppUpdateManagerFactory.create(applicationContext)
-    }
-    private var updateFlowShowing = false
-    // Whatever the result, onResume runs next and asks Play again, so a cancelled update comes straight back.
-    private val updateLauncher = registerForActivityResult(
-        ActivityResultContracts.StartIntentSenderForResult()
-    ) { updateFlowShowing = false }
+    private val appUpdates = com.example.core.platform.AppUpdateEnforcer(this)
 
     override fun onResume() {
         super.onResume()
-        enforceLatestVersion()
+        appUpdates.check()
     }
 
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean =
         com.example.quran.ReaderKeys.handle(event) || super.dispatchKeyEvent(event)
-
-    /**
-     * Updates are mandatory: when Play has a newer version, its full-screen update flow blocks the app
-     * until it is installed. Offline, or installed from outside Play, the check fails and the app opens normally.
-     */
-    private fun enforceLatestVersion() {
-        if (updateFlowShowing) return
-        appUpdateManager.appUpdateInfo.addOnSuccessListener { info ->
-            val availability = info.updateAvailability()
-            val pending = availability == com.google.android.play.core.install.model.UpdateAvailability.UPDATE_AVAILABLE &&
-                info.isUpdateTypeAllowed(com.google.android.play.core.install.model.AppUpdateType.IMMEDIATE)
-            // An update that was started and then left (app killed, Home pressed) must be resumed.
-            val interrupted = availability ==
-                com.google.android.play.core.install.model.UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS
-            if (!updateFlowShowing && !isFinishing && (pending || interrupted)) {
-                updateFlowShowing = runCatching {
-                    appUpdateManager.startUpdateFlowForResult(
-                        info,
-                        updateLauncher,
-                        com.google.android.play.core.appupdate.AppUpdateOptions.newBuilder(
-                            com.google.android.play.core.install.model.AppUpdateType.IMMEDIATE
-                        ).build()
-                    )
-                }.getOrDefault(false)
-            }
-        }
-    }
 
     override fun onStart() {
         super.onStart()

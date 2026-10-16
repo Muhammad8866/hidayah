@@ -1,5 +1,4 @@
 import java.util.Properties
-import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
 
 plugins {
   alias(libs.plugins.android.application)
@@ -7,8 +6,13 @@ plugins {
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
-  alias(libs.plugins.google.services)
-  alias(libs.plugins.firebase.crashlytics)
+}
+
+// `-Pfoss` (used by F-Droid) builds only the foss flavor, with no Google/Firebase plugin applied.
+val fossOnly = providers.gradleProperty("foss").isPresent
+if (!fossOnly) {
+  apply(plugin = "com.google.gms.google-services")
+  apply(plugin = "com.google.firebase.crashlytics")
 }
 
 // New UI copy is translated once at build time and bundled for offline lookup.
@@ -30,7 +34,7 @@ tasks.configureEach {
 android {
   namespace = "com.example"
   sourceSets.getByName("main").kotlin.srcDir(autoTranslationDir.get().asFile)
-  assetPacks += listOf(":hindi_quran_pdf")
+  if (!fossOnly) assetPacks += listOf(":hindi_quran_pdf")
   sourceSets.getByName("debug").assets.srcDir("${rootDir}/hindi_quran_pdf/src/main/assets")
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
@@ -43,6 +47,17 @@ android {
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
+
+  // play: Google Play build with Firebase, Play services and Play delivery.
+  // foss: F-Droid build with only free dependencies; Firebase-backed features are hidden.
+  flavorDimensions += "store"
+  productFlavors {
+    create("play") { dimension = "store" }
+    create("foss") { dimension = "store" }
+  }
+  sourceSets.getByName("foss").assets.srcDir("${rootDir}/hindi_quran_pdf/src/main/assets")
+  // The foss build copies the bundled Hindi PDF out of the APK through a file descriptor.
+  androidResources { noCompress += "pdf" }
 
   signingConfigs {
     create("release") {
@@ -63,7 +78,10 @@ android {
       isMinifyEnabled = true
       isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      signingConfig = signingConfigs.getByName("release")
+      // F-Droid signs with its own key, so an unsigned release is built when no keystore is present.
+      if (signingConfigs.getByName("release").storeFile?.exists() == true) {
+        signingConfig = signingConfigs.getByName("release")
+      }
     }
     // Keep the default Android debug signing configuration. It creates and uses
     // the standard per-user debug keystore automatically when one is not present.
@@ -84,6 +102,17 @@ android {
   }
 }
 
+// F-Droid builds never configure the play variants, so no Google artifact is resolved.
+androidComponents {
+  beforeVariants { variant ->
+    if (fossOnly && variant.productFlavors.any { it.second == "play" }) variant.enable = false
+  }
+}
+// The Google plugins see every variant; the foss variants have no Firebase to report to.
+tasks.configureEach {
+  if (name.contains("Foss") && (name.contains("Crashlytics") || name.contains("GoogleServices"))) enabled = false
+}
+
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
 // to match the convention used in Web projects.
 secrets {
@@ -92,14 +121,16 @@ secrets {
   ignoreList.add("FIREBASE_APPCHECK_DEBUG_TOKEN")
 }
 
-googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
+
+// AGP creates flavor+build-type configurations lazily; App Check's debug provider needs this one now.
+configurations.maybeCreate("playDebugImplementation")
 
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
 dependencies {
-  implementation("com.google.android.libraries.places:places:5.1.1")
+  "playImplementation"("com.google.android.libraries.places:places:5.1.1")
   implementation(platform(libs.androidx.compose.bom))
-  implementation(platform(libs.firebase.bom))
+  "playImplementation"(platform(libs.firebase.bom))
   // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
   // implementation(libs.androidx.camera.camera2)
@@ -124,12 +155,12 @@ dependencies {
   implementation(libs.converter.moshi)
   // implementation(libs.firebase.ai) // unused: the assistant is an offline, source-constrained lookup
   // Firestore + Anonymous Auth are used only by the Community Masjid feature.
-  implementation(libs.firebase.firestore)
-  implementation(libs.firebase.auth)
-  implementation(libs.firebase.analytics)
+  "playImplementation"(libs.firebase.firestore)
+  "playImplementation"(libs.firebase.auth)
+  "playImplementation"(libs.firebase.analytics)
   // Crash reports and automatic app-start/frame traces; no network-instrumentation plugin.
-  implementation(libs.firebase.crashlytics)
-  implementation(libs.firebase.perf)
+  "playImplementation"(libs.firebase.crashlytics)
+  "playImplementation"(libs.firebase.perf)
 
   // Uncomment ALL FOUR of the following dependencies together to use Firebase Auth and Google
   // Sign-In via Credential Manager:
@@ -138,8 +169,8 @@ dependencies {
   // implementation(libs.androidx.credentials.play.services)
   // implementation(libs.googleid)
   // App Check: Play Integrity in release, the debug provider only in debug builds.
-  implementation(libs.firebase.appcheck.playintegrity)
-  debugImplementation(libs.firebase.appcheck.debug)
+  "playImplementation"(libs.firebase.appcheck.playintegrity)
+  "playDebugImplementation"(libs.firebase.appcheck.debug)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.logging.interceptor)
@@ -148,10 +179,10 @@ dependencies {
   implementation(libs.moshi.kotlin)
     implementation(libs.okhttp)
     implementation(libs.pdfbox.android)
-  implementation(libs.play.services.location)
-  implementation("com.google.android.play:asset-delivery:2.3.0")
+  "playImplementation"(libs.play.services.location)
+  "playImplementation"("com.google.android.play:asset-delivery:2.3.0")
   // Mandatory (immediate) in-app updates from Google Play.
-  implementation("com.google.android.play:app-update:2.1.0")
+  "playImplementation"("com.google.android.play:app-update:2.1.0")
   implementation(libs.retrofit)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)

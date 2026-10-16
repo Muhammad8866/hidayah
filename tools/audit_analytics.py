@@ -14,7 +14,7 @@ events = {'media': 'media_action', 'mediaState': 'media_state', 'playbackState':
           'milestone': 'feature_milestone', 'prayerAlert': 'prayer_alert', 'widget': 'widget_event',
           'launch': 'app_launch'}
 generated = re.compile(r'_(tap|back|dismiss|refresh|toggle|change_complete|search_submit)_\d+$')
-for path in sorted((root / 'app/src/main/java').rglob('*.kt')):
+for path in sorted(p for d in ('main', 'play') for p in (root / 'app/src' / d / 'java').rglob('*.kt')):
     if 'core/analytics' in path.as_posix(): continue
     source = path.read_text(encoding='utf-8')
     def record(match, event, screen, component='', action=''):

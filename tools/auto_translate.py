@@ -39,7 +39,9 @@ def languages():
 
 def scan():
     found = {}
-    for path in sorted((ROOT / 'app/src/main/java').rglob('*.kt')):
+    # Every flavor's UI copy shares one catalog: main plus the play and foss source sets.
+    paths = [p for d in ('main', 'play', 'foss') for p in (ROOT / 'app/src' / d / 'java').rglob('*.kt')]
+    for path in sorted(paths):
         if '/localization/' in path.as_posix():
             continue
         source = path.read_text(encoding='utf-8')
