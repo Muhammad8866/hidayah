@@ -150,7 +150,7 @@ class AzanAlertService : Service() {
          * not or cannot play, and the caller then posts the normal notification instead.
          */
         fun start(context: Context, azan: File, alert: Intent): Boolean {
-            val audio = context.getSystemService(AudioManager::class.java)
+            val audio = context.getSystemService(AudioManager::class.java) ?: return false
             // On silent or vibrate (in the masjid, in a meeting) or during a call the phone stays quiet.
             if (audio.ringerMode != AudioManager.RINGER_MODE_NORMAL || audio.mode != AudioManager.MODE_NORMAL) return false
             val intent = Intent(context, AzanAlertService::class.java)

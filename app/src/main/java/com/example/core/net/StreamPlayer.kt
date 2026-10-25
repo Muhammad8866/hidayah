@@ -23,7 +23,7 @@ import java.io.File
 @OptIn(UnstableApi::class)
 object StreamPlayer {
     private const val CACHE_BYTES = 256L * 1024 * 1024
-    private var cache: SimpleCache? = null
+    @Volatile private var cache: SimpleCache? = null
 
     @Synchronized
     private fun cache(context: Context): SimpleCache = cache ?: SimpleCache(

@@ -88,7 +88,11 @@ internal fun buildHomeSuggestions(
                 Icons.Default.NightsStay, Color(0xFF6B5BAE), SuggestionTarget.RAMADAN)
         }
     } else if (upcoming != null) {
-        val days = ((upcoming.startsAtMillis - nowMillis) / 86_400_000L).toInt()
+        // Zoned day arithmetic, so a 23 h or 25 h DST day does not make the count off by one.
+        val days = java.time.temporal.ChronoUnit.DAYS.between(
+            java.time.Instant.ofEpochMilli(nowMillis).atZone(java.time.ZoneId.systemDefault()),
+            java.time.Instant.ofEpochMilli(upcoming.startsAtMillis).atZone(java.time.ZoneId.systemDefault())
+        ).toInt()
         if (days in 0..30) {
             out += HomeSuggestion("ramadan_soon",
                 if (days == 0) t("Ramadan begins tonight") else tpl("Ramadan begins in {days} days", "days" to days.toString()),

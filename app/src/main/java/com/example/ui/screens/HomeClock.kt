@@ -15,8 +15,6 @@ import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
 
-private const val DAY_MILLIS = 24 * 60 * 60 * 1000L
-
 /**
  * Wall clock that ticks on exact [periodMillis] boundaries (second or minute), so Home countdowns
  * never lag the ViewModel's unaligned 60 s refresh by up to a minute.
@@ -46,6 +44,10 @@ internal fun AstronomicalPrayerCalculator.RawPrayerTimes.homeHoursOf(type: Praye
 private fun cityCalendar(uiState: MainUiState, nowMillis: Long): Calendar =
     Calendar.getInstance(TimeZone.getTimeZone(uiState.selectedCity.timeZoneId)).apply { timeInMillis = nowMillis }
 
+/** Same wall-clock time [days] civil days away in the city, so DST days are not off by an hour. */
+private fun shiftDays(uiState: MainUiState, millis: Long, days: Int): Long =
+    cityCalendar(uiState, millis).apply { add(Calendar.DAY_OF_YEAR, days) }.timeInMillis
+
 /** Instant of [type] on the city's civil day containing [nowMillis], or null while times are unknown. */
 internal fun prayerInstantToday(uiState: MainUiState, type: PrayerType, nowMillis: Long): Long? {
     val raw = uiState.rawPrayerTimes ?: return null
@@ -62,16 +64,16 @@ internal fun nextPrayerTargetMillis(uiState: MainUiState, nowMillis: Long): Long
     val today = prayerInstantToday(uiState, uiState.nextPrayer, nowMillis) ?: return null
     if (today > nowMillis) return today
     if (uiState.nextPrayer != PrayerType.FAJR) return today
-    val tomorrowRaw = uiState.tomorrowPrayerTimes ?: return today + DAY_MILLIS
+    val tomorrowRaw = uiState.tomorrowPrayerTimes ?: return shiftDays(uiState, today, 1)
     val cal = cityCalendar(uiState, nowMillis).apply { add(Calendar.DAY_OF_YEAR, 1) }
     return runCatching { AstronomicalPrayerCalculator.formatHoursToTimeInMillis(cal, tomorrowRaw.fajrHours) }
-        .getOrDefault(today + DAY_MILLIS)
+        .getOrDefault(shiftDays(uiState, today, 1))
 }
 
 /** When the running prayer window began; after midnight the running Isha began yesterday. */
 internal fun currentPrayerStartMillis(uiState: MainUiState, nowMillis: Long): Long? {
     val start = prayerInstantToday(uiState, uiState.currentPrayer, nowMillis) ?: return null
-    return if (start > nowMillis) start - DAY_MILLIS else start
+    return if (start > nowMillis) shiftDays(uiState, start, -1) else start
 }
 
 /** True when the highlighted next Fajr belongs to tomorrow's civil date in the city. */

@@ -116,9 +116,9 @@ object SmartHifzRevisionPlanner {
         val completedDays = sessions.filter { it.completedTasks > 0 }.map { dayKey(it.reviewedAtEpochMs) }.toSet()
         var cursor = dayKey(nowEpochMs)
         // A user who has not reviewed yet today keeps yesterday's streak visible.
-        if (cursor !in completedDays) cursor -= 86_400_000L
+        if (cursor !in completedDays) cursor = dayKey(cursor - 1)
         var count = 0
-        while (cursor in completedDays) { count++; cursor -= 86_400_000L }
+        while (cursor in completedDays) { count++; cursor = dayKey(cursor - 1) }
         return count
     }
 }

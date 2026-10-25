@@ -28,6 +28,7 @@ class NaatAudioService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        session?.release()
         session = createPlaybackSession(
             this, "naat",
             isPlaying = { NaatAudioManager.state.value.playing },
@@ -49,7 +50,11 @@ class NaatAudioService : Service() {
             ACTION_TOGGLE -> NaatAudioManager.togglePlayPause()
             ACTION_NEXT -> NaatAudioManager.next()
             ACTION_PREVIOUS -> NaatAudioManager.previous()
-            ACTION_STOP -> { NaatAudioManager.stop(); return START_NOT_STICKY }
+            ACTION_STOP -> {
+                NaatAudioManager.stop()
+                stopSelf(startId)
+                return START_NOT_STICKY
+            }
         }
         val notification = buildNotification(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

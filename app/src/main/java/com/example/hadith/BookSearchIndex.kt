@@ -343,7 +343,7 @@ object BookSearchIndex {
 
         val matcher = SnippetMatcher(parts.map { part -> part.word to termKeys(db, part.concepts) })
         val hits = chosen.mapNotNull { doc ->
-            db.rawQuery("SELECT page, heading, body FROM doc WHERE id = $doc", null).use { cursor ->
+            db.rawQuery("SELECT page, heading, body FROM doc WHERE id = ?", arrayOf(doc.toString())).use { cursor ->
                 if (!cursor.moveToFirst()) return@use null
                 val heading = if (cursor.isNull(1)) null else cursor.getString(1)
                 val text = heading ?: InflaterInputStream(cursor.getBlob(2).inputStream()).use { it.readBytes().decodeToString() }

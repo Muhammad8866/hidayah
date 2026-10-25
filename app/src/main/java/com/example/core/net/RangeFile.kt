@@ -97,7 +97,11 @@ internal class RangeFile(
                     source = response.request.url.toString()
                     return bytes
                 }
-            } catch (error: IOException) { failure = error }
+            } catch (error: IOException) {
+                failure = error
+                // Jittered pause so many readers do not retry a struggling server in lockstep.
+                if (attempt == 0 && !changed) Thread.sleep(250L + kotlin.random.Random.nextLong(250L))
+            }
         }
         throw failure ?: IOException("Range failed")
     }

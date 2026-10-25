@@ -27,7 +27,7 @@ object SensitiveDataRedactor {
 
     fun redactCoordinates(lat: Double, lon: Double): String {
         // Coarsen coordinates to 1 decimal place (~11km) for privacy-safe logging
-        return String.format("%.1f° N/S, %.1f° E/W", lat, lon)
+        return String.format(java.util.Locale.US, "%.1f° N/S, %.1f° E/W", lat, lon)
     }
 }
 

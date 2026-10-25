@@ -107,7 +107,7 @@ private fun Long.asSize(): String = when {
 /** Reader preferences and learned vocabulary, persisted across sessions. */
 private class WbwState(context: Context, appLanguage: String) {
     private val prefs = context.getSharedPreferences("quran_wbw", Context.MODE_PRIVATE)
-    var learned by mutableStateOf(prefs.getStringSet("learned", emptySet())!!.toSet()); private set
+    var learned by mutableStateOf(prefs.getStringSet("learned", emptySet()).orEmpty().toSet()); private set
     var lastSurah by mutableIntStateOf(prefs.getInt("last_surah", 0)); private set
     var lastAyah by mutableIntStateOf(prefs.getInt("last_ayah", 1)); private set
     var language by mutableStateOf(

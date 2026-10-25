@@ -67,7 +67,7 @@ object FastNet {
         }
         .build()
 
-    private var filesDir: File? = null
+    @Volatile private var filesDir: File? = null
 
     fun init(context: Context) {
         if (filesDir == null) filesDir = context.applicationContext.filesDir
@@ -203,7 +203,7 @@ object FastNet {
                     break
                 } catch (e: IOException) {
                     if (++failures >= ATTEMPTS) throw e
-                    delay(250L * failures)
+                    delay(250L * failures + kotlin.random.Random.nextLong(250L))
                 }
             }
             pending?.let { (from, to) -> if (from <= to) segment(from, to) }
@@ -227,7 +227,7 @@ object FastNet {
                 } catch (e: IOException) {
                     if (++failures >= ATTEMPTS) throw e
                     source = url
-                    delay(250L * failures)
+                    delay(250L * failures + kotlin.random.Random.nextLong(250L))
                 }
             }
         }

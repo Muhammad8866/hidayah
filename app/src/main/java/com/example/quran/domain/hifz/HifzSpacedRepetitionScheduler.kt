@@ -59,7 +59,11 @@ object HifzSpacedRepetitionScheduler {
             }
         }
 
-        val nextReviewMs = reviewTimestampMs + (newIntervalDays.toLong() * 86_400_000L)
+        // Calendar days, so a DST change does not shift the due time by an hour.
+        val nextReviewMs = Calendar.getInstance(TimeZone.getDefault()).apply {
+            timeInMillis = reviewTimestampMs
+            add(Calendar.DAY_OF_YEAR, newIntervalDays)
+        }.timeInMillis
 
         return current.copy(
             repetitions = newReps,
