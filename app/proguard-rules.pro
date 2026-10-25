@@ -38,3 +38,8 @@
 -dontwarn okhttp3.internal.platform.**
 -dontwarn org.conscrypt.**
 -dontwarn org.openjsse.**
+
+# Places SDK bundles a shaded gRPC that instantiates its channel/name-resolver providers reflectively
+# (Class.forName + no-arg constructor). R8 stripped that constructor, so place lookups failed with
+# "Provider old could not be instantiated: NoSuchMethodException old.<init> []".
+-keepclassmembers class com.google.android.libraries.places.internal.** { <init>(); }
