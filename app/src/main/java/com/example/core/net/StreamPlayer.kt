@@ -21,6 +21,7 @@ import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.mp3.Mp3Extractor
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
@@ -102,7 +103,9 @@ object StreamPlayer {
  */
 internal suspend fun <T> runCancellingOnJobCancel(cancel: () -> Unit, work: () -> T): T = coroutineScope {
     val done = AtomicBoolean(false)
-    val watcher = launch(Dispatchers.IO) {
+    // UNDISPATCHED: the watcher is already waiting before [work] starts. A DEFAULT start could be
+    // cancelled before it ever ran, skipping the finally and leaving [work] running.
+    val watcher = launch(Dispatchers.IO, start = CoroutineStart.UNDISPATCHED) {
         try { awaitCancellation() } finally { if (!done.get()) cancel() }
     }
     try { work() } finally { done.set(true); watcher.cancel() }

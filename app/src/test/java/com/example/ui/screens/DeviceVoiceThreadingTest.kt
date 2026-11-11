@@ -179,7 +179,7 @@ class DeviceVoiceThreadingTest {
     fun duaEngineThatThrowsDuringSetUpIsUnavailableInsteadOfCrashing() {
         val speech = DuaSpeech(context, { _, progress, onInit ->
             createdOn = Thread.currentThread()
-            object : SpeechEngine by FakeEngine(progress, onInit).also { engine = it } {
+            object : SpeechEngine by (FakeEngine(progress, onInit).also { engine = it }) {
                 override fun useArabic(): Boolean = throw IllegalStateException("engine died")
             }
         }, executor)

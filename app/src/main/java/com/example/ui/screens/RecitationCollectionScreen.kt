@@ -576,8 +576,10 @@ private fun CompletedRow(id: String, number: Int?, title: String, reference: Str
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            // The count control stays addressable while folded and reads as finished.
-            Box(Modifier.testTag("collection_count_$id").semantics { disabled() }) {
+            // The count control stays addressable while folded and reads as finished. Its own merge
+            // boundary keeps the tag findable and stops "disabled" merging into the clickable row,
+            // which would hide the row's expand action from TalkBack.
+            Box(Modifier.testTag("collection_count_$id").semantics(mergeDescendants = true) { disabled() }) {
                 TonalPill(localizeUiText("Completed", language), containerColor = tint.copy(alpha = 0.16f), contentColor = tint)
             }
             Icon(Icons.Default.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant,

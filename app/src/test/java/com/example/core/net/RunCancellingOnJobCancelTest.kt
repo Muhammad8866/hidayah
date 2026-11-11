@@ -4,6 +4,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -34,6 +35,20 @@ class RunCancellingOnJobCancelTest {
         }
         assertTrue(started.await(5, TimeUnit.SECONDS))
         job.cancelAndJoin()
+        assertEquals(0L, stop.count)
+    }
+
+    /** The caller is cancelled before the watcher could be dispatched; the work must still be cancelled. */
+    @Test
+    fun callerCancelledBeforeWatcherRunsStillCancelsWork() = runBlocking {
+        val stop = CountDownLatch(1)
+        val job = launch(Dispatchers.IO) {
+            cancel()
+            runCatching {
+                runCancellingOnJobCancel({ stop.countDown() }) { stop.await(10, TimeUnit.SECONDS) }
+            }
+        }
+        job.join()
         assertEquals(0L, stop.count)
     }
 

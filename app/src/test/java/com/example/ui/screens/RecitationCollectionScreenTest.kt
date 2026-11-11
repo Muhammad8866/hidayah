@@ -35,7 +35,11 @@ class RecitationCollectionScreenTest {
         compose.onNodeWithTag("collection_audio_quran_2_255_257").assertIsDisplayed()
         compose.onNodeWithTag("recitation_collection_screen")
             .performScrollToNode(hasTestTag("collection_count_quran_2_255_257"))
-        compose.onNodeWithTag("collection_count_quran_2_255_257").performClick().assertIsNotEnabled()
+        compose.onNodeWithTag("collection_count_quran_2_255_257").performClick()
+        // A finished passage folds into its one-line completed row, which re-exposes the same tag as disabled,
+        // so look the control up again instead of reusing the button node that the fold removed.
+        compose.waitForIdle()
+        compose.onNodeWithTag("collection_count_quran_2_255_257").assertIsNotEnabled()
         val prefs = ApplicationProvider.getApplicationContext<Context>()
             .getSharedPreferences("recitation_collection", Context.MODE_PRIVATE)
         org.junit.Assert.assertEquals(1, prefs.getInt("count_quran_2_255_257", 0))
