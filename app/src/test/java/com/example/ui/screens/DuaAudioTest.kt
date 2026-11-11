@@ -19,6 +19,13 @@ class DuaAudioTest {
     }
 
     @Test
+    fun `device voice gets standard spelling without quranic marks or ayah numbers`() {
+        assertEquals("لَا إِلهَ إِلَّا اللّهُ", speakableArabic("لَا إِلٰهَ إِلَّا اللّٰهُ"))
+        assertEquals("رَبَّنَا اغْفِرْ لَنَا وَنَجِّنَا", speakableArabic("رَبَّنَا ٱغْفِرْ لَنَاۖ (٨٥) وَنَجِّنَا ﴿٨٦﴾"))
+        assertEquals("النَّبِيِّ صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ", speakableArabic("النَّبِيِّ ﷺ"))
+    }
+
+    @Test
     fun `long text without spaces also fits engine limit`() {
         val text = "ا".repeat(301)
         val chunks = splitDuaSpeech(text, 100)

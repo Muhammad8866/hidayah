@@ -1,13 +1,13 @@
 package com.example.ui.screens
 
+import com.example.ui.tour.tourTarget
+
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -32,7 +32,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.ui.localization.LocalizedText
-import java.util.Locale
+import java.util.concurrent.ExecutorService
 import kotlinx.coroutines.flow.MutableStateFlow
 
 internal data class KalimaAudioState(
@@ -100,13 +100,19 @@ internal fun kalimaGapMs(previous: KalimaUtterance, next: KalimaUtterance): Long
     else -> 0L
 }
 
-/** Phrase-by-phrase reading of the bundled Arabic with the device voice; no guessed recording URLs. */
-internal class KalimaAudio(context: Context) {
+/**
+ * Phrase-by-phrase reading of the bundled Arabic with the device voice; no guessed recording URLs.
+ * Session state lives on the main thread; every voice-engine call runs on [engine]'s own thread.
+ */
+internal class KalimaAudio(
+    context: Context,
+    factory: SpeechEngineFactory = deviceSpeechEngine,
+    executor: ExecutorService = newSpeechExecutor()
+) {
     val state = MutableStateFlow(KalimaAudioState())
     private val main = Handler(Looper.getMainLooper())
     private var closed = false
     private var generation = 0
-    private var engine: TextToSpeech? = null
     private var queue: List<KalimaUtterance> = emptyList()
     private var sessionIds: List<String> = emptyList()
     private var position = 0
@@ -117,43 +123,29 @@ internal class KalimaAudio(context: Context) {
         if (change < 0) main.post { if (!closed) stop() }
     }
 
-    init {
-        engine = TextToSpeech(context.applicationContext) { status ->
-            main.post {
-                if (!closed) {
-                    val tts = engine
-                    val supported = status == TextToSpeech.SUCCESS && tts != null &&
-                        tts.setLanguage(Locale.forLanguageTag("ar")) >= TextToSpeech.LANG_AVAILABLE
-                    if (supported) {
-                        tts?.voices?.filter { it.locale.language == "ar" && !it.isNetworkConnectionRequired }
-                            ?.maxByOrNull { it.quality }?.let { tts?.setVoice(it) }
-                        tts?.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
-                    }
-                    state.value = state.value.copy(ready = supported,
-                        error = if (supported) null else "Arabic voice unavailable. Install an Arabic text-to-speech voice in device settings.")
-                }
+    private val engine = SpeechEngineThread(context, object : SpeechProgress {
+        override fun onStart(utteranceId: String?) { main.post {
+            val current = currentFor(utteranceId)
+            if (current != null) state.value = state.value.copy(
+                activeId = sessionIds.getOrNull(current.entryIndex),
+                activePhrase = current.phraseIndex,
+                repeatsLeft = (repeatTotal - 1 - current.pass).coerceAtLeast(0))
+        } }
+        override fun onDone(utteranceId: String?) { main.post {
+            if (currentFor(utteranceId) != null) {
+                if (position >= queue.lastIndex) { com.example.core.analytics.AppAnalytics.mediaState("kalima_speech", "completed"); stop() } else { position++; speakCurrent() }
             }
+        } }
+        override fun onError(utteranceId: String?) { main.post {
+            if (!closed && parseKalimaUtteranceId(utteranceId)?.generation == generation) fail()
+        } }
+    }, onReady = { supported ->
+        if (!closed) {
+            if (!supported) com.example.core.analytics.AppAnalytics.mediaState("kalima_speech", "failed", "voice_unavailable")
+            state.value = state.value.copy(ready = supported,
+                error = if (supported) null else "Arabic voice unavailable. Install an Arabic text-to-speech voice in device settings.")
         }
-        engine?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) { main.post {
-                val current = currentFor(utteranceId)
-                if (current != null) state.value = state.value.copy(
-                    activeId = sessionIds.getOrNull(current.entryIndex),
-                    activePhrase = current.phraseIndex,
-                    repeatsLeft = (repeatTotal - 1 - current.pass).coerceAtLeast(0))
-            } }
-            override fun onDone(utteranceId: String?) { main.post {
-                if (currentFor(utteranceId) != null) {
-                    if (position >= queue.lastIndex) stop() else { position++; speakCurrent() }
-                }
-            } }
-            @Deprecated("Required by Android")
-            override fun onError(utteranceId: String?) { main.post {
-                if (!closed && parseKalimaUtteranceId(utteranceId)?.generation == generation) fail()
-            } }
-        })
-    }
+    }, factory = factory, executor = executor)
 
     /** The queued utterance [utteranceId] refers to, only when it is the one this session is waiting on. */
     private fun currentFor(utteranceId: String?): KalimaUtterance? {
@@ -170,7 +162,9 @@ internal class KalimaAudio(context: Context) {
 
     fun play(entry: KalimaEntry, repeat: Int = 1) {
         val current = state.value
-        if (current.activeId == entry.id && !current.playingAll && !singlePhrase) { stop(); return }
+        if (current.activeId == entry.id && !current.playingAll && !singlePhrase) { com.example.core.analytics.AppAnalytics.media("kalima_speech", "stop"); stop(); return }
+        com.example.core.analytics.AppAnalytics.media("kalima_speech", "play")
+        com.example.core.analytics.AppAnalytics.content("kalima_speech", entry.id, "play")
         val passes = repeat.coerceAtLeast(1)
         start(listOf(entry.id), planKalimaQueue(listOf(kalimaSpeechTexts(entry)), passes, limit = limit()),
             passes, playingAll = false, single = false)
@@ -178,7 +172,8 @@ internal class KalimaAudio(context: Context) {
 
     fun playPhrase(entry: KalimaEntry, index: Int) {
         val current = state.value
-        if (singlePhrase && current.activeId == entry.id && current.activePhrase == index) { stop(); return }
+        if (singlePhrase && current.activeId == entry.id && current.activePhrase == index) { com.example.core.analytics.AppAnalytics.media("kalima_speech", "stop"); stop(); return }
+        com.example.core.analytics.AppAnalytics.media("kalima_speech", "play_phrase")
         val text = kalimaSpeechTexts(entry).getOrNull(index) ?: return
         val plan = splitDuaSpeech(text, limit()).mapIndexed { chunk, part -> KalimaUtterance(0, 0, index, chunk, part) }
         start(listOf(entry.id), plan, 1, playingAll = false, single = true)
@@ -186,12 +181,13 @@ internal class KalimaAudio(context: Context) {
 
     fun playAll(entries: List<KalimaEntry>, startId: String? = null) {
         if (entries.isEmpty()) return
+        com.example.core.analytics.AppAnalytics.media("kalima_speech", "play_all")
         val startIndex = entries.indexOfFirst { it.id == startId }.coerceAtLeast(0)
         start(entries.map { it.id }, planKalimaQueue(entries.map(::kalimaSpeechTexts), 1, startIndex, limit()),
             1, playingAll = true, single = false)
     }
 
-    fun setSlow(slow: Boolean) { state.value = state.value.copy(slow = slow) }
+    fun setSlow(slow: Boolean) { com.example.core.analytics.AppAnalytics.setting("kalima_speech_slow", slow.toString()); state.value = state.value.copy(slow = slow) }
 
     @Suppress("DEPRECATION")
     private fun start(ids: List<String>, plan: List<KalimaUtterance>, repeat: Int, playingAll: Boolean, single: Boolean) {
@@ -204,6 +200,7 @@ internal class KalimaAudio(context: Context) {
         com.example.azan.AzanAudioManager.stop()
         if (audioManager?.requestAudioFocus(focusListener, AudioManager.STREAM_MUSIC,
                 AudioManager.AUDIOFOCUS_GAIN) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            com.example.core.analytics.AppAnalytics.mediaState("kalima_speech", "failed", "audio_focus")
             state.value = state.value.copy(error = "Audio could not play. Try again.")
             return
         }
@@ -219,16 +216,22 @@ internal class KalimaAudio(context: Context) {
 
     /** Speaks one utterance at a time so a speed change applies from the next phrase. */
     private fun speakCurrent() {
-        val tts = engine
         val utterance = queue.getOrNull(position)
-        if (tts == null || utterance == null) { stop(); return }
-        tts.setSpeechRate(if (state.value.slow) .65f else .85f)
+        if (closed || utterance == null) { stop(); return }
+        val rate = if (state.value.slow) .65f else .85f
         val gap = if (position > 0) kalimaGapMs(queue[position - 1], utterance) else 0L
-        if (gap > 0) tts.playSilentUtterance(gap, TextToSpeech.QUEUE_ADD, "$generation:gap")
-        if (tts.speak(utterance.text, TextToSpeech.QUEUE_ADD, null, kalimaUtteranceId(generation, utterance)) != TextToSpeech.SUCCESS) fail()
+        val session = generation
+        val id = kalimaUtteranceId(session, utterance)
+        engine.call { tts ->
+            tts.setSpeechRate(rate)
+            if (gap > 0) tts.playSilence(gap, "$session:gap")
+            // A newer session (or close) already replaced this one; its failure is stale.
+            if (tts.speak(utterance.text, id) != TextToSpeech.SUCCESS) main.post { if (!closed && generation == session) fail() }
+        }
     }
 
     private fun fail() {
+        com.example.core.analytics.AppAnalytics.mediaState("kalima_speech", "failed", "playback_error")
         stop()
         state.value = state.value.copy(error = "Audio could not play. Try again.")
     }
@@ -240,12 +243,18 @@ internal class KalimaAudio(context: Context) {
         sessionIds = emptyList()
         position = 0
         singlePhrase = false
-        engine?.stop()
+        engine.call { it.stop() }
         audioManager?.abandonAudioFocus(focusListener)
         state.value = state.value.copy(activeId = null, activePhrase = -1, repeatsLeft = 0, playingAll = false)
     }
 
-    fun close() { closed = true; stop(); engine?.shutdown(); engine = null }
+    /** Never blocks: the engine is stopped and shut down on its own thread. */
+    fun close() {
+        if (closed) return
+        closed = true
+        stop()
+        engine.close()
+    }
 }
 
 @Composable
@@ -276,7 +285,7 @@ internal fun KalimaAudioControls(entry: KalimaEntry, audio: KalimaAudio, modifie
             Button(
                 onClick = { if (active) audio.stop() else audio.play(entry, repeat) },
                 enabled = state.ready,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("kalima_audio_${entry.id}")
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("kalima_audio_${entry.id}").tourTarget("kalima_audio_listen")
             ) {
                 Icon(if (active) Icons.Default.Stop else Icons.Default.PlayArrow, contentDescription = null,
                     modifier = Modifier.size(20.dp))
@@ -286,7 +295,7 @@ internal fun KalimaAudioControls(entry: KalimaEntry, audio: KalimaAudio, modifie
             FilledTonalIconToggleButton(
                 checked = state.slow,
                 onCheckedChange = { audio.setSlow(it) },
-                modifier = Modifier.size(52.dp).testTag("kalima_slow_${entry.id}")
+                modifier = Modifier.size(52.dp).testTag("kalima_slow_${entry.id}").tourTarget("kalima_audio_slow")
             ) {
                 Icon(Icons.Default.SlowMotionVideo, contentDescription = com.example.ui.localization.localizedUiText("Slow"))
             }
@@ -297,7 +306,7 @@ internal fun KalimaAudioControls(entry: KalimaEntry, audio: KalimaAudio, modifie
                     val next = KALIMA_REPEAT_OPTIONS.indexOf(repeat) + 1
                     repeat = KALIMA_REPEAT_OPTIONS[next % KALIMA_REPEAT_OPTIONS.size]
                 },
-                modifier = Modifier.heightIn(min = 52.dp).testTag("kalima_repeat_${entry.id}"),
+                modifier = Modifier.heightIn(min = 52.dp).testTag("kalima_repeat_${entry.id}").tourTarget("kalima_audio_repeat"),
                 contentPadding = PaddingValues(horizontal = 14.dp)
             ) {
                 Icon(Icons.Default.Repeat, contentDescription = com.example.ui.localization.localizedUiText("Repeat"),
@@ -309,7 +318,8 @@ internal fun KalimaAudioControls(entry: KalimaEntry, audio: KalimaAudio, modifie
         state.error?.let {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 LocalizedText(it, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                if (!state.ready) TextButton(onClick = {
+                if (!state.ready) TextButton(modifier = Modifier.tourTarget("kalima_audio_voice_settings"), onClick = {
+                    com.example.core.analytics.AppAnalytics.media("kalima_speech", "open_tts_settings")
                     val intent = Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     runCatching { context.startActivity(intent) }
                         .recoverCatching { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -332,7 +342,7 @@ internal fun KalimaNowPlayingBar(audio: KalimaAudio, entries: List<KalimaEntry>,
     ) {
         val current = active ?: return@AnimatedVisibility
         val total = kalimaSpeechTexts(current).size
-        Surface(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp).testTag("kalima_now_playing"),
+        Surface(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp).testTag("kalima_now_playing").tourTarget("kalima_now_playing"),
             shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surface, shadowElevation = 6.dp,
             border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))) {
@@ -351,7 +361,7 @@ internal fun KalimaNowPlayingBar(audio: KalimaAudio, entries: List<KalimaEntry>,
                         if (detail.isNotEmpty()) Text(detail, style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    FilledTonalButton(onClick = { audio.stop() }, modifier = Modifier.heightIn(min = 48.dp).testTag("kalima_stop_all")) {
+                    FilledTonalButton(onClick = { com.example.core.analytics.AppAnalytics.media("kalima_speech", "stop"); audio.stop() }, modifier = Modifier.heightIn(min = 48.dp).testTag("kalima_stop_all").tourTarget("kalima_stop_all")) {
                         Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         LocalizedText("Stop")

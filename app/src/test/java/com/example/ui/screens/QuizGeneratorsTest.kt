@@ -38,6 +38,35 @@ class QuizGeneratorsTest {
         }
     }
 
+    @Test fun rightToLeftLanguagesAskHijriDatesWithArabicMonthNames() {
+        for (language in listOf("ar", "fa", "ps", "sd", "ks", "he")) {
+            val source = AamalSource(com.example.festival.IslamicFestivalRepository.FESTIVALS, com.example.festival.FestivalAamal::forFestival, language)
+            val dated = (0 until source.size).mapNotNull(source::question).filter { it.question == "On which Hijri date is {x}?" }
+            assertTrue(language, dated.isNotEmpty())
+            for (q in dated) for (option in q.options) {
+                assertTrue("${q.id} ($language): $option", option.none { it in 'A'..'Z' || it in 'a'..'z' })
+            }
+        }
+    }
+
+    @Test fun englishQuizTextIsUnchangedBySurahLocalization() {
+        val surahs = com.example.quran.FullQuranCatalog.surahs
+        val facts = SurahFactsSource(surahs, "en")
+        val first = facts.question(0)!!
+        assertEquals("Quran · Surah 1 (${surahs[0].englishName})", first.reference)
+        assertEquals(surahs[0].englishName, first.answer)
+        val ofAyah = QuranSurahOfAyahSource(quran, surahs, "en")
+        val q = (0 until ofAyah.size).firstNotNullOf(ofAyah::question)
+        assertTrue(q.options.all { option -> surahs.any { it.englishName == option } })
+    }
+
+    @Test fun aamalReferenceFollowsTheReaderLanguage() {
+        val source = AamalSource(com.example.festival.IslamicFestivalRepository.FESTIVALS, com.example.festival.FestivalAamal::forFestival, "en")
+        val deeds = com.example.festival.IslamicFestivalRepository.FESTIVALS.flatMap { com.example.festival.FestivalAamal.forFestival(it.id) }
+        val q = (0 until source.size).mapNotNull(source::question).first { it.question == "On which occasion is this deed especially recommended?" }
+        assertTrue(q.reference, deeds.any { it.englishSource == q.reference })
+    }
+
     @Test fun missingWordDistractorsNeverFormARealPhrase() {
         val source = QuranMissingWordSource(quran, com.example.quran.FullQuranCatalog.surahs)
         for (index in 0 until source.size step 37) {

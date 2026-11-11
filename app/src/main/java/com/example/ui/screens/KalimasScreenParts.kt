@@ -1,5 +1,9 @@
 package com.example.ui.screens
 
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
+
+import com.example.ui.localization.localizePhrase
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -11,7 +15,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -19,8 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
@@ -98,9 +99,9 @@ internal fun KalimaCard(
 ) {
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Surface(
-        onClick = onOpen,
+        onClick = { com.example.core.analytics.AppAnalytics.content("kalimas", entry.id); onOpen() },
         interactionSource = interaction,
-        modifier = Modifier.fillMaxWidth().pressScale(interaction).testTag("kalima_${entry.id}"),
+        modifier = Modifier.fillMaxWidth().pressScale(interaction).testTag("kalima_${entry.id}").tourTarget("kalima_card"),
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(
@@ -117,7 +118,7 @@ internal fun KalimaCard(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(entry.title, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.titleMedium,
+                    Text(localizePhrase(entry.title, LocalAppLanguage.current), Modifier.weight(1f, fill = false), style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (playing) {
                         Spacer(Modifier.width(6.dp))
@@ -125,7 +126,7 @@ internal fun KalimaCard(
                             modifier = Modifier.size(16.dp))
                     }
                 }
-                val nameMeaning = if (english) entry.nameMeaningEnglish else entry.nameMeaning
+                val nameMeaning = if (english) localizePhrase(entry.nameMeaningEnglish, LocalAppLanguage.current) else entry.nameMeaning
                 if (nameMeaning.isNotBlank()) {
                     Text(nameMeaning, style = MaterialTheme.typography.bodySmall,
                         color = if (isLastRead) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -136,12 +137,12 @@ internal fun KalimaCard(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f))
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                IconToggleButton(favourite, { onFavourite() }, Modifier.testTag("kalima_fav_${entry.id}")) {
+                IconToggleButton(favourite, { com.example.core.analytics.AppAnalytics.interaction("kalimas_screen", "favourite", "toggle", item = entry.id); onFavourite() }, Modifier.testTag("kalima_fav_${entry.id}").tourTarget("kalima_card_favourite")) {
                     Icon(if (favourite) Icons.Default.Star else Icons.Default.StarBorder,
                         contentDescription = localizedUiText(if (favourite) "Remove from Favourites" else "Add to Favourites"),
                         tint = if (favourite) GoldAccent else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconToggleButton(memorised, { onMemorised() }, Modifier.testTag("kalima_memorised_${entry.id}")) {
+                IconToggleButton(memorised, { com.example.core.analytics.AppAnalytics.interaction("kalimas_screen", "memorised", "toggle", item = entry.id); onMemorised() }, Modifier.testTag("kalima_memorised_${entry.id}").tourTarget("kalima_card_memorised")) {
                     Icon(if (memorised) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                         contentDescription = localizedUiText(if (memorised) "Memorised" else "Mark as memorised"),
                         tint = if (memorised) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
@@ -169,7 +170,7 @@ internal fun KalimaProgressCard(
                     Text(
                         localizeUiTemplate("{memorised} of {total} memorised", language,
                             mapOf("memorised" to memorised.toString(), "total" to total.toString())),
-                        Modifier.testTag("kalimas_progress"),
+                        Modifier.testTag("kalimas_progress").tourTarget("kalima_progress"),
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White
                     )
                 }
@@ -186,8 +187,8 @@ internal fun KalimaProgressCard(
             )
             // Primary action: one wide, light button that reads clearly on the dark hero.
             Button(
-                onClick = onResume,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("kalimas_resume"),
+                onClick = com.example.core.analytics.AppAnalytics.trackAction("kalimas_screen", "resume", onResume),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("kalimas_resume").tourTarget("kalima_resume"),
                 colors = ButtonDefaults.buttonColors(containerColor = GoldAccent, contentColor = Color(0xFF0B2D25))
             ) {
                 Text(
@@ -202,12 +203,12 @@ internal fun KalimaProgressCard(
                 KalimaHeroAction(
                     icon = if (playingAll) Icons.Default.Stop else Icons.Default.PlayArrow,
                     label = if (playingAll) "Stop" else "Play all",
-                    enabled = canPlayAll || playingAll, onClick = onPlayAll,
-                    modifier = Modifier.weight(1f).testTag("kalimas_play_all")
+                    enabled = canPlayAll || playingAll, onClick = com.example.core.analytics.AppAnalytics.trackAction("kalimas_screen", "play_all", onPlayAll),
+                    modifier = Modifier.weight(1f).testTag("kalimas_play_all").tourTarget("kalima_play_all")
                 )
                 KalimaHeroAction(
-                    icon = Icons.Default.Quiz, label = "Test yourself", enabled = true, onClick = onQuiz,
-                    modifier = Modifier.weight(1f).testTag("kalimas_quiz")
+                    icon = Icons.Default.Quiz, label = "Test yourself", enabled = true, onClick = com.example.core.analytics.AppAnalytics.trackAction("kalimas_screen", "open_quiz", onQuiz),
+                    modifier = Modifier.weight(1f).testTag("kalimas_quiz").tourTarget("kalima_quiz")
                 )
             }
         }
@@ -237,14 +238,15 @@ private fun KalimaHeroAction(
 internal fun KalimaSettingsSheet(user: KalimaUserState, store: KalimaStore, onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        TourScreen("kalima_settings_sheet")
         Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+            Modifier.fillMaxWidth().verticalScroll(com.example.core.analytics.rememberAnalyticsScrollState("kalimas_screen"))
                 .padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.xxl)
                 .testTag("kalimas_settings_panel"),
             verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             LocalizedText("Reading settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            AppCard(Modifier.fillMaxWidth(), containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f), outlined = false) {
+            AppCard(Modifier.fillMaxWidth().tourTarget("kalima_settings_preview"), containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f), outlined = false) {
                 Text("لَا إِلٰهَ إِلَّا اللّٰهُ", Modifier.fillMaxWidth(), style = kalimaArabicStyle(user.arabicScale))
             }
             LocalizedText("Arabic text size", style = MaterialTheme.typography.labelLarge,
@@ -252,23 +254,25 @@ internal fun KalimaSettingsSheet(user: KalimaUserState, store: KalimaStore, onDi
             Slider(
                 value = user.arabicScale.coerceIn(KalimaStore.MIN_SCALE, KalimaStore.MAX_SCALE),
                 onValueChange = store::setArabicScale,
+                onValueChangeFinished = { com.example.core.analytics.AppAnalytics.setting("kalimas_arabic_size") },
                 valueRange = KalimaStore.MIN_SCALE..KalimaStore.MAX_SCALE, steps = 9,
-                modifier = Modifier.testTag("kalimas_arabic_size")
+                modifier = Modifier.testTag("kalimas_arabic_size").tourTarget("kalima_settings_size")
             )
             LocalizedText("Meaning language", style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(user.meaning == KalimaMeaning.ROMAN_URDU, { store.setMeaning(KalimaMeaning.ROMAN_URDU) },
-                    label = { Text("Roman Urdu") }, shape = CircleShape,
+            Row(Modifier.tourTarget("kalima_settings_meaning"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(user.meaning == KalimaMeaning.ROMAN_URDU, { com.example.core.analytics.AppAnalytics.setting("kalimas_meaning", "roman_urdu"); store.setMeaning(KalimaMeaning.ROMAN_URDU) },
+                    label = { LocalizedText("Roman Urdu") }, shape = CircleShape,
                     modifier = Modifier.heightIn(min = 40.dp).testTag("kalimas_meaning_urdu"))
-                FilterChip(user.meaning == KalimaMeaning.ENGLISH, { store.setMeaning(KalimaMeaning.ENGLISH) },
+                FilterChip(user.meaning == KalimaMeaning.ENGLISH, { com.example.core.analytics.AppAnalytics.setting("kalimas_meaning", "english"); store.setMeaning(KalimaMeaning.ENGLISH) },
+                    // "English" is the language endonym; intentionally not localized.
                     label = { Text("English") }, shape = CircleShape,
                     modifier = Modifier.heightIn(min = 40.dp).testTag("kalimas_meaning_english"))
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            KalimaSwitchRow("Show transliteration", user.showRoman, store::setShowRoman)
-            KalimaSwitchRow("Show meaning", user.showMeaning, store::setShowMeaning)
-            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("kalimas_settings_done")) {
+            KalimaSwitchRow("Show transliteration", user.showRoman, Modifier.tourTarget("kalima_settings_roman")) { com.example.core.analytics.AppAnalytics.setting("kalimas_show_roman", it.toString()); store.setShowRoman(it) }
+            KalimaSwitchRow("Show meaning", user.showMeaning, Modifier.tourTarget("kalima_settings_show_meaning")) { com.example.core.analytics.AppAnalytics.setting("kalimas_show_meaning", it.toString()); store.setShowMeaning(it) }
+            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("kalimas_settings_done").tourTarget("kalima_settings_done")) {
                 LocalizedText("Done")
             }
         }
@@ -276,9 +280,9 @@ internal fun KalimaSettingsSheet(user: KalimaUserState, store: KalimaStore, onDi
 }
 
 @Composable
-private fun KalimaSwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+private fun KalimaSwitchRow(label: String, checked: Boolean, modifier: Modifier = Modifier, onChange: (Boolean) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(MaterialTheme.shapes.medium)
+        modifier.fillMaxWidth().heightIn(min = 48.dp).clip(MaterialTheme.shapes.medium)
             .clickable(role = Role.Switch) { onChange(!checked) },
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -287,9 +291,9 @@ private fun KalimaSwitchRow(label: String, checked: Boolean, onChange: (Boolean)
     }
 }
 
-/** What the collection is and where the text comes from; the source list folds away. */
+/** A short note on what the collection is. */
 @Composable
-internal fun KalimaAboutCard(english: Boolean, sourcesOpen: Boolean, onToggleSources: () -> Unit) {
+internal fun KalimaAboutCard(english: Boolean) {
     AppCard(Modifier.fillMaxWidth().padding(top = Spacing.sm), contentPadding = PaddingValues(14.dp)) {
         Row(verticalAlignment = Alignment.Top) {
             Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
@@ -302,14 +306,6 @@ internal fun KalimaAboutCard(english: Boolean, sourcesOpen: Boolean, onToggleSou
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        TextButton(onClick = onToggleSources, modifier = Modifier.heightIn(min = 48.dp)) {
-            LocalizedText("Sources")
-            Spacer(Modifier.width(4.dp))
-            Icon(if (sourcesOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null,
-                modifier = Modifier.size(18.dp))
-        }
-        if (sourcesOpen) Text(KalimasContent.SOURCES, style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -325,7 +321,7 @@ internal fun copyKalima(context: Context, entry: KalimaEntry, english: Boolean) 
 internal fun shareKalima(context: Context, entry: KalimaEntry, english: Boolean) {
     val send = Intent(Intent.ACTION_SEND).setType("text/plain")
         .putExtra(Intent.EXTRA_SUBJECT, entry.title)
-        .putExtra(Intent.EXTRA_TEXT, KalimasContent.shareText(entry, english))
+        .putExtra(Intent.EXTRA_TEXT, com.example.core.share.AppShareLink.withLink(context, KalimasContent.shareText(entry, english)))
     runCatching { context.startActivity(Intent.createChooser(send, entry.title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
 
@@ -333,12 +329,16 @@ internal fun shareKalima(context: Context, entry: KalimaEntry, english: Boolean)
 @Composable
 internal fun KalimaQuizDialog(english: Boolean, onDismiss: () -> Unit) {
     var round by remember { mutableIntStateOf(0) }
-    val questions = remember(round, english) { KalimaQuiz.questions(System.nanoTime(), english = english) }
+    val language = LocalAppLanguage.current
+    val questions = remember(round, english, language) {
+        KalimaQuiz.questions(System.nanoTime(), english = english, language = language)
+    }
     var index by remember(round) { mutableIntStateOf(0) }
     var selected by remember(round, index) { mutableStateOf<Int?>(null) }
     var score by remember(round) { mutableIntStateOf(0) }
     val finished = index >= questions.size
     val question = questions.getOrNull(index)
+    TourScreen("kalima_quiz")
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag("kalimas_quiz_dialog"),
@@ -348,7 +348,7 @@ internal fun KalimaQuizDialog(english: Boolean, onDismiss: () -> Unit) {
                 if (!finished && questions.isNotEmpty()) {
                     LinearProgressIndicator(
                         progress = { (index + 1).toFloat() / questions.size },
-                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                        modifier = Modifier.fillMaxWidth().tourTarget("kalima_quiz_progress").height(6.dp).clip(CircleShape),
                         gapSize = 0.dp, drawStopIndicator = {}
                     )
                     Text("${index + 1} / ${questions.size}", style = MaterialTheme.typography.labelLarge,
@@ -357,9 +357,9 @@ internal fun KalimaQuizDialog(english: Boolean, onDismiss: () -> Unit) {
             }
         },
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.verticalScroll(com.example.core.analytics.rememberAnalyticsScrollState("kalimas_screen")), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (question == null) {
-                    Text("$score / ${questions.size}", Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+                    Text("$score / ${questions.size}", Modifier.fillMaxWidth().tourTarget("kalima_quiz_score"), textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary)
                     LocalizedText(
@@ -372,7 +372,7 @@ internal fun KalimaQuizDialog(english: Boolean, onDismiss: () -> Unit) {
                         Modifier.fillMaxWidth(), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge
                     )
                 } else {
-                    Text(question.prompt, style = MaterialTheme.typography.titleMedium)
+                    Text(question.prompt, Modifier.tourTarget("kalima_quiz_question"), style = MaterialTheme.typography.titleMedium)
                     question.arabic?.takeIf(String::isNotBlank)?.let {
                         Surface(shape = MaterialTheme.shapes.medium,
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)) {
@@ -397,9 +397,10 @@ internal fun KalimaQuizDialog(english: Boolean, onDismiss: () -> Unit) {
                             Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium)
                                 .clickable(enabled = !answered, role = Role.RadioButton) {
                                     selected = optionIndex
+                                    com.example.core.analytics.AppAnalytics.interaction("kalimas_screen", "answer", "select", item = if (correct) "correct" else "incorrect")
                                     if (correct) score++
                                 }
-                                .testTag("kalimas_quiz_option_$optionIndex"),
+                                .testTag("kalimas_quiz_option_$optionIndex").tourTarget("kalima_quiz_option"),
                             shape = MaterialTheme.shapes.medium, color = container, contentColor = content
                         ) {
                             Row(Modifier.padding(12.dp).heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -418,13 +419,17 @@ internal fun KalimaQuizDialog(english: Boolean, onDismiss: () -> Unit) {
         },
         confirmButton = {
             if (question == null) {
-                if (questions.isNotEmpty()) TextButton(onClick = { round++ }) { LocalizedText("Try again") }
+                if (questions.isNotEmpty()) TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("kalimas_screen", "try_again"); round++ }, modifier = Modifier.tourTarget("kalima_quiz_try_again")) { LocalizedText("Try again") }
             } else {
-                Button(onClick = { index++ }, enabled = selected != null) {
+                Button(onClick = {
+                    if (index == questions.lastIndex) com.example.core.analytics.AppAnalytics.milestone("kalimas", "quiz_finished")
+                    com.example.core.analytics.AppAnalytics.interaction("kalimas_screen", "next")
+                    index++
+                }, enabled = selected != null, modifier = Modifier.tourTarget("kalima_quiz_next")) {
                     LocalizedText(if (index == questions.lastIndex) "Finish" else "Next")
                 }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { LocalizedText("Close") } }
+        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.tourTarget("kalima_quiz_close")) { LocalizedText("Close") } }
     )
 }

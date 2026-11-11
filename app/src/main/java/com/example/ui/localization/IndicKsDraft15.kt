@@ -46,7 +46,7 @@ internal object IndicKsDraft15 {
         "Stop downloads" to "ڈاؤن لوڈ کر بنٛد۔",
         "Download all" to "سٲری کر ڈاؤن لوڈ۔",
         "No naat found." to "کانٛہہ تہ ناٹ آو نہٕ لبنہٕ۔",
-        "Hamd" to "ہہہہہہہہہہہہہہہ",
+        "Hamd" to "حمد",
         "Manqabat" to "منکابات",
         "Munajaat" to "مناجات",
         "Azan of the world" to "ازان آف دی ورلڈ",

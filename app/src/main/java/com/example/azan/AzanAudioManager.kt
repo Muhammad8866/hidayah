@@ -45,6 +45,7 @@ object AzanAudioManager {
     /** Azans chosen as an alert tone before their download finished. */
     private val alertAfterDownload = mutableSetOf<String>()
     private var player: ExoPlayer? = null
+    private var audioLoad: com.example.core.analytics.AppAnalytics.AudioLoad? = null
     private val _state = MutableStateFlow(AzanAudioState())
     val state = _state.asStateFlow()
 
@@ -88,6 +89,7 @@ object AzanAudioManager {
                 else -> track.sources.map(Uri::parse)
             }
             var next = 0
+            audioLoad = com.example.core.analytics.AppAnalytics.audioLoad("azan_audio")
             player = StreamPlayer.build(context).apply {
                 // Handles audio focus for us: a call or another player pauses it, and we then stop.
                 setAudioAttributes(attributes, true)
@@ -97,7 +99,7 @@ object AzanAudioManager {
                     override fun onPlaybackStateChanged(state: Int) {
                 com.example.core.analytics.AppAnalytics.playbackState("azan_audio", state)
                         when (state) {
-                            Player.STATE_READY -> _state.update { it.copy(playing = playWhenReady, buffering = false) }
+                            Player.STATE_READY -> { audioLoad?.ready(); _state.update { it.copy(playing = playWhenReady, buffering = false) } }
                             Player.STATE_BUFFERING -> _state.update { it.copy(buffering = true) }
                             Player.STATE_ENDED -> stop()
                         }
@@ -114,6 +116,7 @@ object AzanAudioManager {
                             setMediaItem(MediaItem.fromUri(sources[next++]))
                             prepare()
                         } else {
+                            audioLoad?.failed()
                             stop()
                             _state.update { it.copy(error = PLAY_ERROR) }
                         }

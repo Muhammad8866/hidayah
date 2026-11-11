@@ -55,7 +55,7 @@ data class WbwWord(
      */
     val audioUrls: List<String> get() = "%03d_%03d_%03d.mp3".format(surah, ayah, position).let { name ->
         listOfNotNull(
-            "https://github.com/Muhammad8866/deen-companion-quran/releases/download/wbw-audio-v1/wbw_$name".takeUnless { isTimed },
+            "https://github.com/Muhammad8866/hidayah/releases/download/wbw-audio-v1/wbw_$name".takeUnless { isTimed },
             "https://audio.qurancdn.com/wbw/$name"
         )
     }

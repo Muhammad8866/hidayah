@@ -31,6 +31,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -69,7 +71,7 @@ enum class AppDestination(val title: String, val selectedIcon: ImageVector, val 
     HOME("Home", Icons.Filled.Home, Icons.Outlined.Home),
     /** Timetable during Ramadan, countdown to the next Ramadan the rest of the year. */
     RAMADAN("Ramzan", Icons.Filled.NightsStay, Icons.Outlined.NightsStay),
-    QURAN("Quran", Icons.Filled.MenuBook, Icons.Outlined.MenuBook),
+    QURAN("Quran", Icons.AutoMirrored.Filled.MenuBook, Icons.AutoMirrored.Outlined.MenuBook),
     HADITH("Hadith", Icons.Filled.AutoStories, Icons.Outlined.AutoStories),
     COMMUNITY_MASJID("Masjid", Icons.Filled.Mosque, Icons.Outlined.Mosque),
     DUAS("Duas", Icons.Filled.Favorite, Icons.Outlined.FavoriteBorder),
@@ -82,9 +84,11 @@ enum class AppDestination(val title: String, val selectedIcon: ImageVector, val 
     PROPHET_NAMES("99 Names of the Prophet ﷺ", Icons.Filled.Stars, Icons.Outlined.Stars),
     RECITATION_COLLECTION("Manzil / Ruqyah / Wazaif", Icons.Filled.CollectionsBookmark, Icons.Outlined.CollectionsBookmark),
     RABBANA_DUAS("40 Rabbana Duas", Icons.Filled.VolunteerActivism, Icons.Outlined.VolunteerActivism),
-    KALIMAS("6 Kalime & Iman", Icons.Filled.MenuBook, Icons.Outlined.MenuBook),
+    KALIMAS("6 Kalime & Iman", Icons.AutoMirrored.Filled.MenuBook, Icons.AutoMirrored.Outlined.MenuBook),
+    QAIDAH("Madani Qaidah", Icons.AutoMirrored.Filled.MenuBook, Icons.AutoMirrored.Outlined.MenuBook),
+    FATEHA("Fateha (Isal-e-Sawab)", Icons.Filled.VolunteerActivism, Icons.Outlined.VolunteerActivism),
+    JUMUAH_KHUTBAH("Jumu'ah Khutbah", Icons.Filled.Mosque, Icons.Outlined.Mosque),
     BOOKS("Islamic Books", Icons.Filled.CollectionsBookmark, Icons.Outlined.CollectionsBookmark),
-    WORLD_LIBRARY("World Library", Icons.Filled.Public, Icons.Outlined.Public),
     DAILY_TOOLS("Daily tools", Icons.Filled.CheckCircle, Icons.Outlined.CheckCircle),
     MORE("More", Icons.Filled.MoreHoriz, Icons.Outlined.MoreHoriz)
 }
@@ -116,9 +120,11 @@ private val moreDestinations = setOf(
     AppDestination.PROPHET_NAMES,
     AppDestination.RABBANA_DUAS,
     AppDestination.KALIMAS,
+    AppDestination.QAIDAH,
+    AppDestination.FATEHA,
+    AppDestination.JUMUAH_KHUTBAH,
     AppDestination.RECITATION_COLLECTION,
     AppDestination.BOOKS,
-    AppDestination.WORLD_LIBRARY,
     AppDestination.DAILY_TOOLS
 )
 
@@ -161,7 +167,14 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         reportLaunch(intent)
+        pendingOpenScreen = openScreenOf(intent)
     }
+
+    /** A screen a prayer alert's button asked for, taken once by the composition. */
+    private var pendingOpenScreen by mutableStateOf<com.example.prayer.PrayerAlertAction?>(null)
+
+    private fun openScreenOf(intent: android.content.Intent?) = com.example.prayer.PrayerAlertAction.from(
+        intent?.getStringExtra(com.example.prayer.PrayerNotificationReceiver.EXTRA_OPEN_SCREEN))
 
     /** Reports whether the launcher icon, a prayer alert or the home-screen widget opened the app. */
     private fun reportLaunch(intent: android.content.Intent?) {
@@ -185,7 +198,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // A rotation or restore re-creates the Activity with the same intent; that is not a new launch.
-        if (savedInstanceState == null) reportLaunch(intent)
+        if (savedInstanceState == null) {
+            reportLaunch(intent)
+            pendingOpenScreen = openScreenOf(intent)
+        }
         enableEdgeToEdge()
         com.example.prayer.AstronomicalPrayerCalculator.use24HourClock =
             android.text.format.DateFormat.is24HourFormat(this)
@@ -258,10 +274,21 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                LaunchedEffect(pendingOpenScreen) {
+                    when (pendingOpenScreen) {
+                        com.example.prayer.PrayerAlertAction.ADHKAR -> {
+                            viewModel.selectDuasScreenTab(com.example.viewmodel.DuasScreenTab.ADHKAR)
+                            currentDestination = AppDestination.DUAS
+                        }
+                        com.example.prayer.PrayerAlertAction.QURAN -> currentDestination = AppDestination.QURAN
+                        null -> Unit
+                    }
+                    pendingOpenScreen = null
+                }
+
                 LaunchedEffect(currentDestination) {
                     if (currentDestination != AppDestination.QURAN && currentDestination != AppDestination.HADITH &&
-                        currentDestination != AppDestination.BOOKS &&
-                        currentDestination != AppDestination.WORLD_LIBRARY
+                        currentDestination != AppDestination.BOOKS
                     ) {
                         readerImmersive = false
                     }
@@ -292,6 +319,8 @@ class MainActivity : ComponentActivity() {
 
                 // The feature tour walks through the real tabs, so each step picks the screen behind it.
                 var tourStep by rememberSaveable { mutableIntStateOf(0) }
+                // More > App tour offers the full tour or one tab's coach marks.
+                var showTourPicker by rememberSaveable { mutableStateOf(false) }
                 // Where each bottom tab sits on screen, so the tour can spotlight it.
                 val navItemBounds = remember { mutableStateMapOf<AppDestination, Rect>() }
                 // Steps inside More spotlight its tiles instead; More reports where they ended up.
@@ -509,7 +538,7 @@ class MainActivity : ComponentActivity() {
                                 onBack = com.example.core.analytics.AppAnalytics.trackAction("main_activity", "azan_back", backFromSecondary)
                             )
 
-                            AppDestination.BABY_NAMES -> BabyNamesScreen(onBack = backFromSecondary)
+                            AppDestination.BABY_NAMES -> BabyNamesScreen(onBack = com.example.core.analytics.AppAnalytics.trackAction("main_activity", "baby_names_back", backFromSecondary))
 
                             AppDestination.ALLAH_NAMES -> AllahNamesScreen(
                                 onBack = com.example.core.analytics.AppAnalytics.trackAction("main_activity", "allah_names_back", backFromSecondary)
@@ -519,24 +548,24 @@ class MainActivity : ComponentActivity() {
                                 onBack = com.example.core.analytics.AppAnalytics.trackAction("main_activity", "prophet_names_back", backFromSecondary)
                             )
 
-                            AppDestination.RECITATION_COLLECTION -> RecitationCollectionScreen(onBack = backFromSecondary)
+                            AppDestination.RECITATION_COLLECTION -> RecitationCollectionScreen(onBack = com.example.core.analytics.AppAnalytics.trackAction("main_activity", "recitation_collection_back", backFromSecondary))
 
                             AppDestination.RABBANA_DUAS -> RabbanaDuasScreen(
                                 onBack = com.example.core.analytics.AppAnalytics.trackAction("main_activity", "rabbana_duas_back", backFromSecondary)
                             )
 
-                            AppDestination.KALIMAS -> KalimasScreen(onBack = backFromSecondary)
+                            AppDestination.KALIMAS -> KalimasScreen(onBack = com.example.core.analytics.AppAnalytics.trackAction("main_activity", "kalimas_back", backFromSecondary))
+
+                            AppDestination.QAIDAH -> QaidahScreen(onBack = com.example.core.analytics.AppAnalytics.trackAction("main_activity", "qaidah_back", backFromSecondary))
+
+                            AppDestination.FATEHA -> FatehaScreen(onBack = com.example.core.analytics.AppAnalytics.trackAction("main_activity", "fateha_back", backFromSecondary))
+
+                            AppDestination.JUMUAH_KHUTBAH -> JumuahKhutbahScreen(onBack = com.example.core.analytics.AppAnalytics.trackAction("main_activity", "jumuah_khutbah_back", backFromSecondary))
 
                             AppDestination.BOOKS -> IslamicBooksScreen(
                                 isImmersive = readerImmersive,
                                 onImmersiveChange = { readerImmersive = it },
                                 onBack = com.example.core.analytics.AppAnalytics.trackAction("main_activity", "books_back", backFromSecondary)
-                            )
-
-                            AppDestination.WORLD_LIBRARY -> WorldLibraryScreen(
-                                isImmersive = readerImmersive,
-                                onImmersiveChange = { readerImmersive = it },
-                                onBack = com.example.core.analytics.AppAnalytics.trackAction("main_activity", "world_library_back", backFromSecondary)
                             )
 
                             AppDestination.DAILY_TOOLS -> DailyToolScreen(
@@ -569,15 +598,17 @@ class MainActivity : ComponentActivity() {
                                     onNavigateToRecitationCollection = { openSecondary(AppDestination.RECITATION_COLLECTION, AppDestination.MORE) },
                                     onNavigateToRabbanaDuas = { openSecondary(AppDestination.RABBANA_DUAS, AppDestination.MORE) },
                                     onNavigateToKalimas = { openSecondary(AppDestination.KALIMAS, AppDestination.MORE) },
+                                    onNavigateToQaidah = { openSecondary(AppDestination.QAIDAH, AppDestination.MORE) },
+                                    onNavigateToFateha = { openSecondary(AppDestination.FATEHA, AppDestination.MORE) },
+                                    onNavigateToKhutbah = { openSecondary(AppDestination.JUMUAH_KHUTBAH, AppDestination.MORE) },
                                     onNavigateToBooks = { openSecondary(AppDestination.BOOKS, AppDestination.MORE) },
-                                    onNavigateToWorldLibrary = { openSecondary(AppDestination.WORLD_LIBRARY, AppDestination.MORE) },
                                     onOpenDailyTool = { tool ->
                                         activeDailyTool = tool
                                         openSecondary(AppDestination.DAILY_TOOLS, AppDestination.MORE)
                                     },
                                     onNavigateToQibla = { showQibla = true },
                                     onOpenSettings = { showMoreSettings = true },
-                                    onStartTour = viewModel::startFeatureTour,
+                                    onStartTour = { showTourPicker = true },
                                     tourSection = tourSection,
                                     onTourSpotlight = { moreTourRect = it }
                                 )
@@ -630,6 +661,23 @@ class MainActivity : ComponentActivity() {
                     )
                     // Back steps through the tour instead of navigating the screens underneath it.
                     BackHandler { com.example.core.analytics.AppAnalytics.interaction("main_activity", "feature_tour_back", "tap"); if (tourStep > 0) tourStep-- else finishTour() }
+                }
+                // Per-tab coach marks: shown the first time each tab is opened, replayable from More.
+                com.example.ui.tour.TabWalkthroughHost(
+                    currentDestination = currentDestination,
+                    enabled = !uiState.needsFeatureTour && !readerImmersive && !showTourPicker,
+                    overlayOpen = showQibla || showMoreSettings
+                )
+                if (showTourPicker) {
+                    com.example.ui.tour.TourPickerDialog(
+                        onFullTour = { showTourPicker = false; viewModel.startFeatureTour() },
+                        onTabTour = { tour ->
+                            showTourPicker = false
+                            currentDestination = tour.destination
+                            com.example.ui.tour.TabWalkthrough.request(tour)
+                        },
+                        onDismiss = { com.example.core.analytics.AppAnalytics.interaction("main_activity", "dismiss_tour_picker", "dismiss"); showTourPicker = false }
+                    )
                 }
                 }
                 }

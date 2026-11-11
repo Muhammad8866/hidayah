@@ -1,7 +1,11 @@
 package com.example.ui.screens
+import com.example.ui.localization.formatHijriDate
+import com.example.ui.localization.isRtlAppLanguage
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizedUiText
 import com.example.ui.localization.LocalAppLocale
+import com.example.ui.tour.tourTarget
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -102,7 +106,7 @@ fun PrayerTransparencyBottomSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("prayer_transparency_bottom_sheet", "close_sheet", onDismiss)) {
+                IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("prayer_transparency_bottom_sheet", "close_sheet", onDismiss), modifier = Modifier.tourTarget("home_pt_close")) {
                     Icon(imageVector = Icons.Default.Close, contentDescription = localizedUiText("Close"))
                 }
             }
@@ -123,7 +127,7 @@ fun PrayerTransparencyBottomSheet(
                         } else null,
                         onClick = { com.example.core.analytics.AppAnalytics.interaction("prayer_transparency_bottom_sheet", "select_transparency_category", "tap", item = category.name); selectedCategory = category },
                         label = { LocalizedText(category.label) },
-                        modifier = Modifier.testTag("transparency_chip_${category.name.lowercase()}")
+                        modifier = Modifier.testTag("transparency_chip_${category.name.lowercase()}").tourTarget("home_pt_categories")
                     )
                 }
             }
@@ -132,6 +136,7 @@ fun PrayerTransparencyBottomSheet(
 
             LazyColumn(
                 modifier = Modifier
+                    .tourTarget("home_pt_details")
                     .heightIn(max = 460.dp)
                     .animateContentSize(),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm)
@@ -167,7 +172,7 @@ fun PrayerTransparencyBottomSheet(
                             TransparencyRow(
                                 title = "Geographical Coordinates",
                                 value = coordinates,
-                                note = "Location: ${uiState.selectedCity.name}, ${uiState.selectedCity.stateOrCountry} (Timezone: ${uiState.selectedCity.timeZoneId})"
+                                note = localizedUiTemplate("Location: {city}, {region} (Timezone: {zone})", "city" to uiState.selectedCity.name, "region" to uiState.selectedCity.stateOrCountry, "zone" to uiState.selectedCity.timeZoneId)
                             )
                         }
 
@@ -182,7 +187,7 @@ fun PrayerTransparencyBottomSheet(
                         item {
                             TransparencyRow(
                                 title = "Equation of Time (EoT)",
-                                value = "${String.format(locale, "%.2f", ephemeris.equationOfTimeMinutes)} minutes",
+                                value = localizedUiTemplate("{value} minutes", "value" to String.format(locale, "%.2f", ephemeris.equationOfTimeMinutes)),
                                 note = "Difference between apparent solar time (sundial) and mean solar clock time."
                             )
                         }
@@ -218,10 +223,10 @@ fun PrayerTransparencyBottomSheet(
                                 title = "Calculation Authority",
                                 value = uiState.prayerConfig.method.title,
                                 note = uiState.prayerConfig.method.ishaIntervalMinutes?.let { interval ->
-                                    "Fajr twilight angle: ${uiState.prayerConfig.method.fajrAngle}° | " +
-                                        "Isha: Maghrib + $interval min (+30 min in Ramadan)"
-                                } ?: "Fajr twilight angle: ${uiState.prayerConfig.method.fajrAngle}° | " +
-                                    "Isha angle: ${uiState.prayerConfig.method.ishaAngle}°"
+                                    localizedUiTemplate("Fajr twilight angle: {fajr}° | Isha: Maghrib + {minutes} min (+30 min in Ramadan)",
+                                        "fajr" to uiState.prayerConfig.method.fajrAngle, "minutes" to interval)
+                                } ?: localizedUiTemplate("Fajr twilight angle: {fajr}° | Isha angle: {isha}°",
+                                    "fajr" to uiState.prayerConfig.method.fajrAngle, "isha" to uiState.prayerConfig.method.ishaAngle)
                             )
                         }
 
@@ -244,9 +249,11 @@ fun PrayerTransparencyBottomSheet(
                         item {
                             TransparencyRow(
                                 title = "Hijri Date Conversion",
-                                value = "${uiState.hijriDate.day} ${uiState.hijriDate.monthNameEnglish} ${uiState.hijriDate.year} AH (${uiState.hijriDate.monthNameArabic})",
-                                note = "${HijriRegion.forTimeZone(uiState.selectedCity.timeZoneId).methodDescription} " +
-                                    "User moon-sighting adjustment: ${if (uiState.hijriAdjustmentDays >= 0) "+${uiState.hijriAdjustmentDays}" else "${uiState.hijriAdjustmentDays}"} days."
+                                value = formatHijriDate(uiState.hijriDate, uiState.languageCode) +
+                                    if (isRtlAppLanguage(uiState.languageCode)) "" else " (${uiState.hijriDate.monthNameArabic})",
+                                note = localizedUiText(HijriRegion.forTimeZone(uiState.selectedCity.timeZoneId).methodDescription) + " " +
+                                    localizedUiTemplate("User moon-sighting adjustment: {days} days.",
+                                        "days" to if (uiState.hijriAdjustmentDays >= 0) "+${uiState.hijriAdjustmentDays}" else "${uiState.hijriAdjustmentDays}")
                             )
                         }
 

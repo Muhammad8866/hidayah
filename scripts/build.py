@@ -14,7 +14,7 @@ OUT = sys.argv[1]
 os.makedirs(OUT, exist_ok=True)
 LANGS = ["en", "ur", "hi", "bn"]
 # The app's own copy of the recitation (GitHub release), tried before the original host.
-MIRROR = "https://github.com/Muhammad8866/deen-companion-quran/releases/download/wbw-audio-v1/{:03d}.mp3"
+MIRROR = "https://github.com/Muhammad8866/hidayah/releases/download/wbw-audio-v1/{:03d}.mp3"
 # Exact sizes of the mirrored files, written by get_audio.py (the API's file_size is only approximate).
 MANIFEST = os.path.join(HERE, "audio_manifest.json")
 sizes = {int(k): v[0] for k, v in json.load(open(MANIFEST)).items()} if os.path.exists(MANIFEST) else {}

@@ -27,4 +27,6 @@ internal object IndicDraftPhrases {
     private val loaded = java.util.concurrent.ConcurrentHashMap<String, Map<String, String>>()
     fun forLanguage(code: String): Map<String, String> =
         loaders[code]?.let { load -> loaded.getOrPut(code) { load() } } ?: emptyMap()
+    /** Languages whose drafts have been merged in this process; for startup-cost tests. */
+    internal fun loadedLanguages(): Set<String> = loaded.keys.toSet()
 }

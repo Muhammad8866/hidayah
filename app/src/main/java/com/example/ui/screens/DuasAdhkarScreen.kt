@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
 import com.example.ui.components.ScreenHeader
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import com.example.ui.components.AppSearchField
 import com.example.ui.components.AppCard
 import com.example.ui.components.HeroSurface
@@ -196,6 +198,7 @@ fun DuasAdhkarScreen(
         // The tabs sit on the page colour, so the screen reads as one calm surface.
         PrimaryTabRow(
             selectedTabIndex = uiState.duasScreenTab.ordinal,
+            modifier = Modifier.tourTarget("duas_tabs"),
             containerColor = MaterialTheme.colorScheme.background
         ) {
             SCREEN_TABS.forEach { (tab, label) ->
@@ -299,7 +302,7 @@ fun DuasTab(
             placeholder = "Search duas",
             modifier = Modifier
                 .padding(start = 16.dp, end = 16.dp, top = 12.dp)
-                .testTag("dua_search_field"),
+                .testTag("dua_search_field").tourTarget("duas_search"),
             keyboardActions = KeyboardActions(onSearch = { com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "submit_dua_search", "search_submit"); keyboard?.hide() })
         )
 
@@ -334,6 +337,7 @@ private fun DuaListContent(
     onClearSearch: () -> Unit,
     onDuaClick: (Dua) -> Unit
 ) {
+    TourScreen("duas_list")
     Column(modifier = Modifier.fillMaxSize()) {
         DuaListHeader(
             category = uiState.selectedDuaCategory,
@@ -379,6 +383,7 @@ private fun DuaCard(dua: Dua, showCategory: Boolean, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .testTag("dua_card_${dua.id}")
+            .tourTarget("duas_card")
     ) {
         Row(verticalAlignment = Alignment.Top) {
             Column(modifier = Modifier.weight(1f)) {
@@ -402,7 +407,7 @@ private fun DuaCard(dua: Dua, showCategory: Boolean, onClick: () -> Unit) {
                 }
             }
             Spacer(modifier = Modifier.width(8.dp))
-            GradeBadge(dua)
+            Box(Modifier.tourTarget("duas_grade")) { GradeBadge(dua) }
         }
 
         // The Arabic sits on its own soft panel so it reads as the heart of the card.
@@ -448,7 +453,7 @@ private fun DuaCard(dua: Dua, showCategory: Boolean, onClick: () -> Unit) {
             )
             if (dua.recommendedCount > 1) {
                 Spacer(modifier = Modifier.width(8.dp))
-                RepeatChip(dua.recommendedCount)
+                Box(Modifier.tourTarget("duas_repeat_chip")) { RepeatChip(dua.recommendedCount) }
             }
         }
     }
@@ -477,7 +482,7 @@ private fun EmptyDuaResults(showClearSearch: Boolean, onClearSearch: () -> Unit)
             textAlign = TextAlign.Center
         )
         if (showClearSearch) {
-            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("duas_adhkar_screen", "clear_dua_search", onClearSearch), modifier = Modifier.heightIn(min = 48.dp)) { LocalizedText("Clear search") }
+            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("duas_adhkar_screen", "clear_dua_search", onClearSearch), modifier = Modifier.heightIn(min = 48.dp).tourTarget("duas_clear_search")) { LocalizedText("Clear search") }
         }
     }
 }
@@ -510,7 +515,7 @@ private fun OccasionGrid(onPick: (String) -> Unit) {
         columns = GridCells.Adaptive(minSize = 156.dp),
         modifier = Modifier
             .fillMaxSize()
-            .testTag("dua_occasion_grid"),
+            .testTag("dua_occasion_grid").tourTarget("duas_categories"),
         contentPadding = PaddingValues(start = Spacing.screen, end = Spacing.screen, top = Spacing.lg, bottom = Spacing.xxl),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -525,7 +530,7 @@ private fun OccasionGrid(onPick: (String) -> Unit) {
             AllDuasBanner(
                 count = countLabel(DUA_COUNTS[DuaDatasetRepository.ALL_CATEGORY] ?: 0, language),
                 onClick = { openCategory(DuaDatasetRepository.ALL_CATEGORY) },
-                modifier = Modifier.fillMaxWidth().testTag(tagOf(DuaDatasetRepository.ALL_CATEGORY))
+                modifier = Modifier.fillMaxWidth().testTag(tagOf(DuaDatasetRepository.ALL_CATEGORY)).tourTarget("duas_all_banner")
             )
         }
         item(key = "occasions_title", span = { GridItemSpan(maxLineSpan) }) {
@@ -544,7 +549,7 @@ private fun OccasionGrid(onPick: (String) -> Unit) {
                 category = category,
                 count = countLabel(DUA_COUNTS[category] ?: 0, language),
                 onClick = { openCategory(category) },
-                modifier = Modifier.fillMaxWidth().testTag(tagOf(category))
+                modifier = Modifier.fillMaxWidth().testTag(tagOf(category)).tourTarget("duas_occasion_tile")
             )
         }
     }
@@ -640,7 +645,8 @@ private fun DuaListHeader(category: String, count: Int, onBack: () -> Unit) {
         title = category,
         modifier = Modifier
             .padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 4.dp)
-            .testTag("dua_list_header"),
+            .testTag("dua_list_header")
+            .tourTarget("duas_list_header"),
         onBack = onBack,
         backTestTag = "dua_list_back",
         leading = {
@@ -692,13 +698,15 @@ private fun DuaDetailSheet(
     onOpen: (Dua) -> Unit,
     onDismiss: () -> Unit
 ) {
+    TourScreen("duas_detail")
     val language = LocalAppLanguage.current
     val title = dua.displayTitle(language)
     val meaning = dua.displayMeaning(language)
     val context = LocalContext.current
     val duaAudio = rememberDuaSpeech()
+    val recordedAudio = rememberRecordedDuaAudio()
     androidx.compose.runtime.DisposableEffect(dua.id) {
-        onDispose { duaAudio.stop() }
+        onDispose { duaAudio.stop(); recordedAudio.stop() }
     }
     val position = siblings.indexOfFirst { it.id == dua.id }
     val scrollState = rememberScrollState()
@@ -752,7 +760,7 @@ private fun DuaDetailSheet(
                         )
                     }
                 }
-                IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("duas_adhkar_screen", "close_dua_detail", onDismiss)) {
+                IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("duas_adhkar_screen", "close_dua_detail", onDismiss), modifier = Modifier.tourTarget("duas_detail_close")) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = localizeUiText("Close", language)
@@ -781,25 +789,25 @@ private fun DuaDetailSheet(
                         .padding(start = 18.dp, end = 18.dp, bottom = 20.dp, top = 4.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (dua.recommendedCount > 1) RepeatChip(dua.recommendedCount)
+                        if (dua.recommendedCount > 1) Box(Modifier.tourTarget("duas_detail_repeat")) { RepeatChip(dua.recommendedCount) }
                         Spacer(modifier = Modifier.weight(1f))
                         val sizeLabel = localizeUiText("Text size", language)
                         IconButton(
                             onClick = { com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "dua_text_smaller", "tap"); onArabicScaleChange((arabicScale - ARABIC_SCALE_STEP).coerceAtLeast(MIN_ARABIC_SCALE)) },
                             enabled = arabicScale > MIN_ARABIC_SCALE + 0.01f,
-                            modifier = Modifier.testTag("dua_text_smaller")
+                            modifier = Modifier.testTag("dua_text_smaller").tourTarget("duas_text_smaller")
                         ) {
                             Icon(Icons.Default.TextDecrease, contentDescription = "$sizeLabel −")
                         }
                         IconButton(
                             onClick = { com.example.core.analytics.AppAnalytics.interaction("duas_adhkar_screen", "dua_text_larger", "tap"); onArabicScaleChange((arabicScale + ARABIC_SCALE_STEP).coerceAtMost(MAX_ARABIC_SCALE)) },
                             enabled = arabicScale < MAX_ARABIC_SCALE - 0.01f,
-                            modifier = Modifier.testTag("dua_text_larger")
+                            modifier = Modifier.testTag("dua_text_larger").tourTarget("duas_text_larger")
                         ) {
                             Icon(Icons.Default.TextIncrease, contentDescription = "$sizeLabel +")
                         }
                     }
-                    SelectionContainer {
+                    SelectionContainer(Modifier.tourTarget("duas_detail_arabic")) {
                         ArabicText(
                             text = dua.arabicText,
                             fontSize = (28 * arabicScale).sp,
@@ -809,9 +817,11 @@ private fun DuaDetailSheet(
                 }
             }
 
-            DuaAudioControls("dua_${dua.id}", dua.arabicText, duaAudio)
+            if (ManzilRuqyahAudioCatalog.hasDuaRecording(dua.id)) {
+                RecordedDuaControls(dua.id, recordedAudio, Modifier.padding(top = 8.dp).tourTarget("duas_detail_audio")) { duaAudio.stop() }
+            } else DuaAudioControls("dua_${dua.id}", dua.arabicText, duaAudio, Modifier.tourTarget("duas_detail_audio"))
             Spacer(modifier = Modifier.height(16.dp))
-            SelectionContainer {
+            SelectionContainer(Modifier.tourTarget("duas_detail_text")) {
                 Column {
                     SectionLabel("Pronunciation")
                     Text(
@@ -840,7 +850,8 @@ private fun DuaDetailSheet(
             Spacer(modifier = Modifier.height(16.dp))
             InfoPanel(
                 icon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(18.dp)) },
-                color = goldContainer()
+                color = goldContainer(),
+                modifier = Modifier.tourTarget("duas_detail_benefit")
             ) {
                 LocalizedText(
                     text = "Virtue / Benefit:",
@@ -861,7 +872,8 @@ private fun DuaDetailSheet(
                     )
                 },
                 // Provenance stays quiet: a faint panel, small type.
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                modifier = Modifier.tourTarget("duas_detail_source")
             ) {
                 LocalizedText(
                     text = "${dua.sourceCollection}, ${dua.sourceReference}",
@@ -871,7 +883,7 @@ private fun DuaDetailSheet(
                 // The badge already shows a plain grade; only a fuller scholarly note adds anything.
                 if (dua.authenticityGrading != dua.gradeLabel) {
                     Text(
-                        text = localizePhrase(dua.authenticityGrading, language),
+                        text = displayGradingNote(dua.authenticityGrading, language),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -885,6 +897,7 @@ private fun DuaDetailSheet(
                     modifier = Modifier
                         .weight(1f)
                         .testTag("dua_copy_button")
+                        .tourTarget("duas_copy")
                 ) {
                     Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
@@ -895,6 +908,7 @@ private fun DuaDetailSheet(
                     modifier = Modifier
                         .weight(1f)
                         .testTag("dua_share_button")
+                        .tourTarget("duas_share")
                 ) {
                     Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
@@ -912,6 +926,7 @@ private fun DuaDetailSheet(
                         modifier = Modifier
                             .weight(1f)
                             .testTag("dua_previous_button")
+                            .tourTarget("duas_previous")
                     ) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null)
                         LocalizedText("Previous", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
@@ -927,6 +942,7 @@ private fun DuaDetailSheet(
                         modifier = Modifier
                             .weight(1f)
                             .testTag("dua_next_button")
+                            .tourTarget("duas_next")
                     ) {
                         LocalizedText("Next", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
@@ -941,9 +957,10 @@ private fun DuaDetailSheet(
 private fun InfoPanel(
     icon: @Composable () -> Unit,
     color: Color,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    Surface(color = color, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
+    Surface(color = color, shape = MaterialTheme.shapes.small, modifier = modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
             Box(modifier = Modifier.padding(top = 1.dp)) { icon() }
             Spacer(modifier = Modifier.width(10.dp))
@@ -1031,6 +1048,29 @@ internal fun Dua.displayMeaning(languageCode: String): DisplayMeaning =
     else textIn(languageCode)?.meaning?.let { DisplayMeaning(it) }
         ?: bilingualContent(englishTranslation, englishMeaning, languageCode)
 
+/**
+ * A few scholarly grading notes were written in Roman Hindi. English shows their English wording,
+ * Hinglish keeps the original, and every other language translates from the English.
+ */
+private val gradingNotesInEnglish = mapOf(
+    "Ayat Qurani (hadith ki sanad mauqoof)" to "Quranic verse (the hadith's chain is mauqoof)",
+    "Ayat Qurani; hadith Sahih" to "Quranic verse; hadith Sahih",
+    "Hasan (Hafiz Ibn Hajar), Sahaba ka amal" to "Hasan (Hafiz Ibn Hajar); practice of the Companions",
+    "Hasan (baaz muhaddiseen ne sanad par kalaam kiya)" to "Hasan (some hadith scholars have criticised its chain)",
+    "Hasan (majmoo'i turuq se)" to "Hasan (through its combined chains)",
+    "Hasan Sahih (Imam Tirmizi; Imam Bukhari ne Sahih kaha)" to "Hasan Sahih (Imam Tirmizi; Imam Bukhari called it Sahih)",
+    "Mauqoof (Aasaar se saabit)" to "Mauqoof (established through athar)",
+    "Mauqoof Sahih (Hazrat Umar RA se)" to "Mauqoof Sahih (from Hazrat Umar RA)",
+    "Mauqoof Sahih (Sahaba se)" to "Mauqoof Sahih (from the Companions)",
+    "Mauqoof Sahih (Sahabi ka qaul, Sheikh Albani)" to "Mauqoof Sahih (saying of a Companion; Sheikh Albani)",
+    "Mauqoof — sanad mein kalaam hai; asal hadith Ibn Majah 3062 Hasan" to
+        "Mauqoof — its chain has been criticised; the original hadith, Ibn Majah 3062, is Hasan"
+)
+
+internal fun displayGradingNote(note: String, languageCode: String): String =
+    if (languageCode == "hinglish") localizePhrase(note, languageCode)
+    else localizePhrase(gradingNotesInEnglish[note] ?: note, languageCode)
+
 private fun Dua.displayContext(languageCode: String): String =
     textIn(languageCode)?.context ?: bilingualContent(context, englishContext, languageCode).text
 
@@ -1054,7 +1094,7 @@ private fun Dua.shareText(language: String): String = buildString {
     appendLine(meaning.text)
     meaning.fallbackLanguage?.let { appendLine(it) }
     appendLine()
-    append("— $sourceCollection, $sourceReference ($authenticityGrading)")
+    append("— $sourceCollection, $sourceReference (${displayGradingNote(authenticityGrading, language)})")
 }
 
 private fun copyDua(context: Context, dua: Dua, language: String) {
@@ -1070,7 +1110,7 @@ private fun shareDua(context: Context, dua: Dua, language: String) {
     val send = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_SUBJECT, dua.displayTitle(language))
-        putExtra(Intent.EXTRA_TEXT, dua.shareText(language))
+        putExtra(Intent.EXTRA_TEXT, com.example.core.share.AppShareLink.withLink(context, dua.shareText(language)))
     }
     val chooser = Intent.createChooser(send, null)
     val activity = context.findActivity()

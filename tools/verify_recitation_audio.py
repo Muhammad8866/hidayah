@@ -21,7 +21,10 @@ for path in files:
     subprocess.run([ffmpeg, "-v", "error", "-xerror", "-i", str(path), "-f", "null", "-"],
                    check=True, capture_output=True)
 for manifest in [ASSETS / "recitation_audio/sources.json", ASSETS / "dua_recording_sources.json"]:
-    document = json.loads(manifest.read_text(encoding="utf-8"))
+    text = manifest.read_text(encoding="utf-8") if manifest.exists() else ""
+    if not text.strip():
+        continue  # committed empty: no recordings to check
+    document = json.loads(text)
     records = document["recordings"]
     for recording in records:
         if "sha256" not in recording:

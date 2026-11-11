@@ -16,7 +16,7 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[1]
 QUOTED = r'"(?:\\.|[^"\\])*"'
 TOKENS = re.compile(r'\{[A-Za-z0-9_]+\}|%\d*\$?[sdfox]|[\u0600-\u06ff]+')
-CALL = re.compile(r'\b(LocalizedText|LocalizedPhraseText|localizedUiText|localizeUiText|localizeUiTemplate|localizePhrase|Text|MaterialText)\s*\(\s*(?:(?:text|template)\s*=\s*)?(' + QUOTED + r')')
+CALL = re.compile(r'\b(LocalizedText|LocalizedPhraseText|localizedUiText|localizeUiText|localizeUiTemplate|localizedUiTemplate|localizePhrase|Text|MaterialText)\s*\(\s*(?:(?:text|template)\s*=\s*)?(' + QUOTED + r')')
 
 # QUOTED stops at quotes nested inside ${...}, so a value may end in an unclosed interpolation.
 INTERPOLATION = re.compile(r'\$\{(?:[^{}]|\{[^{}]*\})*(?:\}|$)|\$[A-Za-z_]\w*')
@@ -39,8 +39,8 @@ def languages():
 
 def scan():
     found = {}
-    # Every flavor's UI copy shares one catalog: main plus the play and foss source sets.
-    paths = [p for d in ('main', 'play', 'foss') for p in (ROOT / 'app/src' / d / 'java').rglob('*.kt')]
+    # Every flavor's UI copy shares one catalog: main plus the play source set.
+    paths = [p for d in ('main', 'play') for p in (ROOT / 'app/src' / d / 'java').rglob('*.kt')]
     for path in sorted(paths):
         if '/localization/' in path.as_posix():
             continue
@@ -118,34 +118,26 @@ def translate(code, name, texts):
     return outputs
 
 def generate(packs, output):
-    def write_kotlin(path, body):
-        if not path.exists() or path.read_text(encoding='utf-8') != body:
-            path.write_text(body, encoding='utf-8')
-    def quote(value):
-        return json.dumps(value, ensure_ascii=False).replace('$', '\\$')
+    """Writes one tab-separated phrase pack per language as a Java resource, not Kotlin:
+    compiling ~1300 generated map objects made every build slow."""
+    def escape(value):
+        return value.replace('\\', '\\\\').replace('\t', '\\t').replace('\n', '\\n').replace('\r', '\\r')
     output.mkdir(parents=True, exist_ok=True)
-    loaders = []
+    for stale in output.glob('*.kt'):
+        stale.unlink()
+    folder = output / 'auto_translations'
+    folder.mkdir(parents=True, exist_ok=True)
     for code, rows in sorted(packs.items()):
-        entries = sorted(rows.items())
-        names = []
-        for offset in range(0, len(entries), 60):
-            name = f'AutoTranslation_{code}_{offset // 60}'
-            names.append(name + '.phrases')
-            body = 'package com.example.ui.localization\n\ninternal object ' + name + ' {\n    val phrases = mapOf(\n'
-            body += ''.join(f'        {quote(k)} to {quote(v)},\n' for k, v in entries[offset:offset + 60])
-            body += '    )\n}\n'
-            write_kotlin(output / (name + '.kt'), body)
-        if names:
-            loaders.append(f'        {quote(code)} to {{ {" + ".join(names)} }},\n')
-    body = ('package com.example.ui.localization\n\n/** Generated machine drafts; review pending. */\n'
-            'internal object AutoTranslationPhrases {\n'
-            '    private val loaders: Map<String, () -> Map<String, String>> = mapOf(\n' + ''.join(loaders) + '    )\n'
-            '    private val loaded = java.util.concurrent.ConcurrentHashMap<String, Map<String, String>>()\n'
-            '    fun lookup(text: String, language: String): String? = loaders[language]?.let { load ->\n'
-            '        loaded.getOrPut(language) { load() }[text]\n    }\n}\n')
-    write_kotlin(output / 'AutoTranslationPhrases.kt', body)
+        body = ''.join(f'{escape(k)}\t{escape(v)}\n' for k, v in sorted(rows.items()))
+        path = folder / f'{code}.tsv'
+        if not path.exists() or path.read_text(encoding='utf-8') != body:
+            path.write_text(body, encoding='utf-8', newline='\n')
 
 def main():
+    # Windows consoles default to cp1252, which cannot print non-English phrases in warnings.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, 'reconfigure'):
+            stream.reconfigure(encoding='utf-8')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--initialize-baseline', action='store_true')
     parser.add_argument('--check', action='store_true')

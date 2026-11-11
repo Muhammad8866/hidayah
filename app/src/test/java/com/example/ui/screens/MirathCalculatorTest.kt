@@ -110,4 +110,40 @@ class MirathCalculatorTest {
                         r.shares.first { it.heir == "Daughter" }.each * MirathFraction.of(2))
                 }
     }
+
+    @Test fun awlAndRaddTable() {
+        // (input, expected fractions by heir, adjustment prefix)
+        val cases = listOf(
+            // Minbariyya: 1/8 + 2/3 + 1/6 + 1/6 = 27/24, base raised from 24 to 27.
+            Triple(input().copy(spouses = 1, father = true, mother = true, daughters = 2),
+                mapOf("Wife" to "1/9", "Father" to "4/27", "Mother" to "4/27", "Daughter" to "16/27"), "Awl"),
+            // 1/4 + 1/6 + 2/3 = 13/12.
+            Triple(input().copy(male = false, spouses = 1, mother = true, daughters = 2),
+                mapOf("Husband" to "3/13", "Mother" to "2/13", "Daughter" to "8/13"), "Awl"),
+            // Radd without spouse: 1/2 : 1/6 becomes 3/4 : 1/4.
+            Triple(input().copy(mother = true, daughters = 1),
+                mapOf("Daughter" to "3/4", "Mother" to "1/4"), "Radd"),
+            // Spouse keeps 1/4; the surplus 1/12 returns to the daughters only.
+            Triple(input().copy(male = false, spouses = 1, daughters = 2),
+                mapOf("Husband" to "1/4", "Daughter" to "3/4"), "Radd"),
+            Triple(input().copy(daughters = 3), mapOf("Daughter" to "1/1"), "Radd"),
+            Triple(input().copy(mother = true), mapOf("Mother" to "1/1"), "Radd"),
+        )
+        for ((family, expected, prefix) in cases) {
+            val r = calculateMirath(family)
+            assertNull(r.error)
+            assertEquals(expected.keys, r.shares.map { it.heir }.toSet())
+            expected.forEach { (heir, share) -> assertEquals("$family $heir", share, fraction(r, heir)) }
+            assertTrue(r.adjustment!!.startsWith(prefix))
+            assertEquals(0L, r.remainder.numerator)
+        }
+    }
+
+    @Test fun exactFixedSharesNeedNoAdjustment() {
+        // Wife 1/8 + mother 1/6 + daughter 1/2 + father 1/6 = 23/24; father takes the 1/24 residue.
+        val r = calculateMirath(input().copy(spouses = 1, father = true, mother = true, daughters = 1))
+        assertEquals("5/24", fraction(r, "Father"))
+        assertNull(r.adjustment)
+        assertEquals(0L, r.remainder.numerator)
+    }
 }

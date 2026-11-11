@@ -71,6 +71,7 @@ class AzanScreenTest {
         assertTrue(tracks.size > 150)
         assertEquals(tracks.size, tracks.map { it.id }.toSet().size)
         assertTrue(tracks.all { it.url.startsWith("https://archive.org/download/") && it.sizeBytes > 0 })
+        assertTrue(tracks.all { it.mirrorUrl.startsWith("https://github.com/Muhammad8866/hidayah/releases/download/azan-v1/") })
         val regions = tracks.map { it.region }.toSet()
         assertTrue(regions.containsAll(listOf("Makkah", "Madinah", "Al-Aqsa", "Egypt", "Turkey", "Pakistan", "Indonesia")))
         assertTrue(tracks.any { it.fajr } && tracks.any { !it.fajr })

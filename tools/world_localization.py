@@ -23,7 +23,9 @@ PROTECTED = re.compile(r'\{[A-Za-z0-9_]+\}|%\d*\$?[sdfox]|[\u0600-\u06ff]+(?:[ \
 PUBLIC_TRANSLATOR_ENDPOINT = 'single'
 
 def read(path, default):
-    return json.loads(path.read_text(encoding='utf-8')) if path.exists() else default
+    # Some data files are committed empty (0 bytes); treat them like missing files.
+    text=path.read_text(encoding='utf-8') if path.exists() else ''
+    return json.loads(text) if text.strip() else default
 
 def write(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -44,8 +46,8 @@ def existing_ids(code):
 def required(code):
     source=read(SOURCE,{})
     existing=existing_ids(code)
-    return {value for key,row in source['duas'].items() if key not in existing for value in row} | {
-        value for row in source['features'].values() for value in row}
+    return {value for key,row in source.get('duas',{}).items() if key not in existing for value in row} | {
+        value for row in source.get('features',{}).values() for value in row}
 
 def validate(source, target):
     if not isinstance(target,str) or not target.strip(): raise ValueError('Blank translation')
@@ -101,6 +103,16 @@ def normalize_terminology(source, target, code):
         if code=='fa': target=target.replace('پیشخوان','شمارنده')
     return target
 
+_hijri_year_labels=None
+
+def hijri_year_labels():
+    """"<n> AH" literals in app code (quiz answers), which the empty dua source no longer lists."""
+    global _hijri_year_labels
+    if _hijri_year_labels is None:
+        _hijri_year_labels=frozenset(label for path in (ROOT/'app/src/main/java').rglob('*.kt')
+            for label in re.findall(r'"(\d+ AH)"',path.read_text(encoding='utf-8')))
+    return _hijri_year_labels
+
 def glossary(code):
     values=read(ROOT/'localization/world-glossary.json',{}).get(code,{})
     for filename in ('remaining-ps-el-pl-glossary.json','remaining-uk-so-am-glossary.json','remaining-uz-he-si-glossary.json','remaining-el-root-glossary.json'):
@@ -114,10 +126,10 @@ def glossary(code):
     # AH denotes a Hijri year, not "hours" or a unit of electric charge.
     formats={'fa':'{n} هجری قمری','tr':'Hicrî {n}','id':'{n} H',
              'es':'año {n} de la Hégira','ru':'{n} г. хиджры','zh':'伊斯兰历{n}年',
-             'it':'{n} dell’Egira','ja':'ヒジュラ暦{n}年'}
-    for text in required(code):
+             'it':'{n} dell’Egira','ja':'ヒジュラ暦{n}年','pl':'{n} r. hidżry'}
+    for text in required(code) | hijri_year_labels():
         match=re.fullmatch(r'(\d+) AH',text)
-        if match:
+        if match and code in formats:
             number=match[1].translate(str.maketrans('0123456789','۰۱۲۳۴۵۶۷۸۹')) if code=='fa' else match[1]
             values[text]=formats[code].format(n=number)
     return values

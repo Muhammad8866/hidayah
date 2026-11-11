@@ -3,7 +3,7 @@ package com.example.ui.localization
 /** Machine translated draft; review pending. */
 internal object IndicSatDraft25 {
     val MAP: Map<String, String> = mapOf(
-        "Al-A'raf" to "ᱟᱞᱼᱟᱨاف",
+        "Al-A'raf" to "ᱟᱞᱼᱟᱨᱟᱯᱷ",
         "The Heights" to "ᱩᱥᱩᱞ ᱠᱚ ᱾",
         "The Spoils of War" to "ᱞᱟᱹᱲᱦᱟᱹᱭ ᱨᱮᱭᱟᱜ ᱠᱷᱮᱹᱞ",
         "The Repentance" to "ᱚᱱᱢᱟᱱ ᱾",
@@ -32,7 +32,7 @@ internal object IndicSatDraft25 {
         "The Light" to "ᱮᱞᱟᱭᱤᱴ ᱾",
         "Al-Furqan" to "ᱟᱞᱼᱯᱷᱩᱨᱠᱟᱱ",
         "The Criterion" to "ᱯᱚᱨᱤᱢᱟᱱ",
-        "Ash-Shu'ara" to "ᱚᱥᱼᱥᱩ'آرا",
+        "Ash-Shu'ara" to "ᱚᱥᱼᱥᱩ'ᱟᱨᱟ",
         "The Poets" to "ᱠᱟᱶᱤᱫ ᱠᱚ ᱾",
         "The Ant" to "ᱫᱟ ᱮᱱᱴ",
         "The Stories" to "ᱠᱟᱹᱦᱟᱹᱨᱤ ᱠᱚ ᱾",
@@ -40,7 +40,7 @@ internal object IndicSatDraft25 {
         "The Spider" to "ᱫᱟ ᱥᱯᱟᱭᱰᱟᱨ",
         "Ar-Rum" to "ᱟᱨᱼᱨᱚᱢ",
         "The Romans" to "ᱨᱳᱢᱟᱱ ᱠᱚ",
-        "Luqman" to "ଲୁକᱢᱚᱱ ᱾",
+        "Luqman" to "ᱞᱩᱠᱢᱟᱱ ᱾",
         "As-Sajdah" to "ᱚᱥᱼᱥᱟᱡᱫᱟ",
         "The Prostration" to "ᱯᱚᱨᱚᱥᱛᱚᱨᱚᱱ",
         "Al-Ahzab" to "ᱟᱞᱼᱟᱦᱟᱡᱚᱵ",
@@ -55,7 +55,7 @@ internal object IndicSatDraft25 {
         "Sad" to "ᱟᱹᱰᱤ ᱜᱷᱟᱹᱞᱚᱜᱼᱟ ᱾",
         "Az-Zumar" to "ᱟᱡᱼᱡᱩᱢᱟᱨ",
         "The Groups" to "ᱜᱟᱫᱮᱞ ᱠᱚ",
-        "Ghafir" to "ᱜافᱤᱨ",
+        "Ghafir" to "ᱜᱟᱯᱷᱤᱨ",
         "The Forgiver" to "ᱪᱷᱟᱹᱲ ᱮᱢᱚᱜᱤᱡ ᱾",
         "Fussilat" to "ᱯᱷᱩᱥᱤᱞᱟᱴ",
         "Explained in Detail" to "ᱵᱚᱨᱱᱚᱱ ᱞᱮᱠᱟᱛᱮ ᱵᱚᱨᱱᱚᱱ ᱟᱠᱟᱱᱟ ᱾",
@@ -66,7 +66,7 @@ internal object IndicSatDraft25 {
         "Ad-Dukhan" to "ᱟᱫᱼᱫᱩᱠᱦᱟᱱ",
         "The Smoke" to "ᱫᱟ ᱥᱳᱢᱚᱠ",
         "Al-Jathiyah" to "ᱟᱞᱼᱡᱟᱛᱷᱟᱭᱟ ᱾",
-        "The Crouching" to "ᱫᱟ ᱠᱨᱟᱣچنگ",
+        "The Crouching" to "ᱫᱟ ᱠᱨᱟᱣᱪᱤᱝ",
         "Al-Ahqaf" to "ᱟᱞᱼᱟᱦᱟᱠᱷᱟᱯᱷ",
         "The Sand Dunes" to "ᱥᱮᱰ ᱰᱩᱱ",
         "Muhammad" to "ᱢᱚᱦᱚᱢᱚᱫ ᱾",
@@ -81,7 +81,7 @@ internal object IndicSatDraft25 {
         "An-Najm" to "ᱚᱱᱼᱱᱟᱡᱢ",
         "The Star" to "ᱫᱟ ᱥᱴᱟᱨ",
         "Al-Qamar" to "ᱟᱞᱼᱠᱟᱢᱟᱨ",
-        "The Moon" to "چنڊ ᱾",
-        "The Most Merciful" to "ᱡᱚᱛᱚ ᱠᱷᱚᱱ ᱰᱷᱮᱨ رحم ᱟᱱ ᱾",
+        "The Moon" to "ᱪᱟᱸᱫᱚ ᱾",
+        "The Most Merciful" to "ᱡᱚᱛᱚ ᱠᱷᱚᱱ ᱰᱷᱮᱨ ᱫᱟᱭᱟ ᱟᱱ ᱾",
     )
 }

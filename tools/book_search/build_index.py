@@ -1,14 +1,20 @@
 """Builds the search index that lets the app open a Hadith or Islamic book PDF at the page a query is about.
 
     python tools/book_search/build_index.py extract <folder of mirror PDFs>...
-    python tools/book_search/build_index.py build --out <output folder>
+    python tools/book_search/build_index.py build --out <output folder> [--assets <folder>]
 
 `extract` reads the PDFs once and keeps their chapters and page text in tools/book_search/.cache,
 so `build` (needed after every change to concepts.txt) runs without the PDFs. The PDFs must carry
 their mirror asset names (ar-bukhari-v1.pdf, en-bahar-e-shariat-v2.pdf, ...), because the app maps
-an indexed book back to its catalog entry by that name. `build` writes book-search.db.gz and
-book-search-version.txt, which are uploaded to the `search-v1` release of
-Muhammad8866/deen-companion-hadith-pdfs, and refreshes the test vectors the app's unit test reads.
+an indexed book back to its catalog entry by that name.
+
+`build` writes two parts. book-search-core.db holds everything a search needs (dictionary,
+concepts, chapters, word index) and ships inside the APK: it is copied to
+app/src/main/assets/book_search/core.db with its version.txt, so search works with no download.
+book-search-bodies-<version>.bin holds the page text shown as result previews; the app fetches
+single pages from it by byte range, so it is uploaded to the `search-v2` release of
+Muhammad8866/hidayah. Its name carries the version because the core's offsets point into exactly
+that file. `build` also refreshes the test vectors the app's unit test reads.
 
 No OCR and no machine learning is involved: a page is indexed only when the PDF already carries
 readable text, and a chapter only when the PDF has real bookmarks. Scanned books stay unindexed.
@@ -31,7 +37,8 @@ HERE = Path(__file__).resolve().parent
 CONCEPTS = HERE / "concepts.txt"
 CACHE = HERE / ".cache" / "extracted"
 VECTORS = HERE.parents[1] / "app/src/test/resources/book_search_vectors.tsv"
-FORMAT = 2
+FORMAT = 3
+ASSETS = HERE.parents[1] / "app/src/main/assets/book_search"
 MAX_PHRASE = 6
 HEADING_SCORE = 3000
 
@@ -64,7 +71,8 @@ def _dropped(cp: int) -> bool:
 
 
 def _strip_article(token: str) -> str:
-    if len(token) > 5 and token.startswith(ARTICLE_PREFIXES):
+    # والدين (parents) and its family begin with the same letters as "and the ...".
+    if len(token) > 5 and token.startswith(ARTICLE_PREFIXES) and not token.startswith("والد"):
         return token[3:]
     if len(token) > 4 and token.startswith(("ال", "لل")):
         return token[2:]
@@ -80,7 +88,9 @@ def normalize(text: str) -> list[str]:
         ch = ch.translate(CHAR_MAP)
         category = unicodedata.category(ch)
         out.append(ch if category[0] in "LM" or category == "Nd" else " ")
-    return [_strip_article(token) for token in "".join(out).split()]
+    # Recomposing rejoins vowel signs that decomposition split in two (Bengali ো, Tamil ொ),
+    # as BookSearchText.normalize does.
+    return [_strip_article(token) for token in unicodedata.normalize("NFC", "".join(out)).split()]
 
 
 # The Indic scripts share one layout, each in its own 128-character block, so one table read by
@@ -103,6 +113,8 @@ INDIC_SIGNS = {
     0x48: "ai", 0x49: "o", 0x4A: "o", 0x4B: "o", 0x4C: "au",
 }
 INDIC_VIRAMA, INDIC_NUKTA = 0x4D, 0x3C
+# Written "ya", said "ja": যাকাত is zakat.
+BENGALI_YA = "য"
 INDIC_NASALS = {0x01: "n", 0x02: "n", 0x03: "h"}
 
 
@@ -116,9 +128,12 @@ def romanize(token: str) -> str:
         return token
     # Syllables as [consonant, vowel, vowel is the unwritten "a"].
     units = []
-    for ch in token:
+    # The true "ya" of Bengali is its own letter, or "ya" with a dot.
+    for ch in token.replace("য়", "য়"):
         offset = ord(ch) & 0x7F
-        if offset in INDIC_CONSONANTS:
+        if ch == BENGALI_YA:
+            units.append(["j", "a", True])
+        elif offset in INDIC_CONSONANTS:
             units.append([INDIC_CONSONANTS[offset], "a", True])
         elif offset in INDIC_VOWELS:
             units.append(["", INDIC_VOWELS[offset], False])
@@ -158,7 +173,9 @@ def sound_key(token: str) -> str:
     word = re.sub(r"(?<=[^aeiou])h", "", word)
     if len(word) > 2 and word.endswith("h"):
         word = word[:-1]
-    word = word.translate(str.maketrans("eyo", "aiu"))
+    # Same order as BookSearchText.soundKey: "eid" and "ईद" both give "id".
+    word = word.replace("y", "i").replace("ie", "i").replace("ei", "i")
+    word = word.replace("e", "a").replace("o", "u")
     return re.sub(r"(.)\1+", r"\1", word)
 
 
@@ -286,18 +303,22 @@ def write_vectors(phrases):
                 out.write(f"{sample}\t{' '.join(tokens)}\t{' '.join(map(sound_key, tokens))}\n")
 
 
-def build(out: Path):
+def build(out: Path, cache: Path = CACHE, assets: Path | None = None):
+    """Writes the index from the books extracted into [cache]; copies the core into [assets] when given."""
     labels, phrases, table = load_concepts()
     write_vectors(phrases)
     out.mkdir(parents=True, exist_ok=True)
-    db_path = out / "book-search.db"
+    db_path = out / "book-search-core.db"
     db_path.unlink(missing_ok=True)
+    bodies_part = out / "book-search-bodies.part"
+    bodies = open(bodies_part, "wb")
     db = sqlite3.connect(db_path)
     db.executescript("""
         PRAGMA page_size = 4096;
         CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT);
         CREATE TABLE book(id INTEGER PRIMARY KEY, asset TEXT NOT NULL);
-        CREATE TABLE doc(id INTEGER PRIMARY KEY, book INTEGER NOT NULL, page INTEGER NOT NULL, heading TEXT, body BLOB);
+        CREATE TABLE doc(id INTEGER PRIMARY KEY, book INTEGER NOT NULL, page INTEGER NOT NULL, heading TEXT,
+                         body_at INTEGER, body_len INTEGER);
         CREATE VIRTUAL TABLE words USING fts4(content="", text, tokenize=simple);
         CREATE TABLE stopword(token TEXT PRIMARY KEY) WITHOUT ROWID;
         CREATE TABLE concept(id INTEGER PRIMARY KEY, label TEXT NOT NULL);
@@ -311,7 +332,7 @@ def build(out: Path):
 
     doc_id = 0
     frequencies = []  # (concept, doc, weight)
-    sources = sorted(CACHE.glob("*.json.gz"))
+    sources = sorted(Path(cache).glob("*.json.gz"))
     if not sources:
         raise SystemExit("Nothing extracted yet: run `build_index.py extract <pdf folders>` first.")
     for book_id, source in enumerate(sources, start=1):
@@ -320,7 +341,7 @@ def build(out: Path):
         db.execute("INSERT INTO book VALUES(?, ?)", (book_id, book["asset"]))
         for page, title in book["chapters"]:
             doc_id += 1
-            db.execute("INSERT INTO doc VALUES(?, ?, ?, ?, NULL)", (doc_id, book_id, page, title))
+            db.execute("INSERT INTO doc VALUES(?, ?, ?, ?, NULL, NULL)", (doc_id, book_id, page, title))
             db.execute("INSERT INTO words(docid, text) VALUES(?, ?)", (doc_id, searchable(title)))
             counts, _early = count_concepts(keys_of(title), table)
             # A front-matter bookmark ("Contents", "Bahaar") is no destination for a topic.
@@ -328,8 +349,10 @@ def build(out: Path):
             frequencies += [(concept, doc_id, weight) for concept in counts]
         for page, text in book["pages"]:
             doc_id += 1
-            db.execute("INSERT INTO doc VALUES(?, ?, ?, NULL, ?)",
-                       (doc_id, book_id, page, zlib.compress(text.encode("utf-8"), 9)))
+            # The page text goes to the bodies file; the core keeps only where to find it.
+            packed = zlib.compress(text.encode("utf-8"), 9)
+            db.execute("INSERT INTO doc VALUES(?, ?, ?, NULL, ?, ?)", (doc_id, book_id, page, bodies.tell(), len(packed)))
+            bodies.write(packed)
             db.execute("INSERT INTO words(docid, text) VALUES(?, ?)", (doc_id, searchable(text)))
             counts, early = count_concepts(keys_of(text), table)
             # A table-of-contents page names every topic once and explains none of them.
@@ -347,21 +370,36 @@ def build(out: Path):
         db.execute("INSERT INTO hit VALUES(?, ?, ?)", (concept, doc, max(1, round(weight * idf))))
 
     version = str(int(time.time()))
-    db.executemany("INSERT INTO meta VALUES(?, ?)",
-                   [("version", version), ("format", str(FORMAT)), ("docs", str(doc_id))])
+    bodies_size = bodies.tell()
+    bodies.close()
+    bodies_name = f"book-search-bodies-{version}.bin"
+    bodies_path = out / bodies_name
+    bodies_path.unlink(missing_ok=True)
+    bodies_part.rename(bodies_path)
+    db.executemany("INSERT INTO meta VALUES(?, ?)", [
+        ("version", version), ("format", str(FORMAT)), ("docs", str(doc_id)),
+        ("bodies", bodies_name), ("bodies_size", str(bodies_size)),
+    ])
     db.execute("INSERT INTO words(words) VALUES('optimize')")
     db.commit()
     db.execute("VACUUM")
     db.close()
 
-    with open(db_path, "rb") as source, gzip.open(out / "book-search.db.gz", "wb", compresslevel=9) as target:
-        shutil.copyfileobj(source, target)
     (out / "book-search-version.txt").write_text(version, encoding="utf-8")
+    if assets is not None:
+        assets = Path(assets)
+        assets.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(db_path, assets / "core.db")
+        (assets / "version.txt").write_bytes(version.encode("utf-8"))
+    core_size = db_path.stat().st_size
+    packed_core = len(gzip.compress(db_path.read_bytes(), compresslevel=9))
     unused = [labels[c] for c in range(len(labels)) if c not in spread]
     print(f"{len(sources)} books, {doc_id} entries, {len(labels)} concepts, version {version}")
-    print(f"db {db_path.stat().st_size / 1e6:.1f} MB, gz {(out / 'book-search.db.gz').stat().st_size / 1e6:.1f} MB")
+    print(f"core {core_size / 1e6:.1f} MB (about {packed_core / 1e6:.1f} MB in the APK), "
+          f"page text {bodies_size / 1e6:.1f} MB in {bodies_name}")
     if unused:
         print("concepts found on no page:", ", ".join(unused))
+    return db_path, bodies_path
 
 
 if __name__ == "__main__":
@@ -371,8 +409,10 @@ if __name__ == "__main__":
     extractor.add_argument("folders", nargs="+", type=Path)
     builder = commands.add_parser("build")
     builder.add_argument("--out", required=True, type=Path)
+    builder.add_argument("--assets", type=Path, default=ASSETS,
+                         help="where the app's bundled core goes (default: app/src/main/assets/book_search)")
     arguments = parser.parse_args()
     if arguments.command == "extract":
         extract(arguments.folders)
     else:
-        build(arguments.out)
+        build(arguments.out, assets=arguments.assets)

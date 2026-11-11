@@ -13,6 +13,7 @@ import android.os.storage.StorageManager
 import android.system.ErrnoException
 import android.system.OsConstants
 import com.example.core.pdf.PdfPageCache
+import com.example.core.logging.SafeLogger
 import com.example.core.net.RangeFile
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -420,17 +421,41 @@ object PdfQuran {
                 val installedHindiPack = isHindiEdition(book) &&
                     HindiQuranAssetPack.file(appContext)?.length() == book.sizeBytes
                 if (Build.VERSION.SDK_INT >= 26 && !installedHindiPack && !book.bundled) {
+                    val started = android.os.SystemClock.elapsedRealtime()
                     try {
                         return@withLock Documents.stream(book)
                     } catch (cancelled: CancellationException) {
                         throw cancelled
-                    } catch (_: Exception) {
+                    } catch (error: Exception) {
                         // A source without reliable ranges still uses the complete verified file.
+                        // Logged so the cause of a silent full download can be told apart later.
+                        SafeLogger.w(
+                            "PdfQuran",
+                            "Online stream of ${book.id} failed after " +
+                                "${android.os.SystemClock.elapsedRealtime() - started} ms; " +
+                                "downloading the full file: ${describeFailure(error)}"
+                        )
                     }
                 }
             }
             Documents.open(book.id, localFile(book))
         }
+    }
+
+    /**
+     * Exception types and messages only, never a stack trace: a trace's causes could carry a
+     * signed redirect address. Suppressed range errors show what the renderer's EIO hid.
+     */
+    private fun describeFailure(error: Throwable): String {
+        val parts = mutableListOf<String>()
+        var current: Throwable? = error
+        while (current != null && parts.size < 3) {
+            parts += "${current.javaClass.simpleName}: ${current.message.orEmpty()}"
+            val next = current.cause
+            current = if (next === current) null else next
+        }
+        error.suppressed.take(2).forEach { parts += "range ${it.javaClass.simpleName}: ${it.message.orEmpty()}" }
+        return parts.joinToString(" <- ")
     }
 
     /** Returns the verified original PDF, downloading it when needed for external sharing. */
@@ -491,6 +516,8 @@ object PdfQuran {
             if (length != book.sizeBytes) throw IOException("PDF source size changed")
             val thread = HandlerThread("quran-range-${book.id}").apply { start() }
             var descriptor: ParcelFileDescriptor? = null
+            // The renderer only sees EIO; keep the range error behind it for the fallback log.
+            val readFailure = java.util.concurrent.atomic.AtomicReference<IOException?>()
             try {
                 descriptor = appContext.getSystemService(StorageManager::class.java).openProxyFileDescriptor(
                     ParcelFileDescriptor.MODE_READ_ONLY,
@@ -498,7 +525,10 @@ object PdfQuran {
                         override fun onGetSize(): Long = length
                         override fun onRead(offset: Long, size: Int, data: ByteArray): Int = try {
                             range.read(offset, size, data)
-                        } catch (_: IOException) { throw ErrnoException("Quran PDF range", OsConstants.EIO) }
+                        } catch (error: IOException) {
+                            readFailure.set(error)
+                            throw ErrnoException("Quran PDF range", OsConstants.EIO)
+                        }
                         override fun onRelease() { thread.quitSafely() }
                     }, Handler(thread.looper)
                 )
@@ -506,6 +536,7 @@ object PdfQuran {
                 open[book.id] = directory to document
                 return document
             } catch (error: Throwable) {
+                readFailure.get()?.takeIf { it !== error }?.let(error::addSuppressed)
                 descriptor?.close()
                 thread.quitSafely()
                 throw error

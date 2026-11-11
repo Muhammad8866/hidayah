@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -22,9 +24,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.LocalizedText
-import com.example.ui.localization.localizeUiText
 import com.example.ui.localization.localizedUiText
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
@@ -139,6 +141,7 @@ private fun wordsOf(text: String) = text.split(Regex("\\s+")).filter(String::isN
 @Composable
 fun HifzCoachScreen(modifier: Modifier = Modifier) {
     com.example.core.analytics.AnalyticsScreen("hifz_coach_screen")
+    TourScreen("quranmodes_hifz_coach")
 
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hifz_coach", 0) }
@@ -373,7 +376,7 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                 val end = minOf(s.totalAyat, nextNew.ayah.value + sessionLength - 1)
                 // Today's plan: the one next step, revision first, then new ayahs.
                 item(key = "plan") {
-                    HeroSurface(Modifier.fillMaxWidth().testTag("hifz_today_plan"), contentPadding = PaddingValues(20.dp)) {
+                    HeroSurface(Modifier.fillMaxWidth().testTag("hifz_today_plan").tourTarget("quranmodes_hifz_plan"), contentPadding = PaddingValues(20.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             LocalizedText("Today's plan", color = QuranGoldLight, fontSize = 13.sp, fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.5.sp, modifier = Modifier.weight(1f).semantics { heading() })
@@ -381,8 +384,8 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                         }
                         Spacer(Modifier.height(10.dp))
                         if (focus == HifzCoachLogic.PlanFocus.REVISE) {
-                            LocalizedText("$due ayah${if (due == 1) "" else "s"} to revise", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                            LocalizedText("About $batch min · revising keeps your hifz safe", color = Color.White.copy(alpha = .75f), fontSize = 13.sp)
+                            LocalizedText(if (due == 1) localizedUiTemplate("{count} ayah to revise", "count" to due) else localizedUiTemplate("{count} ayahs to revise", "count" to due), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            LocalizedText(localizedUiTemplate("About {minutes} min · revising keeps your hifz safe", "minutes" to batch), color = Color.White.copy(alpha = .75f), fontSize = 13.sp)
                         } else {
                             if (cards.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
                                 Icon(Icons.Default.CheckCircle, null, tint = QuranGoldLight, modifier = Modifier.size(16.dp))
@@ -392,7 +395,7 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     LocalizedText(s.englishName, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                                    LocalizedText(if (end > nextNew.ayah.value) "Ayah ${nextNew.ayah.value}–$end of ${s.totalAyat}" else "Ayah ${nextNew.ayah.value} of ${s.totalAyat}",
+                                    LocalizedText(if (end > nextNew.ayah.value) localizedUiTemplate("Ayah {start}–{end} of {total}", "start" to nextNew.ayah.value, "end" to end, "total" to s.totalAyat) else localizedUiTemplate("Ayah {ayah} of {total}", "ayah" to nextNew.ayah.value, "total" to s.totalAyat),
                                         color = Color.White.copy(alpha = .75f), fontSize = 13.sp)
                                 }
                                 Spacer(Modifier.width(12.dp))
@@ -413,12 +416,12 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                         }
                         Spacer(Modifier.height(16.dp))
                         if (focus == HifzCoachLogic.PlanFocus.REVISE) {
-                            HeroButton(if (due > batch) "Revise next $batch" else "Start revision", Modifier.testTag("hifz_start_due")) {
+                            HeroButton(if (due > batch) localizedUiTemplate("Revise next {count}", "count" to batch) else "Start revision", Modifier.testTag("hifz_start_due").tourTarget("quranmodes_hifz_start_revision")) {
                                 com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "start_revision", "tap")
                                 begin(SessionKind.REVISION, HifzCoachLogic.revisionQueue(summary.dueCards))
                             }
                         } else {
-                            HeroButton("Start memorising", Modifier.testTag("hifz_start_passage")) {
+                            HeroButton("Start memorising", Modifier.testTag("hifz_start_passage").tourTarget("quranmodes_hifz_start_memorising")) {
                                 com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "start_memorising", "tap"); startNewPassage()
                             }
                         }
@@ -434,7 +437,7 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                                 SectionLabel("MEMORISE NEW AYAHS")
                                 if (focus == HifzCoachLogic.PlanFocus.REVISE) {
                                     LocalizedText(s.englishName, color = HifzAccent, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                                    LocalizedText(if (end > nextNew.ayah.value) "Ayah ${nextNew.ayah.value}–$end of ${s.totalAyat}" else "Ayah ${nextNew.ayah.value} of ${s.totalAyat}",
+                                    LocalizedText(if (end > nextNew.ayah.value) localizedUiTemplate("Ayah {start}–{end} of {total}", "start" to nextNew.ayah.value, "end" to end, "total" to s.totalAyat) else localizedUiTemplate("Ayah {ayah} of {total}", "ayah" to nextNew.ayah.value, "total" to s.totalAyat),
                                         color = HifzMuted, fontSize = 13.sp)
                                 } else Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
                                     LocalizedText("Ayahs per session", color = HifzMuted, fontSize = 13.sp)
@@ -443,14 +446,14 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                                 }
                             }
                             TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "open_passage_settings", "tap"); showPassageSheet = true },
-                                modifier = Modifier.heightIn(min = 48.dp).testTag("hifz_passage_settings")) {
+                                modifier = Modifier.heightIn(min = 48.dp).testTag("hifz_passage_settings").tourTarget("quranmodes_hifz_change_passage")) {
                                 Icon(Icons.Default.Tune, null, tint = HifzGold, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
                                 LocalizedText("Change", color = HifzGold, fontWeight = FontWeight.SemiBold)
                             }
                         }
                         if (focus == HifzCoachLogic.PlanFocus.REVISE) {
-                            SecondaryButton("Start memorising", Modifier.testTag("hifz_start_passage")) {
+                            SecondaryButton("Start memorising", Modifier.testTag("hifz_start_passage").tourTarget("quranmodes_hifz_start_memorising")) {
                                 com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "start_memorising", "tap"); startNewPassage()
                             }
                         }
@@ -488,7 +491,7 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                             }
                             TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "practise_weak_ayahs", "tap");
                                 begin(SessionKind.WEAK, weakCards.take(HifzCoachLogic.MAX_REVISION).map { HifzQueueItem(it.reference, learnFirst = true) })
-                            }, modifier = Modifier.heightIn(min = 48.dp)) { LocalizedText("Practise all", color = HifzGold, fontWeight = FontWeight.Bold) }
+                            }, modifier = Modifier.heightIn(min = 48.dp).tourTarget("quranmodes_hifz_weak")) { LocalizedText("Practise all", color = HifzGold, fontWeight = FontWeight.Bold) }
                         }
                         val shown = weakCards.take(3)
                         shown.forEachIndexed { i, card ->
@@ -500,18 +503,13 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                                     NumberBadge(card.reference.surah.value)
                                     Spacer(Modifier.width(12.dp))
                                     Column(Modifier.weight(1f)) {
-                                        LocalizedText("${surahName(card.reference.surah.value)} · Ayah ${card.reference.ayah.value}", color = HifzAccent, fontWeight = FontWeight.SemiBold)
-                                        LocalizedText("Recall ${card.averageAccuracy}% · ${card.attempts} tr${if (card.attempts == 1) "y" else "ies"}", color = HifzMuted, fontSize = 12.sp)
+                                        LocalizedText(localizedUiTemplate("{surah} · Ayah {ayah}", "surah" to surahName(card.reference.surah.value), "ayah" to card.reference.ayah.value), color = HifzAccent, fontWeight = FontWeight.SemiBold)
+                                        LocalizedText(if (card.attempts == 1) localizedUiTemplate("Recall {percent}% · {count} try", "percent" to card.averageAccuracy, "count" to card.attempts) else localizedUiTemplate("Recall {percent}% · {count} tries", "percent" to card.averageAccuracy, "count" to card.attempts), color = HifzMuted, fontSize = 12.sp)
                                     }
                                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = HifzMuted)
                                 }
                             }
                         }
-                    }
-                }
-                item(key = "source") {
-                    TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "open_text_source", "tap"); context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://tanzil.net"))) }) {
-                        LocalizedText("Arabic text: Tanzil Quran Text (Simple 1.1)", fontSize = 12.sp, color = HifzMuted)
                     }
                 }
             }
@@ -522,13 +520,13 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                         // Every graded ayah is already saved, so leaving mid-session loses nothing.
                         Surface(onClick = com.example.core.analytics.AppAnalytics.trackAction("hifz_coach_screen", "end_session", ::leave),
                             shape = CircleShape, color = HifzCard, border = BorderStroke(1.dp, MushafBorder.copy(alpha = .35f)),
-                            modifier = Modifier.size(44.dp)) {
+                            modifier = Modifier.size(44.dp).tourTarget("quranmodes_hifz_end_session")) {
                             Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Close, localizedUiText("End session"), tint = HifzAccent) }
                         }
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            LocalizedText("${surahName(cur.reference.surah.value)} · Ayah ${cur.reference.ayah.value}", color = HifzAccent, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                            LocalizedText("Ayah ${index + 1} of ${queue.size}", color = HifzMuted, fontSize = 12.sp)
+                            LocalizedText(localizedUiTemplate("{surah} · Ayah {ayah}", "surah" to surahName(cur.reference.surah.value), "ayah" to cur.reference.ayah.value), color = HifzAccent, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                            LocalizedText(localizedUiTemplate("Ayah {ayah} of {total}", "ayah" to index + 1, "total" to queue.size), color = HifzMuted, fontSize = 12.sp)
                         }
                         val badge = when {
                             cur.isRetry -> "Once more"
@@ -566,7 +564,7 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                             HorizontalDivider(color = MushafBorder.copy(alpha = .25f))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    LocalizedText("Read aloud $TARGET_READS times", color = HifzAccent, fontWeight = FontWeight.SemiBold)
+                                    LocalizedText(localizedUiTemplate("Read aloud {count} times", "count" to TARGET_READS), color = HifzAccent, fontWeight = FontWeight.SemiBold)
                                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 6.dp)) {
                                         repeat(TARGET_READS) { dot ->
                                             Box(Modifier.size(14.dp).clip(CircleShape).background(if (dot < reads) QuranGreen else QuranGoldLight.copy(alpha = .45f)))
@@ -574,11 +572,11 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                                     }
                                 }
                                 OutlinedButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "count_read", "tap"); if (reads < TARGET_READS) reads++ }, enabled = reads < TARGET_READS,
-                                    modifier = Modifier.testTag("hifz_count_read")) {
+                                    modifier = Modifier.testTag("hifz_count_read").tourTarget("quranmodes_hifz_count_read")) {
                                     LocalizedText(if (reads < TARGET_READS) "I read it" else "Done ✓")
                                 }
                             }
-                            PrimaryButton(if (reads >= TARGET_READS) "Hide it & test me" else "I know it — test me", Modifier.testTag("hifz_test_me")) { com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "test_me", "tap");
+                            PrimaryButton(if (reads >= TARGET_READS) "Hide it & test me" else "I know it — test me", Modifier.testTag("hifz_test_me").tourTarget("quranmodes_hifz_test_me")) { com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "test_me", "tap");
                                 stopAudio(); step = PracticeStep.RECALL
                             }
                         }
@@ -602,7 +600,7 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                                     val micColor by animateColorAsState(if (listening) MistakeRed else QuranGreen, tween(200), label = "hifzMic")
                                     FilledIconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("hifz_coach_screen", "toggle_mic", ::toggleMic), enabled = !checkingVoice,
-                                        modifier = Modifier.size(72.dp).testTag("hifz_mic"),
+                                        modifier = Modifier.size(72.dp).testTag("hifz_mic").tourTarget("quranmodes_hifz_mic"),
                                         colors = IconButtonDefaults.filledIconButtonColors(containerColor = micColor)) {
                                         if (checkingVoice) CircularProgressIndicator(Modifier.size(28.dp), color = Color.White, strokeWidth = 3.dp)
                                         else Icon(if (listening) Icons.Default.Stop else Icons.Default.Mic, localizedUiText(if (listening) "Finish" else "Check with microphone"),
@@ -632,7 +630,7 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                                     Icon(Icons.Default.Lightbulb, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
                                     LocalizedText(if (revealed == 0) "Hint" else "Next word")
                                 }
-                                Button(onClick = { com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "show_answer", "tap"); stopSpeech(); step = PracticeStep.CHECK }, modifier = Modifier.weight(1.4f).testTag("hifz_reveal"),
+                                Button(onClick = { com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "show_answer", "tap"); stopSpeech(); step = PracticeStep.CHECK }, modifier = Modifier.weight(1.4f).testTag("hifz_reveal").tourTarget("quranmodes_hifz_show_ayah"),
                                     colors = ButtonDefaults.buttonColors(containerColor = QuranGreen, contentColor = Color.White)) {
                                     Icon(Icons.Default.Visibility, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
                                     LocalizedText("Show ayah")
@@ -658,14 +656,14 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                                 if (a != null) {
                                     Surface(color = QuranGoldLight.copy(alpha = .25f), shape = RoundedCornerShape(12.dp)) {
                                         Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                                            LocalizedText("Voice match ${a.score}%", color = HifzAccent, fontWeight = FontWeight.Bold)
+                                            LocalizedText(localizedUiTemplate("Voice match {percent}%", "percent" to a.score), color = HifzAccent, fontWeight = FontWeight.Bold)
                                             LocalizedText(if (a.incorrectIndices.isEmpty()) "Every word matched. MashaAllah!"
                                                 else "Words in red may have been missed. Speech recognition isn't perfect, so trust your own judgement.",
                                                 color = HifzMuted, fontSize = 12.sp)
                                         }
                                     }
                                 }
-                                if (revealed > 0) LocalizedText("You used ${revealed} hint word${if (revealed == 1) "" else "s"}.", color = HifzGold, fontSize = 13.sp)
+                                if (revealed > 0) LocalizedText(if (revealed == 1) localizedUiTemplate("You used {count} hint word.", "count" to revealed) else localizedUiTemplate("You used {count} hint words.", "count" to revealed), color = HifzGold, fontSize = 13.sp)
                                 Row {
                                     ListenButton(audioState, speed, ::changeSpeed, onPlay = { playAyah(cur.reference) }, onStop = ::stopAudio)
                                     Spacer(Modifier.weight(1f))
@@ -686,8 +684,8 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                                         val next = HifzSpacedRepetitionScheduler.calculateNextReview(existing.schedule,
                                             SmartHifzRevisionPlanner.confidenceFor(style.grade.score), now)
                                         val whenText = if (style.grade == HifzGrade.FORGOT && !cur.isRetry) "Again in this session"
-                                            else "Next: ${HifzCoachLogic.intervalLabel(next.intervalDays)}"
-                                        GradeButton(style, whenText, style.grade == suggested, Modifier.weight(1f)) { grade(style.grade) }
+                                            else localizedUiTemplate("Next: {interval}", "interval" to localizedUiText(HifzCoachLogic.intervalLabel(next.intervalDays)))
+                                        GradeButton(style, whenText, style.grade == suggested, Modifier.weight(1f).tourTarget("quranmodes_hifz_grade")) { grade(style.grade) }
                                     }
                                 }
                                 Spacer(Modifier.height(10.dp))
@@ -707,7 +705,7 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                         LocalizedText("Session complete", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold,
                             modifier = Modifier.align(Alignment.CenterHorizontally).semantics { heading() })
                         val reviewed = queue.map { q -> q.reference }.distinct().size
-                        LocalizedText("MashaAllah! You practised $reviewed ayah${if (reviewed == 1) "" else "s"}.", color = Color.White.copy(alpha = .8f),
+                        LocalizedText(if (reviewed == 1) localizedUiTemplate("MashaAllah! You practised {count} ayah.", "count" to reviewed) else localizedUiTemplate("MashaAllah! You practised {count} ayahs.", "count" to reviewed), color = Color.White.copy(alpha = .8f),
                             textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                         if (summary.streakDays > 0) {
                             Spacer(Modifier.height(10.dp))
@@ -731,10 +729,10 @@ fun HifzCoachScreen(modifier: Modifier = Modifier) {
                             color = HifzMuted, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                         val due = summary.dueCards.size
                         when {
-                            due > 0 -> PrimaryButton("Revise $due due ayah${if (due == 1) "" else "s"}") { com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "revise_due_after_session", "tap");
+                            due > 0 -> PrimaryButton(if (due == 1) localizedUiTemplate("Revise {count} due ayah", "count" to due) else localizedUiTemplate("Revise {count} due ayahs", "count" to due)) { com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "revise_due_after_session", "tap");
                                 begin(SessionKind.REVISION, HifzCoachLogic.revisionQueue(summary.dueCards))
                             }
-                            kind == SessionKind.NEW -> PrimaryButton("Memorise next $sessionLength") { com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "memorise_next_after_session", "tap"); startNewPassage() }
+                            kind == SessionKind.NEW -> PrimaryButton(localizedUiTemplate("Memorise next {count}", "count" to sessionLength)) { com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "memorise_next_after_session", "tap"); startNewPassage() }
                         }
                         OutlinedButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("hifz_coach_screen", "back_to_coach", ::leave), modifier = Modifier.fillMaxWidth()) { LocalizedText("Back to Coach", color = HifzAccent) }
                     }
@@ -748,7 +746,8 @@ private enum class AudioState { IDLE, LOADING, PLAYING, ERROR }
 
 @Composable
 private fun ListenButton(state: AudioState, speed: Float, onSpeedChange: (Float) -> Unit, onPlay: () -> Unit, onStop: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    val isOnline by com.example.ui.components.rememberIsOnline()
+    Row(Modifier.tourTarget("quranmodes_hifz_listen"), verticalAlignment = Alignment.CenterVertically) {
         TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("hifz_coach_screen", "toggle_listen", if (state == AudioState.IDLE || state == AudioState.ERROR) onPlay else onStop)) {
             if (state == AudioState.LOADING) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = HifzAccent)
             else Icon(if (state == AudioState.PLAYING) Icons.Default.Stop else Icons.Default.Headphones, null, tint = HifzAccent, modifier = Modifier.size(18.dp))
@@ -756,7 +755,9 @@ private fun ListenButton(state: AudioState, speed: Float, onSpeedChange: (Float)
             LocalizedText(when (state) { AudioState.PLAYING -> "Stop"; AudioState.LOADING -> "Loading…"; else -> "Listen" }, color = HifzAccent)
         }
         // The error hint takes the speed pill's place so the row still fits beside "Try again".
-        if (state == AudioState.ERROR) LocalizedText("Needs internet", color = HifzMuted, fontSize = 12.sp)
+        // Online, a failed play is a server or file problem, so it must not blame the connection.
+        if (state == AudioState.ERROR && isOnline) LocalizedText("Could not play", color = HifzMuted, fontSize = 12.sp)
+        else if (state == AudioState.ERROR) LocalizedText("Needs internet", color = HifzMuted, fontSize = 12.sp)
         else PlaybackSpeedButton(speed, onSpeedChange, color = HifzAccent)
     }
 }
@@ -783,7 +784,7 @@ private fun StepIndicator(step: PracticeStep, showRead: Boolean) {
             }, tween(250), label = "hifzStep")
             Row(Modifier.weight(1f).clip(CircleShape).background(fill)
                 .padding(horizontal = 8.dp, vertical = 7.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                LocalizedText(if (done) "✓ $label" else "${i + 1}  $label", color = if (active) Color.White else HifzAccent,
+                Text(if (done) "✓ ${localizedUiText(label)}" else "${i + 1}  ${localizedUiText(label)}", color = if (active) Color.White else HifzAccent,
                     fontSize = 13.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -903,14 +904,14 @@ private fun PassageSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val s = FullQuranCatalog.surahs[nextNew.surah.value - 1]
     val end = minOf(s.totalAyat, nextNew.ayah.value + sessionLength - 1)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = HifzCard) {
+    ModalBottomSheet(onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("hifz_coach_screen", "dismiss_passage_sheet", onDismiss), sheetState = sheetState, containerColor = HifzCard) {
         Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 28.dp).testTag("hifz_passage_sheet"),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             SectionLabel("MEMORISE NEW AYAHS")
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     LocalizedText(s.englishName, color = HifzAccent, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-                    LocalizedText(if (end > nextNew.ayah.value) "Ayah ${nextNew.ayah.value}–$end of ${s.totalAyat}" else "Ayah ${nextNew.ayah.value} of ${s.totalAyat}", color = HifzMuted, fontSize = 13.sp)
+                    LocalizedText(if (end > nextNew.ayah.value) localizedUiTemplate("Ayah {start}–{end} of {total}", "start" to nextNew.ayah.value, "end" to end, "total" to s.totalAyat) else localizedUiTemplate("Ayah {ayah} of {total}", "ayah" to nextNew.ayah.value, "total" to s.totalAyat), color = HifzMuted, fontSize = 13.sp)
                 }
                 Text(s.arabicName, color = HifzAccent, fontFamily = IndoPakFont, fontSize = 24.sp)
             }
@@ -971,16 +972,16 @@ private fun SurahPickerDialog(onPick: (Int) -> Unit, onDismiss: () -> Unit) {
             Column {
                 OutlinedTextField(query, { query = it }, modifier = Modifier.fillMaxWidth(),
                     leadingIcon = { Icon(Icons.Default.Search, null) }, label = { LocalizedText("Name or number") }, singleLine = true)
-                val q = query.trim()
                 val language = LocalAppLanguage.current
+                val matches = remember(query, language) { com.example.quran.QuranSearch.surahs(query, language) }
                 LazyColumn(Modifier.heightIn(max = 380.dp)) {
-                    items(FullQuranCatalog.surahs.filter { q.isEmpty() || it.englishName.contains(q, true) || it.arabicName.contains(q) || it.number.toString() == q || localizeUiText(it.englishName, language).contains(q, true) }, key = { it.number }) { s ->
+                    items(matches, key = { it.number }) { s ->
                         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "pick_surah", "tap", item = "surah_${s.number}"); onPick(s.number) }.padding(horizontal = 8.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically) {
                             Text("${s.number}", color = HifzGold, fontWeight = FontWeight.Bold, modifier = Modifier.width(34.dp))
                             Column(Modifier.weight(1f)) {
                                 LocalizedText(s.englishName, color = HifzAccent, fontWeight = FontWeight.SemiBold)
-                                LocalizedText("${s.totalAyat} ayahs", color = HifzMuted, fontSize = 12.sp)
+                                LocalizedText(localizedUiTemplate("{count} ayahs", "count" to s.totalAyat), color = HifzMuted, fontSize = 12.sp)
                             }
                             Text(s.arabicName, color = HifzAccent, fontFamily = IndoPakFont, fontSize = 18.sp)
                         }
@@ -998,10 +999,10 @@ private fun AyahPickerDialog(surah: Int, initial: Int, onPick: (Int) -> Unit, on
     val value = input.toIntOrNull()?.takeIf { it in 1..total }
     AlertDialog(
         onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("hifz_coach_screen", "dismiss_ayah_picker", onDismiss),
-        title = { LocalizedText("${surahName(surah)}: start at which ayah?") },
+        title = { LocalizedText(localizedUiTemplate("{surah}: start at which ayah?", "surah" to surahName(surah))) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(input, { input = it.filter(Char::isDigit).take(3) }, label = { LocalizedText("Ayah 1 to $total") },
+                OutlinedTextField(input, { input = it.filter(Char::isDigit).take(3) }, label = { LocalizedText(localizedUiTemplate("Ayah 1 to {total}", "total" to total)) },
                     singleLine = true, isError = input.isNotEmpty() && value == null, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AssistChip(onClick = { com.example.core.analytics.AppAnalytics.interaction("hifz_coach_screen", "ayah_from_start", "tap"); input = "1" }, label = { LocalizedText("From start") })

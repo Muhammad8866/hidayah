@@ -2,6 +2,8 @@
 
 package com.example.ui.screens
 
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -63,7 +65,13 @@ private fun SalahText.control(): String {
 
 @Composable
 fun SalahScreen(onBack: () -> Unit, onOpenQibla: () -> Unit, modifier: Modifier = Modifier) {
+    SalahScreenContent(onBack, onOpenQibla, modifier)
+}
+
+@Composable
+private fun SalahScreenContent(onBack: () -> Unit, onOpenQibla: () -> Unit, modifier: Modifier) {
     com.example.core.analytics.AnalyticsScreen("salah_screen")
+    TourScreen("guides_salah")
 
     val context = LocalContext.current
     val prefs = remember(context) { PrayerSettingsStore.prefs(context) }
@@ -148,7 +156,11 @@ fun SalahScreen(onBack: () -> Unit, onOpenQibla: () -> Unit, modifier: Modifier 
         confirmButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "close_madhhab_picker", "tap"); showSchoolPicker = false }) { Text(SalahUi.CLOSE.control()) } }
     )
 
-    ToolScreen(DailyTool.SALAH, ::closeDetail, modifier, listState) { accent ->
+    ToolScreen(DailyTool.SALAH, {
+        // Leaving the tool itself is tracked by the caller; only closing a detail page is tracked here.
+        if (selectedTopicId != null || selectedPrayerId != null) com.example.core.analytics.AppAnalytics.interaction("salah_screen", "close_detail", "back")
+        closeDetail()
+    }, modifier, listState) { accent ->
         item(key = "school") {
             HeroCard(accent) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -160,7 +172,7 @@ fun SalahScreen(onBack: () -> Unit, onOpenQibla: () -> Unit, modifier: Modifier 
                             color = accent
                         )
                     }
-                    TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "open_madhhab_picker", "tap"); showSchoolPicker = true }, modifier = Modifier.testTag("salah_madhhab")) {
+                    TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "open_madhhab_picker", "tap"); showSchoolPicker = true }, modifier = Modifier.testTag("salah_madhhab").tourTarget("guides_salah_madhhab")) {
                         Text(SalahUi.CHANGE.control())
                     }
                 }
@@ -174,13 +186,13 @@ fun SalahScreen(onBack: () -> Unit, onOpenQibla: () -> Unit, modifier: Modifier 
         }
         if (selectedPrayer == null && selectedTopic == null) {
             item(key = "tabs") {
-                ScrollableTabRow(selectedTabIndex = tab.ordinal, edgePadding = 0.dp, containerColor = MaterialTheme.colorScheme.background) {
+                ScrollableTabRow(selectedTabIndex = tab.ordinal, edgePadding = 0.dp, containerColor = MaterialTheme.colorScheme.background, modifier = Modifier.tourTarget("guides_salah_tabs")) {
                     SalahTab.entries.forEach { option ->
                         Tab(
                             selected = tab == option,
                             onClick = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "select_salah_tab", "tap", item = option.name); tabName = option.name },
                             text = { Text(option.title.text(), maxLines = 1) },
-                            modifier = Modifier.testTag("salah_tab_${option.name.lowercase()}")
+                            modifier = Modifier.testTag("salah_tab_${option.name.lowercase()}").tourTarget("guides_salah_tab_${option.name.lowercase()}")
                         )
                     }
                 }
@@ -227,7 +239,7 @@ fun SalahScreen(onBack: () -> Unit, onOpenQibla: () -> Unit, modifier: Modifier 
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             LinearProgressIndicator(
                                 progress = { (safeIndex + 1).toFloat() / guideSteps.size },
-                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).tourTarget("guides_salah_step_progress"),
                                 color = accent,
                                 trackColor = accent.copy(alpha = 0.15f),
                                 strokeCap = StrokeCap.Round,
@@ -244,11 +256,11 @@ fun SalahScreen(onBack: () -> Unit, onOpenQibla: () -> Unit, modifier: Modifier 
                                 OutlinedButton(
                                     onClick = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "previous_step", "tap"); showStep(safeIndex - 1) },
                                     enabled = safeIndex > 0,
-                                    modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                                    modifier = Modifier.weight(1f).heightIn(min = 48.dp).tourTarget("guides_salah_previous")
                                 ) { Text(SalahUi.PREVIOUS.control(), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                                 Button(
                                     onClick = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "next_step", "tap"); showStep(if (last) 0 else safeIndex + 1) },
-                                    modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("salah_next_step"),
+                                    modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("salah_next_step").tourTarget("guides_salah_next"),
                                     colors = ButtonDefaults.buttonColors(containerColor = accent)
                                 ) { Text(if (last) SalahUi.START_AGAIN.text() else SalahUi.NEXT.control(), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                             }
@@ -293,7 +305,7 @@ fun SalahScreen(onBack: () -> Unit, onOpenQibla: () -> Unit, modifier: Modifier 
                                 Text(SalahUi.QIBLA.control(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                 Text(SalahUi.QIBLA_HINT.text(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("salah_screen", "open_qibla", onOpenQibla), modifier = Modifier.testTag("salah_qibla")) { Text(SalahUi.OPEN.control()) }
+                            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("salah_screen", "open_qibla", onOpenQibla), modifier = Modifier.testTag("salah_qibla").tourTarget("guides_salah_qibla")) { Text(SalahUi.OPEN.control()) }
                         }
                     }
                 }
@@ -309,7 +321,7 @@ fun SalahScreen(onBack: () -> Unit, onOpenQibla: () -> Unit, modifier: Modifier 
 private fun PrayerCard(prayer: DailyPrayer, madhhab: Madhhab, accent: Color, onOpen: () -> Unit) {
     AppCard(
         onClick = com.example.core.analytics.AppAnalytics.trackItemAction("salah_screen", "open_prayer", prayer.id, onOpen),
-        modifier = Modifier.fillMaxWidth().testTag("salah_${prayer.id}"),
+        modifier = Modifier.fillMaxWidth().testTag("salah_${prayer.id}").tourTarget("guides_salah_prayer_card"),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -349,7 +361,7 @@ private fun PrayerDetail(prayer: DailyPrayer, madhhab: Madhhab, accent: Color, o
             Spacer(Modifier.height(10.dp))
             Button(
                 onClick = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "learn_fard", "tap"); GuideForm.forUnit(prayer.fard, SalahKind.FARD)?.let(onLearn) },
-                modifier = Modifier.testTag("salah_learn_fard"),
+                modifier = Modifier.testTag("salah_learn_fard").tourTarget("guides_salah_learn_fard"),
                 colors = ButtonDefaults.buttonColors(containerColor = accent)
             ) { Text(SalahUi.LEARN_FARD.inLanguage(language, "count" to prayer.fard)) }
         }
@@ -370,7 +382,7 @@ private fun PrayerDetail(prayer: DailyPrayer, madhhab: Madhhab, accent: Color, o
                         Text(part.whenPrayed.text(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     part.form?.let { target ->
-                        TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "learn_prayer_unit", "tap"); onLearn(target) }, modifier = Modifier.testTag("salah_learn_unit_$index")) {
+                        TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "learn_prayer_unit", "tap"); onLearn(target) }, modifier = Modifier.testTag("salah_learn_unit_$index").tourTarget("guides_salah_learn_unit")) {
                             Text(SalahUi.LEARN_UNIT.text())
                         }
                     }
@@ -438,7 +450,7 @@ private fun GuideControls(
     onBeginner: (Boolean) -> Unit
 ) {
     ToolCard {
-        Text(SalahUi.GUIDE_TITLE.text(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(SalahUi.GUIDE_TITLE.text(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.tourTarget("guides_salah_guide_controls"))
         Text(SalahUi.GUIDE_HINT.text(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             GuideForm.entries.forEach { option ->
@@ -446,7 +458,7 @@ private fun GuideControls(
                     selected = form == option,
                     onClick = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "select_guide_form", "tap", item = option.name); onForm(option) },
                     label = { Text(option.title.text(), maxLines = 1) },
-                    modifier = Modifier.testTag("salah_form_${option.name.lowercase()}")
+                    modifier = Modifier.testTag("salah_form_${option.name.lowercase()}").tourTarget("guides_salah_form")
                 )
             }
         }
@@ -458,7 +470,7 @@ private fun GuideControls(
                     onClick = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "select_worshipper", "tap"); onWorshipper(option) },
                     label = { Text(option.title.text(), maxLines = 1) },
                     leadingIcon = { Icon(if (option == Worshipper.MAN) Icons.Default.Face else Icons.Default.Face3, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                    modifier = Modifier.testTag("salah_for_${option.name.lowercase()}")
+                    modifier = Modifier.testTag("salah_for_${option.name.lowercase()}").tourTarget("guides_salah_worshipper")
                 )
             }
         }
@@ -469,7 +481,7 @@ private fun GuideControls(
                     onClick = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "select_praying_as", "tap", item = option.name); onPrayingAs(option) },
                     label = { Text(option.title.text(), maxLines = 1) },
                     leadingIcon = { Icon(if (option == PrayingAs.ALONE) Icons.Default.Person else Icons.Default.Groups, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                    modifier = Modifier.testTag("salah_as_${option.name.lowercase()}")
+                    modifier = Modifier.testTag("salah_as_${option.name.lowercase()}").tourTarget("guides_salah_praying_as")
                 )
             }
         }
@@ -479,7 +491,7 @@ private fun GuideControls(
                 Text(SalahUi.BEGINNER.text(), style = MaterialTheme.typography.titleSmall)
                 Text(SalahUi.BEGINNER_HINT.text(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Switch(checked = beginner, onCheckedChange = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "toggle_beginner_mode", "toggle"); onBeginner(it) }, modifier = Modifier.testTag("salah_beginner_switch"))
+            Switch(checked = beginner, onCheckedChange = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "toggle_beginner_mode", "toggle"); onBeginner(it) }, modifier = Modifier.testTag("salah_beginner_switch").tourTarget("guides_salah_beginner"))
         }
     }
 }
@@ -544,7 +556,7 @@ private fun RecitationBlock(recitation: Recitation, accent: Color, startExpanded
     ) {
         Column {
             Row(
-                Modifier.fillMaxWidth().clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "toggle_recitation", "tap"); expanded = !expanded }.heightIn(min = 48.dp).padding(horizontal = 14.dp, vertical = 10.dp),
+                Modifier.fillMaxWidth().tourTarget("guides_salah_recitation_toggle").clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "toggle_recitation", "tap"); expanded = !expanded }.heightIn(min = 48.dp).padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.Default.AutoStories, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
@@ -568,7 +580,7 @@ private fun ColumnScope.RecitationBody(recitation: Recitation, accent: Color, sh
     recitation.note?.let { Text(it.text(), style = MaterialTheme.typography.labelMedium, color = accent) }
     Text(
         recitation.arabic,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().tourTarget("guides_salah_recitation_card"),
         style = TextStyle(
             fontFamily = ArabicFontFamily,
             fontSize = 26.sp,
@@ -600,7 +612,7 @@ private fun LazyListScope.topicCards(
     items(topics, key = { it.id }) { topic ->
         AppCard(
             onClick = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "open_topic", "tap", item = topic.id); onOpen(topic.id) },
-            modifier = Modifier.fillMaxWidth().testTag("salah_topic_${topic.id}"),
+            modifier = Modifier.fillMaxWidth().testTag("salah_topic_${topic.id}").tourTarget("guides_salah_topic_card"),
             contentPadding = PaddingValues(0.dp)
         ) {
             Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -652,7 +664,7 @@ private fun TopicDetail(topic: SalahTopic, madhhab: Madhhab, accent: Color, onLe
                 Spacer(Modifier.height(10.dp))
                 Button(
                     onClick = { com.example.core.analytics.AppAnalytics.interaction("salah_screen", "learn_from_topic", "tap"); onLearn(target) },
-                    modifier = Modifier.testTag("salah_topic_learn"),
+                    modifier = Modifier.testTag("salah_topic_learn").tourTarget("guides_salah_topic_learn"),
                     colors = ButtonDefaults.buttonColors(containerColor = accent)
                 ) { Text(SalahUi.LEARN.text()) }
             }

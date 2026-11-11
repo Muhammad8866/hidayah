@@ -2,7 +2,8 @@ package com.example.ui.screens
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.example.domain.model.DuaDatasetRepository
+import com.example.core.search.AppSearch
+import com.example.quran.FullQuranCatalog
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -75,6 +76,7 @@ internal class RecitationStore(context: Context, private val today: () -> LocalD
         val streak = if (last != null && day == last + 1) flow.value.streak.coerceAtLeast(0) + 1 else 1
         flow.value = flow.value.copy(streak = streak)
         prefs.edit().putInt("streak", streak).putLong("streak_day", day).apply()
+        com.example.core.analytics.AppAnalytics.streak("recitation_collection", streak)
     }
 
     fun refreshDay() {
@@ -132,11 +134,21 @@ internal fun recitationFontSize(step: Int): Pair<Int, Int> = when (step.coerceIn
 internal fun recitationShareText(title: String, source: String, arabic: String, transliteration: String, meaning: String): String =
     listOf(title, arabic, transliteration, meaning, source).map(String::trim).filter(String::isNotEmpty).joinToString("\n\n")
 
-internal fun recitationMatches(query: String, text: String): Boolean {
-    val words = DuaDatasetRepository.normalizeForSearch(query).split(' ').filter(String::isNotBlank)
-    if (words.isEmpty()) return true
-    val normalized = DuaDatasetRepository.normalizeForSearch(text)
-    return words.all { it in normalized }
+/**
+ * What search reads of a Quran passage (see [AppSearch]): its surah's name counts most, then the
+ * Arabic name and the reference ("2:255-257"), then the surah's meaning, its name in the reader's
+ * language ([localizedTitle]) and the Arabic of its [verses]. A typed number finds that surah's
+ * passages first.
+ */
+internal fun recitationPassageFields(passage: RecitationPassage, verses: List<String>, localizedTitle: String = ""): AppSearch.Fields {
+    val surah = FullQuranCatalog.surahs.first { it.number == passage.surah }
+    return AppSearch.Fields(
+        title = surah.englishName,
+        nativeTitle = surah.arabicName,
+        author = passage.reference,
+        other = listOf(surah.englishMeaning, localizedTitle) + verses,
+        number = passage.surah
+    )
 }
 
 /**

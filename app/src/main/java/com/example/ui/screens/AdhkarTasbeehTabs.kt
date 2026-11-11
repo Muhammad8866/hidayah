@@ -1,5 +1,8 @@
 package com.example.ui.screens
 
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
+
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -114,6 +117,7 @@ import com.example.domain.model.AdhkarDatasetRepository
 import com.example.domain.model.Dua
 import com.example.domain.model.PrayerType
 import com.example.domain.model.TasbeehPreset
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizeUiText
@@ -161,6 +165,7 @@ private fun RollingCount(value: Int, content: @Composable (Int) -> Unit) {
 @Composable
 fun AdhkarTab(uiState: MainUiState, viewModel: MainViewModel) {
     com.example.core.analytics.AnalyticsScreen("adhkar_tab")
+    TourScreen("duas_adhkar")
 
     val language = LocalAppLanguage.current
     val haptics = LocalHapticFeedback.current
@@ -202,6 +207,21 @@ fun AdhkarTab(uiState: MainUiState, viewModel: MainViewModel) {
     // While any dhikr is unfinished there is no banner above the list, so dhikr i is list item i.
     fun scrollToDhikr(index: Int) {
         scope.launch { listState.animateScrollToItem(index) }
+    }
+
+    // A recording carries on through the list; keep the dhikr being recited in view.
+    DisposableEffect(adhkar) {
+        AdhkarAudioPlayer.setQueue(adhkar.map { it.id })
+        onDispose { AdhkarAudioPlayer.setQueue(emptyList()) }
+    }
+    val playingId by AdhkarAudioPlayer.activeId.collectAsState()
+    LaunchedEffect(playingId) {
+        val index = adhkar.indexOfFirst { it.id == playingId }
+        if (index < 0) return@LaunchedEffect
+        val key = keyOf(adhkar[index])
+        if (listState.layoutInfo.visibleItemsInfo.none { it.key == key }) {
+            listState.animateScrollToItem(index + if (allDone) 1 else 0)
+        }
     }
 
     val currentVisible by remember(currentKey) {
@@ -311,7 +331,7 @@ private fun ContinuePill(
             color = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
             shadowElevation = 6.dp,
-            modifier = Modifier.testTag("adhkar_continue")
+            modifier = Modifier.testTag("adhkar_continue").tourTarget("duas_adhkar_continue")
         ) {
             Row(
                 modifier = Modifier.padding(start = 16.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
@@ -360,6 +380,7 @@ private fun AdhkarHeader(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
+                    .tourTarget("duas_adhkar_session")
             ) {
                 Row(modifier = Modifier.padding(4.dp)) {
                     SessionOption(
@@ -383,7 +404,7 @@ private fun AdhkarHeader(
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.tourTarget("duas_adhkar_progress")) {
                 LinearProgressIndicator(
                     progress = { progress },
                     modifier = Modifier
@@ -414,7 +435,7 @@ private fun AdhkarHeader(
                 IconButton(
                     onClick = com.example.core.analytics.AppAnalytics.trackAction("adhkar_tab", "open_reset_adhkar", onReset),
                     enabled = canReset,
-                    modifier = Modifier.testTag("adhkar_reset_all")
+                    modifier = Modifier.testTag("adhkar_reset_all").tourTarget("duas_adhkar_reset_all")
                 ) {
                     Icon(
                         Icons.Default.Refresh,
@@ -477,7 +498,8 @@ private fun AdhkarDoneBanner() {
     HeroSurface(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag("adhkar_done_banner"),
+            .testTag("adhkar_done_banner")
+            .tourTarget("duas_adhkar_done"),
         shape = MaterialTheme.shapes.large,
         contentPadding = PaddingValues(18.dp)
     ) {
@@ -531,7 +553,10 @@ private fun AdhkarCard(
 
     // The whole card is the counter, so a tap anywhere while reciting counts once.
     Card(
-        onClick = { if (collapsed) reopened = true else onCount() },
+        onClick = {
+            if (collapsed) { com.example.core.analytics.AppAnalytics.interaction("adhkar_tab", "reopen_completed_dhikr"); reopened = true }
+            else onCount()
+        },
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = if (done) colors.primaryContainer.copy(alpha = 0.35f) else colors.surface
@@ -547,6 +572,7 @@ private fun AdhkarCard(
             .pressScale(interaction, pressedScale = 0.985f)
             .animateContentSize()
             .testTag("adhkar_card_${dua.id}")
+            .tourTarget("duas_adhkar_card")
     ) {
         if (collapsed) {
             Row(
@@ -571,7 +597,7 @@ private fun AdhkarCard(
                     fontWeight = FontWeight.Bold,
                     color = colors.primary
                 )
-                IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("adhkar_tab", "reset_dhikr", onReset)) {
+                IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("adhkar_tab", "reset_dhikr", onReset), modifier = Modifier.tourTarget("duas_adhkar_reset_one")) {
                     Icon(Icons.Default.Refresh, contentDescription = localizeUiText("Reset", language), modifier = Modifier.size(20.dp))
                 }
             }
@@ -630,7 +656,7 @@ private fun AdhkarCardBody(
             )
             if (target > 1) {
                 Spacer(modifier = Modifier.width(8.dp))
-                RepeatChip(target)
+                Box(Modifier.tourTarget("duas_adhkar_repeat")) { RepeatChip(target) }
             }
         }
         if (language != "en" && title == dua.title) {
@@ -664,7 +690,7 @@ private fun AdhkarCardBody(
         }
 
         Spacer(modifier = Modifier.height(12.dp))
-        Surface(color = goldContainer(), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
+        Surface(color = goldContainer(), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().tourTarget("duas_adhkar_benefit")) {
             Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.Top) {
                 Icon(
                     Icons.Default.AutoAwesome,
@@ -703,7 +729,7 @@ private fun AdhkarCardBody(
         Spacer(modifier = Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (count > 0) {
-                IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("adhkar_tab", "reset_dhikr", onReset)) {
+                IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("adhkar_tab", "reset_dhikr", onReset), modifier = Modifier.tourTarget("duas_adhkar_reset_one")) {
                     Icon(
                         Icons.Default.Refresh,
                         contentDescription = localizeUiText("Reset", language),
@@ -764,7 +790,7 @@ private fun AdhkarCounterButton(count: Int, target: Int, onCount: () -> Unit, la
         spring(dampingRatio = Spring.DampingRatioMediumBouncy),
         label = "adhkar_press"
     )
-    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(68.dp)) {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(68.dp).tourTarget("duas_adhkar_counter")) {
         CircularProgressIndicator(
             progress = { progress },
             modifier = Modifier.fillMaxSize(),
@@ -837,6 +863,7 @@ fun TasbeehTab(
     viewModel: MainViewModel
 ) {
     com.example.core.analytics.AnalyticsScreen("tasbeeh_tab")
+    TourScreen("duas_tasbeeh")
 
     val language = LocalAppLanguage.current
     val haptics = LocalHapticFeedback.current
@@ -934,6 +961,7 @@ fun TasbeehTab(
                     modifier = Modifier
                         .padding(top = 14.dp)
                         .testTag("tasbeeh_next_preset")
+                        .tourTarget("duas_tasbeeh_next")
                 ) {
                     Text(
                         text = "${localizeUiText("Next", language)}: ${nextPreset.transliteration} · ${nextPreset.goal}",
@@ -950,16 +978,17 @@ fun TasbeehTab(
             Spacer(modifier = Modifier.height(18.dp))
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.tourTarget("duas_tasbeeh_stats")
             ) {
                 StatPill(
                     icon = Icons.Default.Repeat,
-                    text = "Rounds: $rounds",
+                    text = localizedUiTemplate("Rounds: {count}", "count" to rounds),
                     modifier = Modifier.testTag("tasbeeh_rounds")
                 )
                 StatPill(
                     icon = Icons.Default.Functions,
-                    text = "Total: $total",
+                    text = localizedUiTemplate("Total: {count}", "count" to total),
                     modifier = Modifier.testTag("tasbeeh_total")
                 )
             }
@@ -972,7 +1001,7 @@ fun TasbeehTab(
                         viewModel.undoTasbeeh()
                     },
                     enabled = count > 0,
-                    modifier = Modifier.heightIn(min = 48.dp).testTag("tasbeeh_undo")
+                    modifier = Modifier.heightIn(min = 48.dp).testTag("tasbeeh_undo").tourTarget("duas_tasbeeh_undo")
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
@@ -981,7 +1010,7 @@ fun TasbeehTab(
                 OutlinedButton(
                     onClick = { com.example.core.analytics.AppAnalytics.interaction("tasbeeh_tab", "open_reset_tasbeeh", "tap"); confirmReset = true },
                     enabled = count > 0 || rounds > 0,
-                    modifier = Modifier.heightIn(min = 48.dp).testTag("tasbeeh_reset")
+                    modifier = Modifier.heightIn(min = 48.dp).testTag("tasbeeh_reset").tourTarget("duas_tasbeeh_reset")
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
@@ -991,7 +1020,7 @@ fun TasbeehTab(
 
             if (preset != null) {
                 Spacer(modifier = Modifier.height(18.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.tourTarget("duas_tasbeeh_source")) {
                     Icon(
                         Icons.AutoMirrored.Filled.MenuBook,
                         contentDescription = localizeUiText("Source citation", language),
@@ -1019,8 +1048,8 @@ fun TasbeehTab(
 @Composable
 private fun TasbeehPresetRow(selectedPhrase: String, onSelect: (TasbeehPreset) -> Unit) {
     val colors = MaterialTheme.colorScheme
+    // A horizontal preset row: its scroll depth is not the screen's, so it is not reported as scroll_progress.
     val rowState = rememberLazyListState()
-    com.example.core.analytics.AnalyticsScroll("adhkar_tasbeeh_tabs", rowState)
     val selectedIndex = TasbeehPreset.ALL.indexOfFirst { it.phrase == selectedPhrase }
     // Brings the chosen dhikr into view, e.g. after "Next" moves along Tasbeeh-e-Fatimi,
     // but leaves the row alone when that card is already fully on screen.
@@ -1040,6 +1069,7 @@ private fun TasbeehPresetRow(selectedPhrase: String, onSelect: (TasbeehPreset) -
         modifier = Modifier
             .fillMaxWidth()
             .testTag("tasbeeh_presets")
+            .tourTarget("duas_tasbeeh_presets")
     ) {
         itemsIndexed(TasbeehPreset.ALL, key = { _, option -> option.phrase }) { _, option ->
             val selected = option.phrase == selectedPhrase
@@ -1108,7 +1138,7 @@ private fun FatimiSteps(currentIndex: Int, roundDone: Boolean) {
             color = colors.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(6.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.testTag("tasbeeh_fatimi_steps")) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.testTag("tasbeeh_fatimi_steps").tourTarget("duas_tasbeeh_fatimi")) {
             (0..2).forEach { i ->
                 val step = TasbeehPreset.ALL[i]
                 val passed = i < currentIndex || (i == currentIndex && roundDone)
@@ -1181,6 +1211,7 @@ private fun TasbeehCounter(count: Int, goal: Int, roundDone: Boolean, onTap: () 
             .fillMaxWidth(0.8f)
             .widthIn(max = 320.dp)
             .aspectRatio(1f)
+            .tourTarget("duas_tasbeeh_counter")
             // A faint halo behind the ring lifts the counter off the page.
             .background(
                 Brush.radialGradient(listOf(colors.primary.copy(alpha = 0.10f), Color.Transparent)),

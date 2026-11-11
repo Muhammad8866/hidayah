@@ -32,6 +32,7 @@ import java.util.TimeZone
 class PrayerNotificationReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
+        com.example.core.analytics.AppAnalytics.wake(context, "prayer_alarm", intent.action)
         val prefs = PrayerSettingsStore.prefs(context)
         if (!PrayerSettingsStore.notificationsEnabled(prefs) || !PrayerSettingsStore.hasSavedCity(prefs)) {
             cancelPrayerAlerts(context)
@@ -58,7 +59,10 @@ class PrayerNotificationReceiver : BroadcastReceiver() {
         const val EXTRA_LAUNCH_SOURCE = "extra_launch_source"
         const val SOURCE_PRAYER_ALERT = "prayer_notification"
         const val SOURCE_WIDGET = "home_widget"
+        /** Which screen a prayer alert's button opens; see [PrayerAlertAction]. */
+        const val EXTRA_OPEN_SCREEN = "extra_open_screen"
         private const val OPEN_APP_REQUEST = 1
+        private const val OPEN_ACTION_REQUEST_BASE = 20
 
         fun createNotificationChannel(context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -157,15 +161,18 @@ class PrayerNotificationReceiver : BroadcastReceiver() {
             fun tr(text: String) = localizeUiText(text, language)
             // Only fixed copy is translated; city names like "New Delhi" must never be rewritten.
             val prayerLabel = if (displayPrayer == prayerArabic) displayPrayer else tr(displayPrayer)
+            // Whole-sentence templates keep word order right in SOV languages like Hindi or Turkish.
+            val prayerTitle = localizeUiTemplate("It's time for {prayer}", language, mapOf("prayer" to prayerLabel))
             val title = if (prayerArabic.isNotBlank() && !isRtlAppLanguage(language)) {
-                "${tr("Time for")} $prayerLabel ($prayerArabic)"
-            } else "${tr("Time for")} $prayerLabel"
+                "$prayerTitle ($prayerArabic)"
+            } else prayerTitle
 
             val content = if (location.isNotBlank()) {
                 localizeUiTemplate("Salah has commenced for {location} at {time}", language,
                     mapOf("location" to location, "time" to prayerTime)) + " • $hijriDate"
             } else {
-                "${tr("Salah time has commenced at")} $prayerTime • $hijriDate"
+                localizeUiTemplate("Salah time has commenced at {time}", language,
+                    mapOf("time" to prayerTime)) + " • $hijriDate"
             }
 
             val verse = localizeUiText(
@@ -173,14 +180,26 @@ class PrayerNotificationReceiver : BroadcastReceiver() {
                 language
             )
 
+            // The prayer stays the title; the daily extra only adds to the expanded body and one button.
+            val plan = PrayerAlertExtras.planFor(context, prayerName)
+            val extraLine = plan.extra?.let { PrayerAlertExtras.text(it, language) } ?: verse
             val builder = NotificationCompat.Builder(context, if (withAzan) AZAN_CHANNEL_ID else CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(title)
                 .setContentText(content)
-                .setStyle(NotificationCompat.BigTextStyle().bigText("$content\n\n$verse"))
+                .setStyle(NotificationCompat.BigTextStyle().bigText(listOf(content, extraLine).joinToString("\n\n")))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
+            plan.action?.let { action ->
+                val openIntent = Intent(openAppIntent).putExtra(EXTRA_OPEN_SCREEN, action.key)
+                // A request code per action so its extras never overwrite the plain open intent's.
+                val actionIntent = PendingIntent.getActivity(
+                    context, OPEN_ACTION_REQUEST_BASE + action.ordinal, openIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                builder.addAction(0, PrayerAlertExtras.actionLabel(action, language), actionIntent)
+            }
             if (withAzan) builder.setSilent(true)
             if (stopAzan != null) {
                 // Swiping the notification away silences the azan too.

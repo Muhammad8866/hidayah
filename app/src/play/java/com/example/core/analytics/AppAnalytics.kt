@@ -1,6 +1,9 @@
 package com.example.core.analytics
 
+import android.app.ActivityManager
+import android.app.ApplicationExitInfo
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -45,7 +48,99 @@ object AppAnalytics {
         applyConsent(true)
         _choice.value = true
         initialized = true
+        reportPriorAnrs(context.applicationContext)
     }
+
+    @Volatile private var currentWake: String? = null
+    @Volatile private var currentPhase: String? = null
+
+    /**
+     * Names what woke the process (a receiver or service and its intent action). A background ANR
+     * reports no keys or logs, so the label also goes into the process state summary, which the
+     * system keeps with the exit record for [reportPriorAnrs] to send on the next launch.
+     */
+    fun wake(context: Context, component: String, action: String?) {
+        val label = ExitDiagnostics.wakeLabel(component, action)
+        currentWake = label
+        writeProcessSummary(context)
+        if (_choice.value == true) runCatching {
+            crashes?.setCustomKey("wake_source", label)
+            crashes?.log("wake $label")
+        }
+    }
+
+    /** How far Application.onCreate got; safe before [init], as Firebase starts before onCreate. */
+    fun startupPhase(context: Context, phase: String) {
+        val label = ExitDiagnostics.token(phase)
+        currentPhase = label
+        writeProcessSummary(context)
+        if (_choice.value != false) runCatching { FirebaseCrashlytics.getInstance().setCustomKey("startup_phase", label) }
+    }
+
+    private fun writeProcessSummary(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) runCatching {
+            context.getSystemService(ActivityManager::class.java)?.setProcessStateSummary(ExitDiagnostics.truncateUtf8(
+                ExitDiagnostics.processSummary(currentWake, currentPhase), ExitDiagnostics.SUMMARY_MAX_BYTES))
+        }
+    }
+
+    /**
+     * Sends each ANR the system recorded since the last report as one non-fatal, carrying the
+     * system's own reason (e.g. "Broadcast of Intent { act=… cmp=… }") and the dead process's
+     * wake source. Crashlytics' own ANR events for background timeouts arrive without either.
+     */
+    private fun reportPriorAnrs(app: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        runCatching {
+            Thread({
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) runCatching {
+                    val crashlytics = crashes ?: return@runCatching
+                    if (_choice.value != true) return@runCatching
+                    val manager = app.getSystemService(ActivityManager::class.java) ?: return@runCatching
+                    val prefs = app.getSharedPreferences(DIAGNOSTICS_PREFS, Context.MODE_PRIVATE)
+                    // Identity map: two exits can share every field, and each must keep its own trace.
+                    val infoOf = java.util.IdentityHashMap<ExitDiagnostics.ExitRecord, ApplicationExitInfo>()
+                    val exits = manager.getHistoricalProcessExitReasons(app.packageName, 0, MAX_EXITS)
+                        .filter { it.reason == ApplicationExitInfo.REASON_ANR }
+                        .map { info ->
+                            ExitDiagnostics.ExitRecord(info.timestamp, info.description, info.importance,
+                                ExitDiagnostics.decodeSummary(info.processStateSummary)).also { infoOf[it] = info }
+                        }
+                    val fresh = ExitDiagnostics.newAnrExits(exits, prefs.getLong(LAST_ANR_KEY, 0L))
+                    if (fresh.isEmpty()) return@runCatching
+                    // Only reported exits have their trace read; a background ANR's description can be just "bg anr".
+                    fresh.forEach { record ->
+                        val subject = ExitDiagnostics.anrSubject(readTraceHead(infoOf[record]))
+                        crashlytics.recordException(PriorAnrReport(ExitDiagnostics.formatAnrReport(record.copy(subject = subject))))
+                    }
+                    // commit: the marker must be on disk before this process can die, or the ANR is sent again.
+                    prefs.edit().putLong(LAST_ANR_KEY, fresh.maxOf { it.timestamp }).commit()
+                }
+            }, "anr-exit-report").apply { isDaemon = true }.start()
+        }
+    }
+
+    /** The first [ExitDiagnostics.TRACE_HEAD_BYTES] of an exit's ANR trace, or null; never throws. */
+    private fun readTraceHead(info: ApplicationExitInfo?): String? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        if (info == null) return null
+        return runCatching {
+            info.traceInputStream?.use { input ->
+                val buffer = ByteArray(ExitDiagnostics.TRACE_HEAD_BYTES)
+                var total = 0
+                while (total < buffer.size) {
+                    val read = input.read(buffer, total, buffer.size - total)
+                    if (read <= 0) break
+                    total += read
+                }
+                if (total == 0) null else String(buffer, 0, total, Charsets.UTF_8)
+            }
+        }.getOrNull()
+    }
+
+    private const val DIAGNOSTICS_PREFS = "analytics_diagnostics"
+    private const val LAST_ANR_KEY = "last_reported_anr_exit"
+    private const val MAX_EXITS = 16
 
     private fun applyConsent(enabled: Boolean) {
         val denied = FirebaseAnalytics.ConsentStatus.DENIED
@@ -162,6 +257,36 @@ object AppAnalytics {
         "feature" to "content_network", "status_code" to status.coerceAtLeast(0).toLong(),
         "duration_ms" to duration.coerceAtLeast(0), "result" to if (failed) "failed" else "completed"))
 
+    /** One onboarding funnel step from [AnalyticsEventPolicy.onboardingSteps]; others are ignored. */
+    fun onboarding(step: String) {
+        if (step in AnalyticsEventPolicy.onboardingSteps) milestone("onboarding", step)
+    }
+
+    /** Call with the current streak length; only fixed buckets (d3, d7, d14, d30, d100) are sent. */
+    fun streak(feature: String, days: Int) {
+        AnalyticsEventPolicy.streakBucket(days)?.let { milestone(feature, "streak", it) }
+    }
+
+    /** Time from a play request until the player is ready; start at play(), call [AudioLoad.ready]. */
+    class AudioLoad internal constructor(private val feature: String) {
+        private val epoch = consentEpoch.get()
+        private val started = SystemClock.elapsedRealtime()
+        private var done = false
+        private val trace: Trace? = if (_choice.value == true) runCatching {
+            performance?.newTrace("audio_load")?.also { it.putAttribute("feature", token(feature)); it.start() }
+        }.getOrNull() else null
+        @Synchronized fun ready() = finish("ready")
+        @Synchronized fun failed() = finish("failed")
+        private fun finish(result: String) {
+            if (done) return
+            done = true
+            runCatching { trace?.putAttribute("result", result); trace?.stop() }
+            if (epoch == consentEpoch.get()) emit("media_load", mapOf("feature" to token(feature),
+                "result" to result, "duration_ms" to (SystemClock.elapsedRealtime() - started).coerceAtLeast(0)))
+        }
+    }
+    fun audioLoad(feature: String) = AudioLoad(feature)
+
     /** One bounded set of milestones per transfer; no URL, path, title or content identifier. */
     class Download internal constructor(private val epoch: Long = consentEpoch.get()) {
         private val started = SystemClock.elapsedRealtime()
@@ -192,3 +317,6 @@ object AppAnalytics {
     }
     fun download() = Download()
 }
+
+/** One fixed type, so every prior-ANR report groups into a single Crashlytics issue. */
+internal class PriorAnrReport(message: String) : Exception(message)

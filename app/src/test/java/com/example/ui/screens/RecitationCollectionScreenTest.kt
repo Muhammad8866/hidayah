@@ -24,6 +24,8 @@ class RecitationCollectionScreenTest {
     }
     @Test fun exactReferenceSearchShowsMatchingAudioAndPersistsCount() {
         compose.setContent { MyApplicationTheme { RecitationCollectionScreen({}) } }
+        // The list is lazy and the search row sits below the hero on a small screen; bring it in first.
+        compose.onNodeWithTag("recitation_collection_screen").performScrollToNode(hasTestTag("collection_search"))
         compose.onNodeWithTag("collection_search").performTextInput("2:255-257")
         compose.waitUntil(30_000) {
             compose.onAllNodesWithText("Continue reading").fetchSemanticsNodes().isNotEmpty()
@@ -44,14 +46,18 @@ class RecitationCollectionScreenTest {
                 MyApplicationTheme { RecitationCollectionScreen({}) }
             }
         }
+        compose.onNodeWithTag("recitation_collection_screen").performScrollToNode(hasText("بڑا متن"))
         compose.onNodeWithText("بڑا متن").assertIsDisplayed()
+        compose.onNodeWithTag("recitation_collection_screen").performScrollToNode(hasText("وظائف"))
         compose.onNodeWithText("وظائف").assertIsDisplayed()
     }
     @Test fun wazaifTabShowsCategoryFiltersAndIsRemembered() {
         compose.setContent { MyApplicationTheme { RecitationCollectionScreen({}) } }
         compose.onNodeWithTag("collection_tab_2").performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag("collection_category_${RecitationCollection.wazaifCategories.first()}").assertIsDisplayed()
+        val firstCategory = hasTestTag("collection_category_${RecitationCollection.wazaifCategories.first()}")
+        compose.onNodeWithTag("recitation_collection_screen").performScrollToNode(firstCategory)
+        compose.onNode(firstCategory).assertIsDisplayed()
         val context = ApplicationProvider.getApplicationContext<Context>()
         org.junit.Assert.assertEquals(2, RecitationStore(context).state.value.lastTab)
     }

@@ -34,7 +34,7 @@ data class AzanTrack(
 object AzanCatalog {
     private const val ASSET = "azan_catalog.json"
     private const val TRUSTED_PREFIX = "https://archive.org/download/"
-    const val MIRROR_BASE = "https://github.com/Muhammad8866/deen-companion-quran/releases/download/azan-v1/"
+    const val MIRROR_BASE = "https://github.com/Muhammad8866/hidayah/releases/download/azan-v1/"
     const val BUNDLED_DIR = "azan_bundled"
 
     /** Popular azans kept inside the APK (tools/azan/bundle_assets.py copies them into assets). */

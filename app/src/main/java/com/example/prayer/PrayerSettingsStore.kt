@@ -29,6 +29,16 @@ object PrayerSettingsStore {
             .putBoolean(NOTIFICATIONS_ENABLED_KEY, enabled).apply()
     }
 
+    /** A dua, Quran goal or streak line in each prayer alert; on unless the user turns it off. */
+    fun alertExtrasEnabled(prefs: SharedPreferences): Boolean =
+        prefs.getBoolean(ALERT_EXTRAS_KEY, true)
+
+    fun saveAlertExtrasEnabled(prefs: SharedPreferences, enabled: Boolean) {
+        prefs.edit().putBoolean(ALERT_EXTRAS_KEY, enabled).apply()
+    }
+
+    private const val ALERT_EXTRAS_KEY = "prayer_alert_extras"
+
     fun useLiveLocation(prefs: SharedPreferences): Boolean =
         prefs.getBoolean(LIVE_LOCATION_KEY, true)
 

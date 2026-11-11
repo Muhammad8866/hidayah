@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
@@ -63,11 +64,12 @@ fun rememberIsOnline(): State<Boolean> = Connectivity.isOnline.collectAsStateWit
 fun OnReconnect(enabled: Boolean = true, action: suspend () -> Unit) {
     val isOnline by rememberIsOnline()
     val latest by rememberUpdatedState(action)
-    var wasOffline = false
+    // Remembered: a plain local is recreated on the recomposition that the reconnect itself causes.
+    val wasOffline = remember { booleanArrayOf(false) }
     LaunchedEffect(isOnline, enabled) {
         if (!enabled) return@LaunchedEffect
-        if (!isOnline) wasOffline = true
-        else if (wasOffline) { wasOffline = false; latest() }
+        if (!isOnline) wasOffline[0] = true
+        else if (wasOffline[0]) { wasOffline[0] = false; latest() }
     }
 }
 

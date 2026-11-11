@@ -1,102 +1,105 @@
 package com.example.hadith
 
 /**
- * Classical Ahle Sunnat books offered as untouched publisher or library PDFs. Each book lists
- * every language edition that could be verified at its source; nothing is machine-translated.
+ * The curated shelves of the Islamic Books library: Bahar-e-Shariat and the Ladies / Muslimah
+ * shelf. Every book is an edition of the dawateislami.net library list, with the very identity
+ * [WorldLibrary.diBook] gives it (id "di-n", collection "wl-di:n"), so a book downloaded, read or
+ * bookmarked from a shelf is the same book in the full list. Nothing comes from any other site.
+ * The rows are fixed, so the shelves show before the list has loaded; [availableWorks] leaves out
+ * a book the loaded list no longer has. IslamicBooksCatalogTest checks every row against the list
+ * shipped with the app.
  */
 object IslamicBooksCatalog {
     const val BAHAR = "bahar_e_shariat"
-    const val ANWAR = "anwar_e_shariat"
-    const val SHAWAHID = "shawahid_un_nubuwwat"
-    const val MAARIJ = "maarij_un_nubuwwat"
+    private const val BAHAR_NAME = "Bahar-e-Shariat"
 
-    /** Byte-identical copies live on this release, so a book survives its source going offline. */
-    const val MIRROR_TAG = "books-v1"
+    private const val DOWNLOAD = "https://data2.dawateislami.net/Data/Books/Download"
 
-    private const val URDU = "اردو (Urdu)"
-    private const val HINDI = "हिन्दी (Hindi)"
-    private const val PERSIAN = "فارسی (Persian)"
+    /**
+     * One edition: a row of the library list ([diId], kept under the library's own [libraryCode])
+     * and how a shelf shows it. [legacyId] is the id this same PDF had on the shelf before it was
+     * read from the library list; null for an edition the shelf did not have.
+     */
+    internal class Edition(
+        val workId: String,
+        val workName: String,
+        val diId: Long,
+        val libraryCode: String,
+        val fileId: Int,
+        val year: Int,
+        val pages: Int,
+        val slug: String,
+        val title: String,
+        val nativeTitle: String?,
+        val volume: Int = 1,
+        val volumeCount: Int = 1,
+        val volumeTitle: String? = null,
+        val legacyId: String? = null
+    ) {
+        val languageCode: String get() = DawateIslamiIndex.appLanguage(libraryCode)
 
-    private fun archive(
-        id: String, collectionId: String, collectionName: String, title: String,
-        languageCode: String, languageName: String, item: String, file: String,
-        volume: Int = 1, volumeCount: Int = 1, volumeTitle: String? = null, nativeTitle: String? = null
-    ) = HadithBook(
-        id = id, collectionId = collectionId, collectionName = collectionName, romanTitle = title,
-        nativeTitle = nativeTitle,
-        languageCode = languageCode, languageName = languageName, pageCount = 0, fileId = 0,
-        slug = id, volume = volume, volumeCount = volumeCount, volumeTitle = volumeTitle,
-        remoteUrl = "https://archive.org/download/$item/$file",
-        sourceUrl = "https://archive.org/details/$item", mirrorTag = MIRROR_TAG
-    )
+        /**
+         * The name the page search index (built from the earlier shelf's PDFs) gives this PDF, so
+         * its indexed pages still open it. Null when the shelf did not have this PDF.
+         */
+        val legacyAsset: String? get() = legacyId?.let { "$languageCode-${workId.replace('_', '-')}-v$volume" }
 
-    /** Maktaba-tul-Madinah's edition: three jild, each published as two PDFs. */
-    private val baharUrdu = listOf("1-a", "1-b", "2-a", "2-b", "3-a", "3-b").mapIndexed { index, part ->
-        val (jild, half) = part.split('-')
-        HadithBook(
-            id = "bk-bahar-ur-${index + 1}", collectionId = BAHAR, collectionName = "Bahar-e-Shariat",
-            romanTitle = "Bahar-e-Shariat — Urdu · Jild $jild, Part ${half.uppercase()}",
-            nativeTitle = "بہارِ شریعت",
-            languageCode = "ur", languageName = URDU, pageCount = 0, publicationYear = 2014,
-            fileId = 1172 + index, slug = "bahar-e-shariat-jild-$part",
-            volume = index + 1, volumeCount = 6, volumeTitle = "Jild $jild · Part ${half.uppercase()}",
-            mirrorTag = MIRROR_TAG
+        fun book(): HadithBook = HadithBook(
+            id = "di-$diId",
+            collectionId = "wl-di:$diId",
+            collectionName = workName,
+            romanTitle = title,
+            nativeTitle = nativeTitle,
+            languageCode = languageCode,
+            languageName = WorldLibrary.languageName(languageCode).orEmpty(),
+            pageCount = pages,
+            publicationYear = year,
+            fileId = fileId,
+            slug = "di:$diId",
+            volume = volume,
+            volumeCount = volumeCount,
+            remoteUrl = "$DOWNLOAD/$libraryCode/pdf/$year/$fileId-1.pdf",
+            sourceUrl = DawateIslamiIndex.LIBRARY_URL + libraryCode + "/" + slug,
+            volumeTitle = volumeTitle,
+            mirrored = false
         )
     }
 
-    private val baharHindi = archive(
-        "bk-bahar-hi", BAHAR, "Bahar-e-Shariat", "Bahar-e-Shariat — Hindi · Complete, all 20 parts",
-        "hi", HINDI, "baahar-e-shariyat-mukammal-20-hissa-hindi",
-        "baahar%20e%20shariyat%20mukammal%2020%20hissa%20%28hindi%29.pdf",
-        volumeTitle = "Complete · all 20 parts", nativeTitle = "बहारे शरीअत"
-    )
+    private val jilds = listOf(1 to "A", 1 to "B", 2 to "A", 2 to "B", 3 to "A", 3 to "B")
 
-    /** Only these parts have been published in English so far. */
-    private val baharEnglish = listOf(1, 2, 3, 4, 5, 6, 16).map { part ->
-        archive(
-            "bk-bahar-en-$part", BAHAR, "Bahar-e-Shariat", "Bahar-e-Shariat — English · Part $part of 20",
-            "en", "English", "bahaar-e-shariat-english", "Bahaar-e-Shariat-Vol-$part.pdf",
-            volume = part, volumeCount = 20, volumeTitle = "Part $part of 20"
+    /** Maktaba-tul-Madinah's Urdu edition: three jild, each published as two PDFs. */
+    private val baharUrdu = jilds.mapIndexed { index, (jild, part) ->
+        Edition(
+            BAHAR, BAHAR_NAME, diId = 1885L + index, libraryCode = "ur", fileId = 1172 + index, year = 2014,
+            pages = listOf(740, 605, 540, 765, 787, 554)[index], slug = "bahar-e-shariat-jild-$jild-${part.lowercase()}",
+            title = "$BAHAR_NAME — Urdu · Jild $jild, Part $part", nativeTitle = "بہارِ شریعت",
+            volume = index + 1, volumeCount = 6, volumeTitle = "Jild $jild · Part $part", legacyId = "bk-bahar-ur-${index + 1}"
         )
     }
 
-    private val anwar = listOf(
-        archive("bk-anwar-ur", ANWAR, "Anwar-e-Shariat", "Anwar-e-Shariat — Urdu",
-            "ur", URDU, "AnwarEShariat", "anwar%20e%20shariat.pdf", nativeTitle = "انوارِ شریعت"),
-        archive("bk-anwar-hi", ANWAR, "Anwar-e-Shariat", "Anwar-e-Shariat — Hindi",
-            "hi", HINDI, "anware-shariat-hindi",
-            "%E0%A4%85%E0%A4%A8%E0%A4%B5%E0%A4%BE%E0%A4%B0%E0%A5%87%20%E0%A4%B6%E0%A4%B0%E0%A5%80%E0%A4%85%E0%A4%A4%20%E0%A4%B9%E0%A4%BF%E0%A4%82%E0%A4%A6%E0%A5%80.pdf", nativeTitle = "अनवारे शरीअत"),
-        archive("bk-anwar-kn", ANWAR, "Anwar-e-Shariat", "Anwar-e-Shariat — Kannada",
-            "kn", "ಕನ್ನಡ (Kannada)", "ANWARESHARIATKANADA", "ANWARE%20SHARIAT%20KANADA.pdf")
-    )
-
-    private val shawahid = listOf(
-        archive("bk-shawahid-ur", SHAWAHID, "Shawahid-un-Nubuwwat", "Shawahid-un-Nubuwwat — Urdu · Translation",
-            "ur", URDU, "shawahid-al-nabuwwat", "Shawahid%20Al%20Nabuwwat.pdf", volumeTitle = "Urdu translation", nativeTitle = "شواہد النبوۃ"),
-        archive("bk-shawahid-fa", SHAWAHID, "Shawahid-un-Nubuwwat", "Shawahid-un-Nubuwwat — Persian · Original text",
-            "fa", PERSIAN, "in.ernet.dli.2015.484821", "2015.484821.Shawahid-Un-Nabuwwat.pdf", volumeTitle = "Original Persian text", nativeTitle = "شواهد النبوة")
-    )
-
-    private val maarij = (1..3).map { volume ->
-        archive(
-            "bk-maarij-ur-$volume", MAARIJ, "Maarij-un-Nubuwwat", "Maarij-un-Nubuwwat — Urdu · Volume $volume of 3",
-            "ur", URDU, "maarijunnabuwwat-ur", "0049${5 + volume}_Maarij-un-Nabuwwat-$volume-ur.pdf",
-            volume = volume, volumeCount = 3, nativeTitle = "معارج النبوۃ"
+    /** The Hindi edition; only Jild 1 is published in the library so far. */
+    private val baharHindi = listOf(Triple(8807L, "A", 756), Triple(8796L, "B", 609)).mapIndexed { index, (diId, part, pages) ->
+        Edition(
+            BAHAR, BAHAR_NAME, diId = diId, libraryCode = "hi", fileId = 1172 + index, year = 2026, pages = pages,
+            slug = "bahar-e-shariat-jild-1-${part.lowercase()}", title = "$BAHAR_NAME — Hindi · Jild 1, Part $part",
+            nativeTitle = "बहारे शरीअत", volume = index + 1, volumeCount = 6, volumeTitle = "Jild 1 · Part $part"
         )
-    } + archive("bk-maarij-fa", MAARIJ, "Maarij-un-Nubuwwat", "Maarij-un-Nubuwwat — Persian · Original text",
-        "fa", PERSIAN, "dli.ministry.26293", "18064.11321-.pdf", volumeTitle = "Original Persian text", nativeTitle = "معارج النبوة")
+    }
 
-    /** The four classical works, without the Ladies / Muslimah shelf. */
-    val classicalBooks: List<HadithBook> = baharUrdu + baharHindi + baharEnglish + anwar + shawahid + maarij
+    private val editions: List<Edition> = baharUrdu + baharHindi + MuslimahBooksCatalog.editions
 
-    val books: List<HadithBook> = classicalBooks + MuslimahBooksCatalog.books
+    /** Every curated edition, the classical shelf first. */
+    val books: List<HadithBook> = baharUrdu.map(Edition::book) + baharHindi.map(Edition::book) + MuslimahBooksCatalog.books
+
+    /** The classical shelf's books (Bahar-e-Shariat), without the Ladies / Muslimah shelf. */
+    val classicalBooks: List<HadithBook> = books.filter { book -> book.collectionName == BAHAR_NAME }
 
     /** Which shelf a work sits on in the Islamic Books library. */
     enum class Shelf { CLASSICAL, MUSLIMAH }
 
     /**
-     * One work (a title in every edition and volume it was verified in). [nativeTitle] and [author]
-     * are catalogue metadata as named by the publisher; blank where the source names none.
+     * One work (a title in every edition and volume the library has). [nativeTitle] and [author]
+     * are catalogue metadata; blank where the publisher names none.
      */
     data class Work(
         val id: String,
@@ -112,38 +115,92 @@ object IslamicBooksCatalog {
 
         fun editions(language: String): List<HadithBook> =
             books.filter { it.languageCode == language }.sortedBy { it.volume }
+
+        /** What search reads: the name, script title, author, and every edition's own titles. */
+        val searchEntry: BookCatalogSearch.Entry by lazy {
+            BookCatalogSearch.Entry(
+                title = name,
+                nativeTitle = nativeTitle,
+                author = author,
+                other = books.flatMap { listOfNotNull(it.romanTitle, it.nativeTitle) }.distinct()
+            )
+        }
     }
 
     private val authors = mapOf(
         BAHAR to "Sadr ash-Shariah Mufti Amjad Ali Azmi · d. 1367 AH",
-        ANWAR to "Faqih-e-Millat Mufti Jalaluddin Ahmad Amjadi · d. 1422 AH",
-        SHAWAHID to "Mawlana Nur ad-Din Abd ar-Rahman Jami · d. 898 AH",
-        MAARIJ to "Mulla Muin ad-Din Kashifi al-Harawi · d. 907 AH",
         "muslimah_islami_behno_ki_namaz" to "Ameer-e-Ahle Sunnat Maulana Muhammad Ilyas Attar Qadri",
-        "muslimah_jannati_zevar" to "Allama Abdul Mustafa Azmi · Al-Madinatul Ilmiyah edition",
+        "muslimah_jannati_zevar" to "Allama Abdul Mustafa Azmi",
         "muslimah_sunni_bahishti_zewar" to "Khalil-e-Millat Mufti Muhammad Khalil Khan Qadri Barkati",
         "muslimah_chadar_aur_char_diwari" to "Khalil-e-Millat Mufti Muhammad Khalil Khan Qadri Barkati",
         "muslimah_aurat_aur_parda" to "Professor Dr. Muhammad Masood Ahmad",
-        "muslimah_saas_bahu_main_sulha_ka_raaz" to "Al-Madinatul Ilmiyah · Dawat-e-Islami",
         "muslimah_jannati_khawateen" to "Maulana Abu Usaid Ubaid Raza Attari Madani"
     )
 
     /** Every work in catalogue order: the classical shelf first, then Ladies / Muslimah. */
-    val works: List<Work> = books.groupBy { it.collectionId }.map { (id, editions) ->
-        val urdu = editions.firstOrNull { it.languageCode == "ur" }
+    val works: List<Work> = editions.groupBy(Edition::workId).map { (id, rows) ->
+        val editionBooks = rows.map { row -> books.first { it.id == "di-${row.diId}" } }
+        val urdu = editionBooks.firstOrNull { it.languageCode == "ur" }
         Work(
             id = id,
-            name = editions.first().collectionName,
-            nativeTitle = (urdu ?: editions.first()).nativeTitle ?: editions.first().collectionName,
+            name = rows.first().workName,
+            nativeTitle = (urdu ?: editionBooks.first()).nativeTitle ?: rows.first().workName,
             author = authors[id].orEmpty(),
-            shelf = if (MuslimahBooksCatalog.books.any { it.collectionId == id }) Shelf.MUSLIMAH else Shelf.CLASSICAL,
-            books = editions
+            shelf = if (id == BAHAR) Shelf.CLASSICAL else Shelf.MUSLIMAH,
+            books = editionBooks
         )
+    }
+
+    /**
+     * The works with only the books the loaded library list still has; a work left with none is
+     * dropped. Before any list has loaded, [isListed] answers true and every work is shown.
+     */
+    fun availableWorks(isListed: (Long) -> Boolean = WorldLibrary::isListed): List<Work> = works.mapNotNull { work ->
+        val kept = work.books.filter { isListed(it.id.removePrefix("di-").toLong()) }
+        when {
+            kept.isEmpty() -> null
+            kept.size == work.books.size -> work
+            else -> work.copy(books = kept)
+        }
+    }
+
+    /**
+     * The works of [among] that match [query], best match first, in any spelling or script (see
+     * [BookCatalogSearch]). Empty when [query] holds no searchable word, such as a blank query:
+     * the home page shows its shelves then, not results.
+     */
+    fun search(query: String, among: List<Work> = availableWorks()): List<Work> {
+        val scores = BookCatalogSearch.Index(among.map { it.searchEntry }).bestScores(query) ?: return emptyList()
+        return among.indices.filter { scores[it] > 0 }.sortedByDescending { scores[it] }.map(among::get)
     }
 
     fun work(id: String?): Work? = works.firstOrNull { it.id == id }
 
+    /** The work a curated book belongs to, by the book's id ("di-n"); null for any other book. */
+    fun workOf(bookId: String?): Work? = works.firstOrNull { work -> work.books.any { it.id == bookId } }
+
     fun book(id: String?): HadithBook? = books.firstOrNull { it.id == id }
+
+    /** The page search index's name for a curated book's PDF, or null when it never indexed it. */
+    fun legacyAsset(bookId: String): String? = editions.firstOrNull { "di-${it.diId}" == bookId }?.legacyAsset
+
+    /** Shelf ids of earlier versions whose PDF is now read from the library list, with the book it became. */
+    internal val legacyMoves: Map<String, HadithBook> by lazy {
+        editions.mapNotNull { row -> row.legacyId?.let { it to books.first { book -> book.id == "di-${row.diId}" } } }.toMap()
+    }
+
+    /**
+     * Shelf editions of earlier versions that the library does not have (they came from the
+     * Internet Archive or another copy), with the language their files were saved under. Their
+     * downloads and reading state are deleted once by [LibraryMigration].
+     */
+    internal val removedEditions: List<Pair<String, String>> =
+        listOf("bk-bahar-hi" to "hi") +
+            listOf(1, 2, 3, 4, 5, 6, 16).map { "bk-bahar-en-$it" to "en" } +
+            listOf("bk-anwar-ur" to "ur", "bk-anwar-hi" to "hi", "bk-anwar-kn" to "kn") +
+            listOf("bk-shawahid-ur" to "ur", "bk-shawahid-fa" to "fa") +
+            (1..3).map { "bk-maarij-ur-$it" to "ur" } + listOf("bk-maarij-fa" to "fa") +
+            listOf("bk-muslimah-islami-behno-ki-namaz-hi-2011" to "hi")
 
     /** App languages whose readers usually read another script's edition. */
     private val readerScript = mapOf("hinglish" to "hi", "ks" to "ur", "sd" to "sd", "pa" to "ur", "ps" to "ur")

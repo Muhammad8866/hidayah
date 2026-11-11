@@ -27,7 +27,7 @@ internal object IndicMniDraft24 {
         "Tasbih of sajdah" to "তসবিয়া সজ্জা",
         "Glory be to my Lord, the Most High." to "খ্বাইদগী ৱাংবা, খ্বাইদগী ৱাংবা, ঐগী লাইবুংদা ইকায় খুম্নবা উৎচরি।",
         "Between the two sajdahs" to "সাজদা অনিগী মরক্তা",
-        "My Lord, forgive me." to "শা পলাൾ, খোইদারমজরি।",
+        "My Lord, forgive me." to "শা পলাল, খোইদারমজরি।",
         "Recommended, not required." to "মসি হায় হায়দুনা অয়াবা পীদে, মথৌ তাদে।",
         "Tashahhud (At-Tahiyyat)" to "তাশাহহুদ (অত-তাহিয়াত)",
         "All greetings, prayers and pure words are for Allah. Peace be upon you, O Prophet, and the mercy of Allah and His blessings. Peace be upon us and upon the righteous servants of Allah. I bear witness that there is no god but Allah, and I bear witness that Muhammad ﷺ is His servant and Messenger." to "য়াইফ-পাওজেল, লাই খোইরম্বা অমসুং অশেংবা ৱাহৈ পুম্নমক অল্লাহ্না পীরগনি। হে পৈগম্বর, অদোম্না শান্তি ফংবা য়াই, অমসুং অল্লাহগী থৌজাল অমসুং মহাক্কী থৌজালশিং। ঐখোয়গী অমসুং অল্লাহগী অচুম্বা থৌমীশিংদা শান্তি ফংবা য়াই। ঐহাক্না অল্লাহ নত্তনা লাইরেম্বী অমত্তা লৈতে হায়বা খুদম্নি, অমসুং ঐহাক্না মুহম্মদ সলিহুল্লাহ ওস্লম অসি মহাক্কী থৌমী অমসুং রসূলনি হায়বা খুদম্নি।",

@@ -70,6 +70,36 @@ class KalimasContentTest {
         assertEquals(listOf("tauheed"), KalimasContent.search("Ever-Living").map { it.id })
     }
 
+    @Test fun searchFindsAKalimaByNameInAnySpellingOrScript() {
+        assertEquals(listOf("shahadat"), KalimasContent.search("kalima shahadat").map { it.id })
+        assertEquals("tayyibah", KalimasContent.search("kalma tayyaba").first().id)
+        assertEquals(listOf("radd_kufr"), KalimasContent.search("radde kufr").map { it.id })
+        assertEquals(listOf("mujmal"), KalimasContent.search("iman mujmal").map { it.id })
+        assertEquals(listOf("mufassal"), KalimasContent.search("imane mufassal").map { it.id })
+        assertEquals("tauheed", KalimasContent.search("touheed").first().id)
+        assertEquals("tauheed", KalimasContent.search("तौहीद").first().id)
+        assertEquals("tayyibah", KalimasContent.search("لا إله إلا الله").first().id)
+    }
+
+    @Test fun aTypedNumberOpensThatKalimaFirstInAnyDigits() {
+        assertEquals("radd_kufr", KalimasContent.search("6").first().id)
+        assertEquals("shahadat", KalimasContent.search("2").first().id)
+        assertEquals("tamjeed", KalimasContent.search("٣").first().id)
+        assertEquals("tamjeed", KalimasContent.search("३").first().id)
+        assertTrue(KalimasContent.search("2", KalimaGroup.IMAN).isEmpty())
+    }
+
+    @Test fun aSmallTypoStillFindsTheKalima() {
+        assertEquals(listOf("istighfar"), KalimasContent.search("istigfar").map { it.id })
+    }
+
+    @Test fun badInputKeepsOrEmptiesTheListWithoutBreaking() {
+        assertEquals(KalimasContent.entries, KalimasContent.search("💥"))
+        assertEquals(KalimasContent.entries, KalimasContent.search("-- , ."))
+        assertTrue(KalimasContent.search("x".repeat(5_000)).isEmpty())
+        assertTrue(KalimasContent.search("zzzz ".repeat(2_000)).isEmpty())
+    }
+
     @Test fun shareTextCarriesTheChosenMeaning() {
         val entry = KalimasContent.byId("shahadat")!!
         val urdu = KalimasContent.shareText(entry, english = false)

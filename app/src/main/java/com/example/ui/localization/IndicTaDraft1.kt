@@ -57,7 +57,7 @@ internal object IndicTaDraft1 {
         "Witr" to "விட்டர்",
         "Today" to "இன்று",
         "All five prayers prayed. Alhamdulillah!" to "ஐந்து பிரார்த்தனைகளும் பிரார்த்தனை செய்யப்பட்டன. அல்ஹம்துலில்லாஹ்!",
-        "Tap ✓ or ✗ to log each prayer." to "ஒவ்வொரு பிரார்த்தனையையும் பதிவு செய்ய Â அல்லது Â ஐத் தட்டவும்.",
+        "Tap ✓ or ✗ to log each prayer." to "ஒவ்வொரு பிரார்த்தனையையும் பதிவு செய்ய ✓ அல்லது ✗ ஐத் தட்டவும்.",
         "Muslimah mode: today is marked as excused from salah." to "முஸ்லிம் முறைஃ இன்று சலாத்திலிருந்து மன்னிக்கப்பட்டுள்ளது என்று குறிக்கப்படுகிறது.",
         "Today's salah" to "இன்றைய சலா",
         "This week" to "இந்த வாரம்",

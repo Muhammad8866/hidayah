@@ -1,9 +1,13 @@
 package com.example.hadith
 
 import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class HadithCatalogState(
     val books: List<HadithBook> = HadithCatalog.books,
@@ -17,9 +21,12 @@ data class HadithCatalogState(
 object HadithRepository {
     private val _state = MutableStateFlow(HadithCatalogState())
     val state: StateFlow<HadithCatalogState> = _state.asStateFlow()
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     fun init(context: Context) {
         HadithPdfStore.init(context)
         BookSearchIndex.init(context)
+        val appContext = context.applicationContext
+        cleanupScope.launch { runCatching { HadithPdfStore.purgeRemovedEditions(appContext) } }
     }
     suspend fun load(forceRefresh: Boolean = false) { _state.value = HadithCatalogState() }
 }

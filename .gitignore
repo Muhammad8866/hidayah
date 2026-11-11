@@ -35,3 +35,9 @@ hindi_quran_pdf/build/
 __pycache__/
 /ramzan_check.png
 /naat-github/
+
+# Tool outputs and logs
+.serena/
+graphify-out/
+artifacts/**/*.log
+*.stackdump

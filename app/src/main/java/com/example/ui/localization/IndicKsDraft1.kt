@@ -57,7 +57,7 @@ internal object IndicKsDraft1 {
         "Witr" to "وٹر۔",
         "Today" to "از۔",
         "All five prayers prayed. Alhamdulillah!" to "تمام پانژن دعون ہنٛز دعا۔ الہمدللہ!",
-        "Tap ✓ or ✗ to log each prayer." to "پرٛؠتھ دعا لاگ ان کرنہٕ خٲطرٕ کٔرو Â یا Â ٹیپ۔",
+        "Tap ✓ or ✗ to log each prayer." to "پرٛؠتھ دعا لاگ ان کرنہٕ خٲطرٕ کٔرو ✓ یا ✗ ٹیپ۔",
         "Muslimah mode: today is marked as excused from salah." to "مسلم موڈ: از چھ نمازٕ نش معافی قرار دنہٕ آمت۔",
         "Today's salah" to "ازک سلام",
         "This week" to "امہ ہفتہٕ",

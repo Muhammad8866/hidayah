@@ -41,10 +41,9 @@ items = sorted(records.values(), key=lambda item: (item["surah"], item["title"])
 items.append({
     "surah": 83,
     "title": "83 Surah Al-Mutaffifin - Tilawat, Tarjama Aur Tafseer Sirat-ul-Jinan",
-    "url": "",
-    # Dawat-e-Islami's official index links this recording in its complete-Surah playlist:
-    # https://data2.dawateislami.net/static/images/main-website/pdf/quran-with-tafseer.pdf
-    "page": "https://www.youtube.com/watch?v=zzwqw_82zHk",
+    # Listed as "83 Al-Mutaffifeen" (no "Surah"), so the title pattern above skips it.
+    "url": "https://data2.dawateislami.net/download/tilawat-e-quran/ur/mp3/2016/39149.mp3",
+    "page": "https://www.dawateislami.net/medialibrary/39149",
 })
 items.sort(key=lambda item: (item["surah"], item["title"]))
 assert len(items) == 115 and {item["surah"] for item in items} == set(range(1, 115)), "Source catalog incomplete"

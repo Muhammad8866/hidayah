@@ -5,7 +5,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.test.core.app.ApplicationProvider
@@ -67,14 +69,12 @@ class TallyCounterScreenTest {
         show()
         composeRule.onNodeWithTag("tally_select").performClick()
         composeRule.onNodeWithTag("tally_new").performClick()
-        // Text-field cursor frames should not drive Robolectric's automatic idle clock forever.
-        composeRule.mainClock.autoAdvance = false
-        composeRule.mainClock.advanceTimeBy(1000)
         composeRule.onRoot().captureRoboImage("build/outputs/roborazzi/tally_advanced_editor.png")
-        composeRule.onNodeWithTag("tally_name_input").performTextInput("Inventory")
-        composeRule.onNodeWithTag("tally_target_input").performTextInput("500")
+        // SetText fills the fields without focusing them. A focused field's blinking cursor keeps the
+        // auto-advancing clock busy forever, and with the clock paused the focus change never settles.
+        composeRule.onNodeWithTag("tally_name_input").performSemanticsAction(SemanticsActions.SetText) { it(AnnotatedString("Inventory")) }
+        composeRule.onNodeWithTag("tally_target_input").performSemanticsAction(SemanticsActions.SetText) { it(AnnotatedString("500")) }
         composeRule.onNodeWithTag("tally_save").performClick()
-        composeRule.mainClock.autoAdvance = true
         composeRule.onNodeWithTag("tally_increment").performClick()
         composeRule.waitForIdle()
         assertEquals(2, TallyCounterStore(prefs).load().counters.size)

@@ -49,6 +49,7 @@ class QuranAudioService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        com.example.core.analytics.AppAnalytics.wake(this, "quran_audio_service", intent?.action ?: "start")
         when (intent?.action) {
             ACTION_TOGGLE -> QuranAudioManager.toggle()
             ACTION_NEXT -> QuranAudioManager.next()
@@ -56,7 +57,13 @@ class QuranAudioService : Service() {
             ACTION_STOP -> { QuranAudioManager.stop(); return START_NOT_STICKY }
         }
         // startForegroundService() requires startForeground() even when there is nothing to show.
-        startForegroundCompat()
+        try {
+            startForegroundCompat()
+        } catch (_: RuntimeException) {
+            // The system refused a background start; leave rather than crash the app.
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
         // Restarted after the process died, or a stale notification tap: nothing is loaded, so
         // leave instead of showing an empty player.
         if (QuranAudioManager.state.value.playingSurah == null) {
@@ -86,7 +93,11 @@ class QuranAudioService : Service() {
 
         fun start(context: Context) {
             val intent = Intent(context, QuranAudioService::class.java)
-            ContextCompat.startForegroundService(context, intent)
+            try {
+                ContextCompat.startForegroundService(context, intent)
+            } catch (_: RuntimeException) {
+                // Android 12+ refuses some background starts; playback keeps running in-process.
+            }
         }
 
         /** Refreshes the notification after a state change, without restarting playback. */
@@ -113,10 +124,12 @@ class QuranAudioService : Service() {
                 Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            session?.publish(state.isPlaying, QuranAudioManager.nowPlayingTitle(), "Mishary Rashid Alafasy")
+            // Same lookup the in-app player uses for "1. Al-Fatihah" style titles.
+            val title = localizeUiText(QuranAudioManager.nowPlayingTitle(), language)
+            session?.publish(state.isPlaying, title, "Mishary Rashid Alafasy")
             return NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(QuranAudioManager.nowPlayingTitle())
+                .setContentTitle(title)
                 .setContentText(localizeUiText("Mishary Rashid Alafasy", language))
                 .setContentIntent(contentIntent)
                 .setOngoing(state.isPlaying)

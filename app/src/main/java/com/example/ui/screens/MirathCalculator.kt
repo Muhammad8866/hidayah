@@ -24,6 +24,7 @@ internal fun mirathAmountError(raw: String): String? =
     if (parseMirathAmount(raw) == null) "Enter valid non-negative amounts with up to 2 decimal places (no commas)." else null
 
 /** Exact fractions keep awl, radd and per-person shares independent of monetary rounding. */
+@ConsistentCopyVisibility
 internal data class MirathFraction private constructor(val numerator: Long, val denominator: Long) {
     operator fun plus(b: MirathFraction) = of(numerator * b.denominator + b.numerator * denominator, denominator * b.denominator)
     operator fun minus(b: MirathFraction) = of(numerator * b.denominator - b.numerator * denominator, denominator * b.denominator)

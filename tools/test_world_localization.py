@@ -13,6 +13,26 @@ class WorldLocalizationTests(unittest.TestCase):
         self.assertEqual(source,world.restore_markers(masked,held,'fa',source))
         self.assertCountEqual(['{n}','الله','{day}','ﷺ'],held.values())
 
+    def test_blank_data_file_reads_as_default(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as directory:
+            blank=Path(directory)/'blank.json'
+            blank.write_text('',encoding='utf-8')
+            self.assertEqual({},world.read(blank,{}))
+            blank.write_text(' \n',encoding='utf-8')
+            self.assertEqual([],world.read(blank,[]))
+            missing=Path(directory)/'missing.json'
+            self.assertEqual({'a':1},world.read(missing,{'a':1}))
+            valid=Path(directory)/'valid.json'
+            valid.write_text('{"x": 2}',encoding='utf-8')
+            self.assertEqual({'x':2},world.read(valid,{}))
+
+    def test_required_tolerates_source_without_duas_or_features(self):
+        from unittest.mock import patch
+        with patch.object(world,'read',return_value={}):
+            self.assertEqual(set(),world.required('fa'))
+
     def test_all_requested_languages_are_supported_in_order(self):
         self.assertEqual(('fa','tr','id','es','ru','zh','it','ja'),world.CODES)
 

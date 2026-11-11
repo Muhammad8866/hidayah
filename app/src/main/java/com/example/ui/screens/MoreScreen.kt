@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.layout.imePadding
+import com.example.ui.tour.tourTarget
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.FilledTonalButton
 import com.example.ui.components.AppSearchField
@@ -55,6 +56,7 @@ import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Mosque
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Settings
@@ -90,6 +92,7 @@ import androidx.compose.ui.unit.dp
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizedMoreSubtitle
+import com.example.core.search.AppSearch
 
 /** Groups of rows the feature tour scrolls to and spotlights, in tour order. */
 enum class MoreTourSection { DAILY_FIRST, DAILY_SECOND, EXPLORE_FIRST, EXPLORE_SECOND, EXPLORE_THIRD, SETTINGS }
@@ -102,6 +105,28 @@ private data class MoreFeature(
     val tag: String,
     val onClick: () -> Unit
 )
+
+/** The searchable words of one More row: its English title and subtitle, and both as shown in the app's language. */
+internal data class MoreSearchEntry(
+    val tag: String,
+    val title: String,
+    val subtitle: String,
+    val localizedTitle: String,
+    val localizedSubtitle: String?
+)
+
+/**
+ * The More search, built once per app language: a row is found by its name or subtitle in English
+ * or in the app's language, in any spelling, case or script (see [AppSearch]). Rows are matched by
+ * [MoreSearchEntry.tag], so the rows shown always carry the screen's current actions.
+ */
+internal fun moreSearch(entries: List<MoreSearchEntry>): AppSearch.Ranker<MoreSearchEntry> = AppSearch.Ranker(entries) { entry ->
+    AppSearch.Fields(
+        title = entry.title,
+        nativeTitle = entry.localizedTitle.takeIf { it != entry.title }.orEmpty(),
+        other = listOfNotNull(entry.subtitle, entry.localizedSubtitle?.takeIf { it != entry.subtitle })
+    )
+}
 
 @Composable
 fun MoreScreen(
@@ -119,9 +144,11 @@ fun MoreScreen(
     onNavigateToProphetNames: () -> Unit = {},
     onNavigateToRabbanaDuas: () -> Unit = {},
     onNavigateToKalimas: () -> Unit = {},
+    onNavigateToQaidah: () -> Unit = {},
+    onNavigateToFateha: () -> Unit = {},
+    onNavigateToKhutbah: () -> Unit = {},
     onNavigateToRecitationCollection: () -> Unit = {},
     onNavigateToBooks: () -> Unit = {},
-    onNavigateToWorldLibrary: () -> Unit = {},
     onOpenDailyTool: (DailyTool) -> Unit = {},
     onStartTour: () -> Unit = {},
     tourSection: MoreTourSection? = null,
@@ -147,10 +174,8 @@ fun MoreScreen(
             Color(0xFF2F7D5B), "more_prophet_names", onNavigateToProphetNames),
         MoreFeature("40 Rabbana Duas", "Quranic duas with meaning", Icons.Default.VolunteerActivism,
             Color(0xFF3B6FA8), "more_rabbana", onNavigateToRabbanaDuas),
-        MoreFeature("Islamic Books", "Bahar-e-Shariat & more", Icons.Default.CollectionsBookmark,
+        MoreFeature("Islamic Books", "Books in every language", Icons.Default.CollectionsBookmark,
             Color(0xFF8A6D1F), "more_books", onNavigateToBooks),
-        MoreFeature("World Library", "Books in every language", Icons.Default.Public,
-            Color(0xFF2E7D6B), "more_world_library", onNavigateToWorldLibrary),
         MoreFeature("Naat (without music)", "Voice-only recitations", Icons.Default.Headphones,
             Color(0xFF2A8C8C), "more_naat", onNavigateToNaat),
         MoreFeature("Azan of the world", "Listen & set as alert tone", Icons.Default.Campaign,
@@ -161,6 +186,12 @@ fun MoreScreen(
             Color(0xFFC0664A), "more_festivals", onNavigateToFestivals),
         MoreFeature("6 Kalime & Iman", "Iman-e-Mujmal aur Iman-e-Mufassal", Icons.Default.AutoStories,
             Color(0xFF2E8B6E), "more_kalimas", onNavigateToKalimas),
+        MoreFeature("Madani Qaidah", "Learn to read the Quran step by step", Icons.Default.AutoStories,
+            Color(0xFF4A8F5C), "more_qaidah", onNavigateToQaidah),
+        MoreFeature("Fateha (Isal-e-Sawab)", "Step-by-step tareeqa with Quran text", Icons.Default.VolunteerActivism,
+            Color(0xFF6B5BAE), "more_fateha", onNavigateToFateha),
+        MoreFeature("Jumu'ah Khutbah", "Arabic Friday khutbah with meaning", Icons.Default.Mosque,
+            Color(0xFF3F7CAC), "more_jumuah_khutbah", onNavigateToKhutbah),
         MoreFeature("Islamic Baby Names", "Baby names with meanings", Icons.Default.VolunteerActivism,
             Color(0xFF9A6286), "more_baby_names", onNavigateToBabyNames)
     )
@@ -176,8 +207,6 @@ fun MoreScreen(
             SettingsAccent, "more_app_tour", onStartTour),
         MoreFeature("Privacy Policy", "What data the app uses and why", Icons.Default.PrivacyTip,
             SettingsAccent, "more_privacy_policy") { showPrivacyPolicy = true },
-        MoreFeature("Sources & Credits", "Where the Quran, audio and books come from", Icons.Default.Info,
-            SettingsAccent, "more_credits") { showCredits = true },
         MoreFeature("Support the Developer", "Voluntary contribution, any amount you wish", Icons.Default.VolunteerActivism,
             SettingsAccent, "more_support_developer") { showSupport = true }
     )
@@ -186,12 +215,16 @@ fun MoreScreen(
     val language = LocalAppLanguage.current
     var query by rememberSaveable { mutableStateOf("") }
     com.example.core.analytics.AnalyticsSearch("more_screen", query)
-    val needle = if (tourSection != null) "" else query.trim().lowercase()
-    val matches = if (needle.isEmpty()) emptyList() else (dailyTools + features + appRows).filter { feature ->
-        feature.title.lowercase().contains(needle) ||
-            feature.subtitle.lowercase().contains(needle) ||
-            localizeUiText(feature.title, language).lowercase().contains(needle) ||
-            localizedMoreSubtitle(feature.subtitle, language)?.lowercase()?.contains(needle) == true
+    val needle = if (tourSection != null) "" else query.trim()
+    val allRows = dailyTools + features + appRows
+    // Built once per language; typing then only reads the query (best match first).
+    val search = remember(language) {
+        moreSearch(allRows.map { row ->
+            MoreSearchEntry(row.tag, row.title, row.subtitle, localizeUiText(row.title, language), localizedMoreSubtitle(row.subtitle, language))
+        })
+    }
+    val matches = if (needle.isEmpty()) emptyList() else allRows.associateBy { it.tag }.let { byTag ->
+        search.search(needle).mapNotNull { byTag[it.tag] }
     }
 
     // Lazy item positions: header, search, "Daily tools" label, its rows, "Explore" label, its rows, a gap, then the app rows.
@@ -266,7 +299,7 @@ fun MoreScreen(
                 // Settings is one tap from the header as well as at the bottom of the list.
                 IconButton(
                     onClick = com.example.core.analytics.AppAnalytics.trackAction("more_screen", "header_settings", onOpenSettings),
-                    modifier = Modifier.testTag("more_header_settings")
+                    modifier = Modifier.testTag("more_header_settings").tourTarget("more_settings")
                 ) {
                     Icon(
                         Icons.Default.Settings,
@@ -277,7 +310,7 @@ fun MoreScreen(
                 }
             }
         }
-        item { AppSearchField(query, { query = it }, "Search", Modifier.testTag("more_search")) }
+        item { AppSearchField(query, { query = it }, "Search", Modifier.testTag("more_search").tourTarget("more_search")) }
         if (needle.isNotEmpty()) {
             item { Spacer(Modifier.height(12.dp)) }
             if (matches.isEmpty()) item {
@@ -292,16 +325,16 @@ fun MoreScreen(
                         size = 72.dp,
                         iconSize = 36.dp
                     )
-                    FilledTonalButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("more_screen", "clear_feature_search", "tap"); query = "" }, modifier = Modifier.heightIn(min = 48.dp)) {
+                    FilledTonalButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("more_screen", "clear_feature_search", "tap"); query = "" }, modifier = Modifier.heightIn(min = 48.dp).tourTarget("more_clear_search")) {
                         LocalizedText("Clear search")
                     }
                 }
             }
             featureRows(matches, 0) { Modifier }
         } else {
-            item { MoreSectionLabel("Daily tools", dailyTools.size) }
+            item { androidx.compose.foundation.layout.Box(Modifier.tourTarget("more_daily_tools")) { MoreSectionLabel("Daily tools", dailyTools.size) } }
             featureRows(dailyTools, dailyStart, trackRow)
-            item { MoreSectionLabel("Explore", features.size) }
+            item { androidx.compose.foundation.layout.Box(Modifier.tourTarget("more_explore")) { MoreSectionLabel("Explore", features.size) } }
             featureRows(features, exploreStart, trackRow)
             item { Spacer(Modifier.height(22.dp)) }
             featureRows(appRows, settingsStart, trackRow)
@@ -419,7 +452,8 @@ private fun MoreFeatureRow(feature: MoreFeature, first: Boolean, last: Boolean, 
         modifier = modifier
             .fillMaxWidth()
             .pressScale(interaction, pressedScale = 0.985f)
-            .testTag(feature.tag),
+            .testTag(feature.tag)
+            .tourTarget("${feature.tag}_row"),
         shape = RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom),
         color = MaterialTheme.colorScheme.surface,
         interactionSource = interaction

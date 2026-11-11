@@ -2,6 +2,8 @@
 
 package com.example.ui.screens
 
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import android.os.Build
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.animateFloatAsState
@@ -18,13 +20,13 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -79,6 +81,7 @@ private enum class TallyHaptic { TAP, ROUND, GOAL }
 @Composable
 internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     com.example.core.analytics.AnalyticsScreen("tally_counter_screen")
+    TourScreen("dailytools_tally_counter")
     val prefs = rememberToolPrefs()
     val store = remember(prefs) { TallyCounterStore(prefs) }
     var collection by remember(store) { mutableStateOf(store.load()) }
@@ -132,6 +135,9 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
             else -> TallyHaptic.TAP
         }
         buzz(haptic)
+        // Milestones, not every tap, as the tasbeeh does.
+        if (haptic == TallyHaptic.GOAL) com.example.core.analytics.AppAnalytics.milestone("tally_counter", "goal_reached")
+        else if (haptic == TallyHaptic.ROUND) com.example.core.analytics.AppAnalytics.milestone("tally_counter", "round_completed")
         if (haptic == TallyHaptic.GOAL) scope.launch {
             snackbar.currentSnackbarData?.dismiss()
             snackbar.showSnackbar(localizeUiTemplate("{name}: goal reached. May Allah accept it.", language,
@@ -181,7 +187,7 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                     if (!focus) {
                         OutlinedButton(
                             onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "counters_sheet"); showCounters = true },
-                            modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("tally_select"),
+                            modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("tally_select").tourTarget("dailytools_tally_select"),
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Icon(Icons.Default.Layers, null, Modifier.size(20.dp))
@@ -197,7 +203,7 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     FilledTonalIconButton(
-                        onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "focus_mode"); focus = !focus }, modifier = Modifier.size(52.dp).testTag("tally_focus")
+                        onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "focus_mode"); focus = !focus }, modifier = Modifier.size(52.dp).testTag("tally_focus").tourTarget("dailytools_tally_focus")
                     ) {
                         Icon(if (focus) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
                             localizedUiText(if (focus) "Exit focus mode" else "Focus mode"))
@@ -207,7 +213,7 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
             item(key = "counter") {
                 val tapLabel = localizedUiText("Tap to count")
                 Card(
-                    modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge,
+                    modifier = Modifier.fillMaxWidth().tourTarget("dailytools_tally_card"), shape = MaterialTheme.shapes.extraLarge,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
                 ) {
@@ -224,7 +230,7 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                             LocalizedText("Total count", Modifier.weight(1f), style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                             if (!focus) {
-                                IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "edit_counter"); editId = active.id }, modifier = Modifier.testTag("tally_edit")) {
+                                IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "edit_counter"); editId = active.id }, modifier = Modifier.testTag("tally_edit").tourTarget("dailytools_tally_edit")) {
                                     Icon(Icons.Default.Tune, localizedUiText("Edit counter"), tint = accent)
                                 }
                             }
@@ -232,7 +238,7 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                         TallyDial(active, numberFormat, accent, dialMax, tapLabel, onTap = ::increment,
                             countDescription = tr("Count {count}", "count" to fmt(active.count)))
                         if (active.target > 0) {
-                            Surface(shape = RoundedCornerShape(14.dp), color = accent.copy(alpha = 0.10f)) {
+                            Surface(shape = RoundedCornerShape(14.dp), color = accent.copy(alpha = 0.10f), modifier = Modifier.tourTarget("dailytools_tally_round_status")) {
                                 Column(Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     val status = when {
@@ -255,7 +261,7 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                                 }
                             }
                         } else if (!focus) {
-                            TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "edit_counter"); editId = active.id }, modifier = Modifier.testTag("tally_add_target")) {
+                            TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "edit_counter"); editId = active.id }, modifier = Modifier.testTag("tally_add_target").tourTarget("dailytools_tally_set_target")) {
                                 Icon(Icons.Default.Flag, null, Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
                                 LocalizedText("Set a target")
@@ -264,13 +270,13 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             OutlinedButton(
                                 onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "decrement"); change { it.decrement() } }, enabled = active.count > 0,
-                                modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("tally_decrement")
+                                modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("tally_decrement").tourTarget("dailytools_tally_decrement")
                                     .semantics { contentDescription = tr("Subtract {step}", "step" to fmt(active.step)) },
                                 shape = RoundedCornerShape(16.dp)
                             ) { Text("−${fmt(active.step)}", style = MaterialTheme.typography.labelLarge.copy(textDirection = TextDirection.Ltr)) }
                             FilledTonalButton(
                                 onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "undo"); change { it.undo() } }, enabled = active.previousCounts.isNotEmpty(),
-                                modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("tally_undo"),
+                                modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("tally_undo").tourTarget("dailytools_tally_undo"),
                                 shape = RoundedCornerShape(16.dp)
                             ) {
                                 Icon(Icons.AutoMirrored.Filled.Undo, null, Modifier.size(18.dp))
@@ -278,7 +284,7 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                             }
                         }
                         TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "reset"); resetId = active.id }, enabled = active.count > 0,
-                            modifier = Modifier.testTag("tally_reset")) {
+                            modifier = Modifier.testTag("tally_reset").tourTarget("dailytools_tally_reset")) {
                             Icon(Icons.Default.RestartAlt, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp)); LocalizedText("Reset count")
                         }
@@ -288,7 +294,7 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
             if (!focus) {
                 item(key = "target") {
                     ToolCard {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.tourTarget("dailytools_tally_target"), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 LocalizedText("Target per round", style = MaterialTheme.typography.titleSmall)
                                 if (active.target > 0) Text(fmt(active.target), color = accent, style = MaterialTheme.typography.labelLarge)
@@ -296,9 +302,9 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                             }
                             TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "edit_counter"); editId = active.id }) { LocalizedText("Custom") }
                         }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.fillMaxWidth().tourTarget("dailytools_tally_target_presets"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(selected = active.target == 0L,
-                                onClick = { save(collection.update(active.copy(target = 0, rounds = 0))) },
+                                onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "target_preset", item = "unlimited"); save(collection.update(active.copy(target = 0, rounds = 0))) },
                                 label = { Icon(Icons.Default.AllInclusive, localizedUiText("Unlimited"), Modifier.size(18.dp)) },
                                 modifier = Modifier.testTag("tally_target_off"))
                             TARGET_PRESETS.forEach { preset ->
@@ -310,16 +316,16 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                             }
                         }
                         if (active.target > 0) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(Modifier.tourTarget("dailytools_tally_rounds"), verticalAlignment = Alignment.CenterVertically) {
                                 LocalizedText("Rounds", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                                IconButton(onClick = { save(collection.update(active.copy(rounds = (active.rounds - 1).coerceAtLeast(0)))) },
+                                IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "rounds", "decrease"); save(collection.update(active.copy(rounds = (active.rounds - 1).coerceAtLeast(0)))) },
                                     enabled = active.rounds > 0, modifier = Modifier.testTag("tally_rounds_minus")) {
                                     Icon(Icons.Default.Remove, localizedUiText("Fewer rounds"))
                                 }
                                 if (active.rounds > 0) Text(fmt(active.rounds.toLong()), style = MaterialTheme.typography.titleMedium,
                                     modifier = Modifier.widthIn(min = 32.dp), textAlign = TextAlign.Center)
                                 else LocalizedText("Open", style = MaterialTheme.typography.titleMedium)
-                                IconButton(onClick = { save(collection.update(active.copy(rounds = (active.rounds + 1).coerceAtMost(TALLY_MAX_ROUNDS)))) },
+                                IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "rounds", "increase"); save(collection.update(active.copy(rounds = (active.rounds + 1).coerceAtMost(TALLY_MAX_ROUNDS)))) },
                                     modifier = Modifier.testTag("tally_rounds_plus")) {
                                     Icon(Icons.Default.Add, localizedUiText("More rounds"))
                                 }
@@ -329,14 +335,14 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                 }
                 item(key = "steps") {
                     ToolCard {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.tourTarget("dailytools_tally_step"), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 LocalizedText("Count per tap", style = MaterialTheme.typography.titleSmall)
                                 Text("+${fmt(active.step)}", color = accent, style = MaterialTheme.typography.labelLarge.copy(textDirection = TextDirection.Ltr))
                             }
                             TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "edit_counter"); editId = active.id }) { LocalizedText("Custom") }
                         }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.fillMaxWidth().tourTarget("dailytools_tally_step_presets"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             STEP_PRESETS.forEach { step ->
                                 FilterChip(selected = active.step == step,
                                     onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "step_preset", item = "s$step"); save(collection.update(active.copy(step = step))) },
@@ -351,16 +357,19 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                 }
                 item(key = "preferences") {
                     ToolCard {
-                        TallySwitch("Tap vibration", Icons.Default.Vibration, vibration, "tally_vibration") {
+                        TallySwitch("Tap vibration", Icons.Default.Vibration, vibration, "tally_vibration", modifier = Modifier.tourTarget("dailytools_tally_vibration")) {
+                            com.example.core.analytics.AppAnalytics.setting("tally_vibration", it.toString())
                             vibration = it; prefs.edit().putBoolean("tally_vibration", it).apply()
                         }
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        TallySwitch("Keep screen awake", Icons.Default.LightMode, keepAwake, "tally_keep_awake") {
+                        TallySwitch("Keep screen awake", Icons.Default.LightMode, keepAwake, "tally_keep_awake", modifier = Modifier.tourTarget("dailytools_tally_keep_awake")) {
+                            com.example.core.analytics.AppAnalytics.setting("tally_keep_awake", it.toString())
                             keepAwake = it; prefs.edit().putBoolean("tally_keep_awake", it).apply()
                         }
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        TallySwitch("Count with volume buttons", Icons.Default.VolumeUp, volumeKeys, "tally_volume_keys",
-                            hint = "Volume up adds, volume down subtracts while this screen is open") {
+                        TallySwitch("Count with volume buttons", Icons.AutoMirrored.Filled.VolumeUp, volumeKeys, "tally_volume_keys",
+                            hint = "Volume up adds, volume down subtracts while this screen is open", modifier = Modifier.tourTarget("dailytools_tally_volume_keys")) {
+                            com.example.core.analytics.AppAnalytics.setting("tally_volume_keys", it.toString())
                             volumeKeys = it; prefs.edit().putBoolean("tally_volume_keys", it).apply()
                         }
                     }
@@ -371,7 +380,7 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
     }
 
     if (showCounters) {
-        ModalBottomSheet(sheetState = sheetState, onDismissRequest = { showCounters = false }) {
+        ModalBottomSheet(sheetState = sheetState, onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "dismiss_counters_sheet", "dismiss"); showCounters = false }) {
             val today = tallyToday()
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp).padding(horizontal = 20.dp),
                 contentPadding = PaddingValues(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -379,6 +388,7 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         LocalizedText("Your counters", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         TextButton(onClick = {
+                            com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "new_counter")
                             scope.launch { sheetState.hide(); showCounters = false; creating = true }
                         }, modifier = Modifier.testTag("tally_new")) {
                             Icon(Icons.Default.Add, null); LocalizedText("New")
@@ -410,6 +420,7 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                             }
                             IconButton(onClick = {
+                                com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "edit_counter")
                                 scope.launch { sheetState.hide(); showCounters = false; editId = counter.id }
                             }) {
                                 Icon(Icons.Default.Edit, localizedUiText("Edit counter"))
@@ -424,18 +435,19 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
     if (creating || editing != null) {
         TallyEditor(counter = editing, displayName = editing?.let(::name).orEmpty(),
             canDelete = editing != null && collection.counters.size > 1,
-            onDismiss = { creating = false; editId = null },
+            onDismiss = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "dismiss_counter_editor", "dismiss"); creating = false; editId = null },
             onSave = { counter ->
+                com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "save_counter")
                 save(if (creating) collection.add(counter) else collection.update(counter))
                 creating = false; editId = null
             },
-            onDelete = { deleteId = editing?.id; editId = null })
+            onDelete = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "delete_counter"); deleteId = editing?.id; editId = null })
     }
     val resetting = collection.counters.firstOrNull { it.id == resetId }
     val deleting = collection.counters.firstOrNull { it.id == deleteId }
     if (resetting != null || deleting != null) {
         val isDelete = deleting != null
-        AlertDialog(onDismissRequest = { resetId = null; deleteId = null },
+        AlertDialog(onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "dismiss_confirm_dialog", "dismiss"); resetId = null; deleteId = null },
             icon = { Icon(if (isDelete) Icons.Default.DeleteOutline else Icons.Default.RestartAlt, null) },
             title = { LocalizedText(if (isDelete) "Delete counter?" else "Reset count?") },
             text = {
@@ -451,6 +463,7 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                 TextButton(onClick = {
                     val undoLabel = localizeUiTemplate("Undo", language, emptyMap())
                     if (deleting != null) {
+                        com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "delete_counter", "confirm")
                         val before = collection
                         save(collection.delete(deleting.id))
                         scope.launch {
@@ -460,6 +473,7 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                             if (result == SnackbarResult.ActionPerformed) save(before)
                         }
                     } else if (resetting != null) {
+                        com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "reset", "confirm")
                         save(collection.update(resetting.reset()))
                         scope.launch {
                             snackbar.currentSnackbarData?.dismiss()
@@ -476,7 +490,7 @@ internal fun TallyCounterScreen(onBack: () -> Unit, modifier: Modifier = Modifie
                     colors = if (isDelete) ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     else ButtonDefaults.textButtonColors()) { LocalizedText(if (isDelete) "Delete" else "Reset") }
             },
-            dismissButton = { TextButton(onClick = { resetId = null; deleteId = null }) { LocalizedText("Cancel") } })
+            dismissButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "dismiss_confirm_dialog", "dismiss"); resetId = null; deleteId = null }) { LocalizedText("Cancel") } })
     }
 }
 
@@ -542,12 +556,12 @@ private fun TallyActivity(
     val peak = values.maxOrNull()?.coerceAtLeast(1) ?: 1
     ToolCard {
         LocalizedText("Activity", style = MaterialTheme.typography.titleSmall)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().tourTarget("dailytools_tally_activity"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TallyStat("Today", format.format(maxOf(daily[today] ?: 0L, collection.todayTotal(today))), accent, Modifier.weight(1f))
             TallyStat("This counter today", format.format(collection.active.todayOn(today)), accent, Modifier.weight(1f))
             TallyStat("All time", format.format(collection.active.lifetime), accent, Modifier.weight(1f))
         }
-        Row(Modifier.fillMaxWidth().height(84.dp), horizontalArrangement = Arrangement.spacedBy(6.dp),
+        Row(Modifier.fillMaxWidth().height(84.dp).tourTarget("dailytools_tally_week_chart"), horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.Bottom) {
             days.forEachIndexed { index, day ->
                 val value = values[index]
@@ -580,8 +594,8 @@ private fun TallyStat(title: String, value: String, accent: Color, modifier: Mod
 
 @Composable
 private fun TallySwitch(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
-                        checked: Boolean, tag: String, hint: String? = null, onChange: (Boolean) -> Unit) {
-    Row(Modifier.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+                        checked: Boolean, tag: String, hint: String? = null, modifier: Modifier = Modifier, onChange: (Boolean) -> Unit) {
+    Row(modifier.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -611,14 +625,14 @@ private fun TallyEditor(counter: TallyCounter?, displayName: String, canDelete: 
     AlertDialog(onDismissRequest = onDismiss,
         title = { LocalizedText(if (counter == null) "New counter" else "Edit counter") },
         text = {
-            Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.heightIn(max = 460.dp).verticalScroll(com.example.core.analytics.rememberAnalyticsScrollState("tally_counter_screen")), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(name, { name = it.take(TALLY_MAX_NAME) }, label = { LocalizedText("Counter name") },
                     singleLine = true, isError = name.isBlank(),
                     modifier = Modifier.fillMaxWidth().testTag("tally_name_input"))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf("SubhanAllah", "Alhamdulillah", "Allahu Akbar", "Astaghfirullah").forEach { suggestion ->
                         val localizedSuggestion = localizedUiText(suggestion)
-                        if (counter == null) SuggestionChip(onClick = { name = localizedSuggestion },
+                        if (counter == null) SuggestionChip(onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "name_suggestion"); name = localizedSuggestion },
                             label = { Text(localizedSuggestion, maxLines = 1, style = MaterialTheme.typography.labelSmall) })
                     }
                 }
@@ -631,7 +645,7 @@ private fun TallyEditor(counter: TallyCounter?, displayName: String, canDelete: 
                     isError = parsedTarget == null, modifier = Modifier.fillMaxWidth().testTag("tally_target_input"))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     TARGET_PRESETS.forEach { preset ->
-                        FilterChip(selected = target == preset.toString(), onClick = { target = preset.toString() },
+                        FilterChip(selected = target == preset.toString(), onClick = { com.example.core.analytics.AppAnalytics.interaction("tally_counter_screen", "editor_target_preset", item = "t$preset"); target = preset.toString() },
                             label = { Text(preset.toString()) })
                     }
                 }

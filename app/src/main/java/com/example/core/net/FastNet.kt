@@ -26,6 +26,7 @@ import java.net.Inet4Address
 import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
@@ -50,7 +51,7 @@ object FastNet {
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .connectionPool(ConnectionPool(12, 5, TimeUnit.MINUTES))
-        .dns(ipv4First)
+        .dns(ReachableFirstDns(ipv4First))
         .retryOnConnectionFailure(true)
         .addInterceptor { chain ->
             val started = android.os.SystemClock.elapsedRealtime()
@@ -80,25 +81,109 @@ object FastNet {
     fun text(url: String): String =
         client.newCall(Request.Builder().url(url).header("Accept", "application/json").build()).execute().use { response ->
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-            response.body?.string() ?: throw IOException("Empty response")
+            response.body?.let { body -> cappedString(body) } ?: throw IOException("Empty response")
         }
+
+    /** Upper bound on a text response; anything larger fails like any other bad response. */
+    internal const val MAX_TEXT_BYTES = 8L shl 20
+
+    /** Reads [body] as text like [okhttp3.ResponseBody.string], but fails past [limit] bytes. */
+    internal fun cappedString(body: okhttp3.ResponseBody, limit: Long = MAX_TEXT_BYTES): String {
+        if (body.contentLength() > limit) throw IOException("Response too large")
+        // request() buffers at most limit + 1 bytes; string() then reads that same buffer.
+        if (body.source().request(limit + 1)) throw IOException("Response too large")
+        return body.string()
+    }
+
+    /**
+     * Runs [call] and hands the response to [block]; if the coroutine is cancelled meanwhile, the
+     * call is cancelled so a blocked connect or read ends at once instead of waiting for a timeout.
+     */
+    @OptIn(kotlinx.coroutines.InternalCoroutinesApi::class)
+    private suspend inline fun <T> executeCancellable(call: Call, block: (Response) -> T): T {
+        // onCancelling: fire as soon as cancellation starts, not after child jobs finish.
+        val handle = currentCoroutineContext()[kotlinx.coroutines.Job]
+            ?.invokeOnCompletion(onCancelling = true, invokeImmediately = true) { call.cancel() }
+        try {
+            return call.execute().use(block)
+        } finally {
+            handle?.dispose()
+        }
+    }
 
     /** Cancels obsolete searches immediately, freeing their network connection. */
     suspend fun textAsync(url: String): String = suspendCancellableCoroutine { continuation ->
         val call = client.newCall(Request.Builder().url(url).header("Accept", "application/json").build())
         continuation.invokeOnCancellation { call.cancel() }
         call.enqueue(object : Callback {
-            override fun onFailure(call: Call, error: IOException) { continuation.resumeWithException(error) }
+            override fun onFailure(call: Call, e: IOException) { continuation.resumeWithException(e) }
             override fun onResponse(call: Call, response: Response) {
                 try {
                     val text = response.use {
                         if (!it.isSuccessful) throw IOException("HTTP ${it.code}")
-                        it.body?.string() ?: throw IOException("Empty response")
+                        it.body?.let { body -> cappedString(body) } ?: throw IOException("Empty response")
                     }
                     continuation.resume(text)
                 } catch (error: Exception) { continuation.resumeWithException(error) }
             }
         })
+    }
+
+    /** Largest span [range] fetches; previews are kilobytes, so anything bigger is a mistake. */
+    private const val MAX_RANGE_BYTES = 2L shl 20
+    private const val RANGE_SOURCE_TTL_MS = 30L * 60 * 1000
+
+    /** Where a link last redirected to (a signed CDN address) and when, so later ranges skip the redirect. */
+    private val rangeSources = ConcurrentHashMap<String, Pair<String, Long>>()
+
+    /**
+     * Bytes [from]..[to] (inclusive) of [url]. Only an exact partial answer is accepted: a server
+     * that ignores the range would send the whole file, so such a response is closed unread.
+     */
+    suspend fun range(url: String, from: Long, to: Long): ByteArray = withContext(Dispatchers.IO) {
+        if (from < 0L || to < from || to - from + 1 > MAX_RANGE_BYTES) throw IOException("Bad range $from-$to")
+        val known = rangeSources[url]
+            ?.takeIf { System.currentTimeMillis() - it.second < RANGE_SOURCE_TTL_MS }?.first
+        if (known != null && known != url) {
+            try {
+                return@withContext requestRange(known, url, from, to)
+            } catch (e: IOException) {
+                ensureActive()
+                // A signed link expires; the original address hands out a fresh one.
+                rangeSources.remove(url)
+            }
+        }
+        requestRange(url, url, from, to)
+    }
+
+    private suspend fun requestRange(source: String, original: String, from: Long, to: Long): ByteArray {
+        val call = client.newCall(
+            Request.Builder().url(source)
+                // Identity encoding keeps byte offsets exact.
+                .header("Accept-Encoding", "identity")
+                .header("Range", "bytes=$from-$to")
+                .build()
+        )
+        return executeCancellable(call) { response ->
+            readRange(response, from, to).also {
+                rangeSources[original] = response.request.url.toString() to System.currentTimeMillis()
+            }
+        }
+    }
+
+    /** The body of [response] when it is exactly bytes [from]..[to]; anything else fails unread. */
+    internal fun readRange(response: Response, from: Long, to: Long): ByteArray {
+        val length = to - from + 1
+        if (response.code != 206 || response.header("Content-Range")?.startsWith("bytes $from-$to/") != true) {
+            throw IOException("HTTP ${response.code}")
+        }
+        val body = response.body ?: throw IOException("Empty response")
+        if (body.contentLength() != -1L && body.contentLength() != length) throw IOException("Unexpected range length")
+        val stream = body.source()
+        if (!stream.request(length)) throw IOException("Incomplete range")
+        val bytes = stream.readByteArray(length)
+        if (!stream.exhausted()) throw IOException("Range longer than asked")
+        return bytes
     }
 
     /**
@@ -155,13 +240,16 @@ object FastNet {
             }
         }
 
-        private fun open(from: Long, to: Long): Response = client.newCall(
-            Request.Builder().url(source)
-                // Identity encoding keeps byte offsets exact.
-                .header("Accept-Encoding", "identity")
-                .header("Range", "bytes=$from-$to")
-                .build()
-        ).execute()
+        private suspend inline fun <T> open(from: Long, to: Long, block: (Response) -> T): T = executeCancellable(
+            client.newCall(
+                Request.Builder().url(source)
+                    // Identity encoding keeps byte offsets exact.
+                    .header("Accept-Encoding", "identity")
+                    .header("Range", "bytes=$from-$to")
+                    .build()
+            ),
+            block,
+        )
 
         /** The first megabyte doubles as the probe that tells whether the server honours ranges. */
         private suspend fun first() {
@@ -169,7 +257,7 @@ object FastNet {
             var pending: Pair<Long, Long>? = null
             while (true) {
                 try {
-                    val rest = open(0, SEGMENT - 1).use { response ->
+                    val rest = open(0, SEGMENT - 1) { response ->
                         if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
                         val body = response.body ?: throw IOException("Empty response")
                         // Hosts answer quota and error pages with 200 + HTML.
@@ -182,7 +270,12 @@ object FastNet {
                         if (ranged == null) {
                             if (response.code == 206) throw IOException("Unexpected partial response")
                             total = body.contentLength()
-                            val end = copy(response, 0, Long.MAX_VALUE)
+                            val counted = done.get()
+                            // Without ranges a broken stream cannot resume, so it must fail and restart.
+                            val end = try { copy(response, 0, Long.MAX_VALUE, resumable = false) } catch (e: IOException) {
+                                done.set(counted)
+                                throw e
+                            }
                             if (total > 0 && end != total) {
                                 done.addAndGet(-end)
                                 throw IOException("Incomplete download")
@@ -214,7 +307,7 @@ object FastNet {
             var failures = 0
             while (pos <= end) {
                 try {
-                    val reached = open(pos, end).use { response ->
+                    val reached = open(pos, end) { response ->
                         if (response.code != 206 || response.header("Content-Range")?.startsWith("bytes $pos-") != true) {
                             throw IOException("HTTP ${response.code}")
                         }
@@ -236,14 +329,15 @@ object FastNet {
          * Writes the body at file offset [from] up to and including [to] and returns the next
          * offset. A stream that breaks after some bytes returns early so the caller resumes there.
          */
-        private suspend fun copy(response: Response, from: Long, to: Long): Long {
+        private suspend fun copy(response: Response, from: Long, to: Long, resumable: Boolean = true): Long {
             val context = currentCoroutineContext()
             var pos = from
             try {
                 val input = response.body?.byteStream() ?: throw IOException("Empty response")
                 val buffer = ByteArray(1 shl 16)
                 while (pos <= to) {
-                    val read = input.read(buffer, 0, minOf(buffer.size.toLong(), to - pos + 1).toInt())
+                    // `to - pos + 1` overflows when [to] is Long.MAX_VALUE; `to - pos` cannot.
+                    val read = input.read(buffer, 0, if (to - pos >= buffer.size) buffer.size else (to - pos + 1).toInt())
                     if (read < 0) break
                     val bytes = ByteBuffer.wrap(buffer, 0, read)
                     while (bytes.hasRemaining()) out.write(bytes, pos + bytes.position())
@@ -255,7 +349,7 @@ object FastNet {
                     if (now - last >= PROGRESS_INTERVAL_NANOS && reported.compareAndSet(last, now)) onProgress(sum, total)
                 }
             } catch (e: IOException) {
-                if (pos == from) throw e
+                if (pos == from || !resumable) throw e
             }
             return pos
         }

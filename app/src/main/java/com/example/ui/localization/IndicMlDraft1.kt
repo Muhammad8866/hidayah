@@ -57,7 +57,7 @@ internal object IndicMlDraft1 {
         "Witr" to "വിർ",
         "Today" to "ഇന്ന്",
         "All five prayers prayed. Alhamdulillah!" to "അഞ്ച് പ്രാർത്ഥനകളും പ്രാർത്ഥിച്ചു. അൽഹംദുലില്ലാഹ്!",
-        "Tap ✓ or ✗ to log each prayer." to "ഓരോ പ്രാർത്ഥനയും രേഖപ്പെടുത്തുന്നതിന് Â അല്ലെങ്കിൽ Â ടാപ്പുചെയ്യുക.",
+        "Tap ✓ or ✗ to log each prayer." to "ഓരോ പ്രാർത്ഥനയും രേഖപ്പെടുത്തുന്നതിന് ✓ അല്ലെങ്കിൽ ✗ ടാപ്പുചെയ്യുക.",
         "Muslimah mode: today is marked as excused from salah." to "മുസൽമാ മോഡ്ഃ ഇന്ന് നമസ്കാരത്തിൽ നിന്ന് ഒഴിവാക്കപ്പെട്ടതായി അടയാളപ്പെടുത്തിയിരിക്കുന്നു.",
         "Today's salah" to "ഇന്നത്തെ സലാം",
         "This week" to "ഈ ആഴ്ച",

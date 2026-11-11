@@ -1,7 +1,6 @@
 package com.example.domain.model
 
-import java.text.Normalizer
-import java.util.Locale
+import com.example.core.search.AppSearch
 
 data class Dua(
     val id: String,
@@ -151,47 +150,49 @@ object DuaDatasetRepository {
 
     private val duasById: Map<String, Dua> by lazy { DUAS.associateBy { it.id } }
 
-    // Precomputed once: every searchable field, folded to plain lowercase letters.
-    private val searchIndex: Map<String, String> by lazy {
-        DUAS.associate { dua ->
-            dua.id to normalizeForSearch(
-                listOf(
-                    dua.title, dua.context, dua.category, dua.transliteration, dua.englishTranslation,
-                    dua.urduTranslation, dua.arabicText, dua.benefit, dua.sourceCollection, dua.sourceReference
-                ).joinToString(" ")
-            )
-        }
-    }
+    /**
+     * What search reads of a dua (see [AppSearch]): the title counts most, then the Roman
+     * transliteration (its name as people type it, "subhanallah" or "subhan allah"), then the
+     * Arabic, then the meanings, context, benefit, category and source. [extra] is the reader's
+     * localized text.
+     */
+    internal fun searchFields(dua: Dua, extra: String = ""): AppSearch.Fields = AppSearch.Fields(
+        title = dua.title,
+        nativeTitle = dua.transliteration,
+        author = dua.arabicText,
+        other = listOf(
+            // Repeated in full here: the fields above are read up to 64 words, a long dua is longer.
+            dua.transliteration, dua.arabicText, dua.context, dua.category, dua.englishTranslation,
+            dua.urduTranslation, dua.benefit, dua.sourceCollection, dua.sourceReference, extra
+        )
+    )
+
+    /** The search over every dua, with the localized text it was built with. */
+    private class DuaSearch(val extra: List<String>, val ranker: AppSearch.Ranker<Int>)
+
+    @Volatile private var duaSearch: DuaSearch? = null
 
     fun byId(id: String): Dua? = duasById[id]
 
     /**
-     * Duas in [category] (or all of them for [ALL_CATEGORY]) whose text contains every word of
-     * [query]. Matching ignores case, harakat and transliteration marks, so "subhanallah" finds
-     * "Subḥānallāh" and "الحمد لله" finds the fully vowelled Arabic.
+     * Duas in [category] (or all of them for [ALL_CATEGORY]) that match [query], best match first.
+     * Matching ignores case, harakat and transliteration marks and finds words joined or split, so
+     * "subhanallah" and "subhan allah" find "Subḥānallāh" and "الحمد لله" finds the fully vowelled
+     * Arabic. [additionalSearchText] adds the reader's localized text. The search is built once and
+     * again only when that text changes (another language).
      */
     fun filter(category: String, query: String, additionalSearchText: (Dua) -> String = { "" }): List<Dua> {
         val inCategory = if (category == ALL_CATEGORY) DUAS else DUAS.filter { it.category == category }
-        val words = normalizeForSearch(query).split(' ').filter { it.isNotEmpty() }
-        if (words.isEmpty()) return inCategory
-        return inCategory.filter { dua ->
-            val haystack = searchIndex.getValue(dua.id)
-            val localizedHaystack = normalizeForSearch(additionalSearchText(dua))
-            words.all { it in haystack || it in localizedHaystack }
-        }
+        if (query.isBlank()) return inCategory
+        val extra = DUAS.map(additionalSearchText)
+        val search = duaSearch?.takeIf { it.extra == extra }
+            ?: DuaSearch(extra, AppSearch.Ranker(DUAS.indices.toList()) { searchFields(DUAS[it], extra[it]) })
+                .also { duaSearch = it }
+        // Ranked over every dua, then narrowed to the category, so a word that is spelt right
+        // elsewhere is not answered with look-alike words in this category.
+        return search.ranker.search(query).map(DUAS::get)
+            .filter { category == ALL_CATEGORY || it.category == category }
     }
 
     fun searchDuas(query: String): List<Dua> = filter(ALL_CATEGORY, query)
-
-    internal fun normalizeForSearch(text: String): String =
-        Normalizer.normalize(text, Normalizer.Form.NFD)
-            .replace(COMBINING_MARKS, "")
-            .lowercase(Locale.ROOT)
-            .replace(JOINERS, "")
-            .replace(NON_WORD, " ")
-            .trim()
-
-    private val COMBINING_MARKS = Regex("\\p{M}+")
-    private val JOINERS = Regex("['‘’`ʿʾ\\-]")
-    private val NON_WORD = Regex("[^\\p{L}\\p{N}]+")
 }

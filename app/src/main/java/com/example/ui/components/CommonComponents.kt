@@ -1,4 +1,5 @@
 package com.example.ui.components
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizedUiText
 
@@ -11,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -33,7 +35,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     LocalizedText(
-        text = "Hello $name!",
+        text = localizedUiTemplate("Hello {name}!", "name" to name),
         modifier = modifier.testTag("greeting_text"),
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.primary
@@ -107,7 +109,7 @@ fun ProvenanceCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.MenuBook,
+                imageVector = Icons.AutoMirrored.Filled.MenuBook,
                 contentDescription = localizedUiText("Source citation"),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
@@ -127,7 +129,7 @@ fun ProvenanceCard(
                 )
                 if (authenticityGrade != null) {
                     LocalizedText(
-                        text = "Authenticity: $authenticityGrade",
+                        text = localizedUiTemplate("Authenticity: {grade}", "grade" to localizedUiText(authenticityGrade)),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.primary

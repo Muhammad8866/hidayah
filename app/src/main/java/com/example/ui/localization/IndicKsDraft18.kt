@@ -76,7 +76,7 @@ internal object IndicKsDraft18 {
         "Start of Rajab" to "راجبک آغاز",
         "Beginning of Rajab, one of the four sacred months." to "راجبک آغاز، ژور مقدس رؠتن منٛز اکھ۔",
         "Isra and Mi'raj" to "اسرٲیہ تہٕ میراج",
-        "Night of the Prophet's ﷺ night journey and ascension (27th Rajab)." to "پیغمبر صلی اللہ علیہ وسلم سٕنز راتہ سفر تہٕ تخت نشین گژھنک (27th रजب)۔",
+        "Night of the Prophet's ﷺ night journey and ascension (27th Rajab)." to "پیغمبر صلی اللہ علیہ وسلم سٕنز راتہ سفر تہٕ تخت نشین گژھنک (27th رجب)۔",
         "Mid-Sha'ban" to "مڈ-شابان",
         "Night of 15th Sha'ban, a night of forgiveness and worship." to "15 مہ شب، معافی تہٕ عبادتٕچ رات۔",
         "Start of Ramadan" to "رمضانک آغاز",

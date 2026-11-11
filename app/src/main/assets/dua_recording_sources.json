@@ -2,166 +2,6 @@
   "method": "Original source MP3s retained without transcoding",
   "recordings": [
     {
-      "asset": "adhkar_audio/dua_allahumma_bika_asbahna.mp3",
-      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_05.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 10.32,
-      "bitrate": 128000,
-      "sampleRate": 48000,
-      "channels": 2,
-      "sha256": "a8ac73ea06fbe603d54d9735b3a5ab107743524b0815a02bb98c09eb317532f9"
-    },
-    {
-      "asset": "adhkar_audio/dua_allahumma_bika_amsayna.mp3",
-      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-08.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 10.833,
-      "bitrate": 128000,
-      "sampleRate": 44100,
-      "channels": 2,
-      "sha256": "7548ec94a898cd83b49a29f1fc9f49dad550b41ed047e871f53d6d9d75259e08"
-    },
-    {
-      "asset": "adhkar_audio/dua_sayyidul_istighfar.mp3",
-      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_06.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 25.632,
-      "bitrate": 128000,
-      "sampleRate": 48000,
-      "channels": 2,
-      "sha256": "b7ee5680ac97ad418c63f3b7b0435f9460a86b63f398fa1b904b08922fb1ba44"
-    },
-    {
-      "asset": "adhkar_audio/dua_morning_witness.mp3",
-      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_07.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 18.216,
-      "bitrate": 128000,
-      "sampleRate": 48000,
-      "channels": 2,
-      "sha256": "c43f5c9e7bf8e6732ac906eb9b6fc6685446740f38ded031eb7ccfb405936671"
-    },
-    {
-      "asset": "adhkar_audio/dua_evening_witness.mp3",
-      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-11.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 22.048,
-      "bitrate": 128000,
-      "sampleRate": 44100,
-      "channels": 2,
-      "sha256": "7dfffddf6565c95b476002f614eb493729a6d369420219bfa8562832d0590842"
-    },
-    {
-      "asset": "adhkar_audio/dua_morning_blessing.mp3",
-      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_08.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 11.448,
-      "bitrate": 128000,
-      "sampleRate": 48000,
-      "channels": 2,
-      "sha256": "53edbb5a8375bf1092134fd4c9e2286d9f008dc739cf1c2c9960c1f672c28327"
-    },
-    {
-      "asset": "adhkar_audio/dua_evening_blessing.mp3",
-      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-13.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 12.969,
-      "bitrate": 128000,
-      "sampleRate": 44100,
-      "channels": 2,
-      "sha256": "e55d91edc1737a68a33804b5081f8c583b2826dffc87c4ac8e086391705058ad"
-    },
-    {
-      "asset": "adhkar_audio/dua_hasbiyallah.mp3",
-      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-15.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 10.986,
-      "bitrate": 127999,
-      "sampleRate": 44100,
-      "channels": 2,
-      "sha256": "fb245f84d9dc0332802525e7dcaec3ded981699bcfda033edd8e28d4729a62cb"
-    },
-    {
-      "asset": "adhkar_audio/dua_bismillah_la_yadurru.mp3",
-      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-18.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 10.223,
-      "bitrate": 127999,
-      "sampleRate": 44100,
-      "channels": 2,
-      "sha256": "0274ec2c47537e15367b9dc681b19061f431ad5529202ac4c64d7b252dd0844c"
-    },
-    {
-      "asset": "adhkar_audio/dua_raditu_billahi.mp3",
-      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-19.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 10.757,
-      "bitrate": 128000,
-      "sampleRate": 44100,
-      "channels": 2,
-      "sha256": "30185f6de248696b33722fd93af54fdddffcabfaaead9f6fd8dd0a0ce4519edf"
-    },
-    {
-      "asset": "adhkar_audio/dua_ya_hayyu_aslih.mp3",
-      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-20.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 13.351,
-      "bitrate": 128000,
-      "sampleRate": 44100,
-      "channels": 2,
-      "sha256": "3c49306b5fc820dceae900bb98101ff8aaa0de9ed1c075b395555c513d47d887"
-    },
-    {
-      "asset": "adhkar_audio/dua_fitratil_islam.mp3",
-      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_17.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 20.904,
-      "bitrate": 128000,
-      "sampleRate": 48000,
-      "channels": 2,
-      "sha256": "fa3985b1a86da9512fb23ed98a7fcd5fae4344ae7a5b2f80b8d5fddcb89c8552"
-    },
-    {
-      "asset": "adhkar_audio/dua_amsayna_fitrah.mp3",
-      "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/27-invocation-Du-matin-et-du-soir-24.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 22.404,
-      "bitrate": 128000,
-      "sampleRate": 44100,
-      "channels": 2,
-      "sha256": "32b9379e6f874140a8ef6a71b0bfe2615dadae7c5f43f0afd1f357fc235cbfa5"
-    },
-    {
-      "asset": "adhkar_audio/dua_subhanallah_wa_bihamdihi.mp3",
-      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_18.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 3.36,
-      "bitrate": 128000,
-      "sampleRate": 48000,
-      "channels": 2,
-      "sha256": "d1cbaba921741b8d50ce0440aaf33d49ee05d50818ae20e1f44e77ddef928add"
-    },
-    {
-      "asset": "adhkar_audio/dua_subhanallah_adada_khalqihi.mp3",
-      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_21.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 9.144,
-      "bitrate": 128000,
-      "sampleRate": 48000,
-      "channels": 2,
-      "sha256": "762082a248aa4b392806b419f6c9ebf01d2bec74edce922c21030cbfe8f5f1b1"
-    },
-    {
-      "asset": "adhkar_audio/dua_kalimat_tammat.mp3",
-      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_24.mp3",
-      "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-du-matin-et-du-soir/",
-      "durationSeconds": 6.0,
-      "bitrate": 128000,
-      "sampleRate": 48000,
-      "channels": 2,
-      "sha256": "7537c5053567ad2678bdd180e2c66a2b67f8fd6f1f66cc1307ee8ddbbeb694a0"
-    },
-    {
       "asset": "recitation_audio/dua/dua_astaghfirullah_atubu.mp3",
       "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_23.mp3",
       "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
@@ -312,6 +152,1036 @@
       "sha256": "193c41984ab59099d8f6c42c1025336b1afeae8f73ea8e37a5e193ce645e58db"
     },
     {
+      "asset": "recitation_audio/dua/dua_debt.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/041_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.384,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "c22b530dd632f60033b2c5aa0c2c6cf7d0d4e31605a29c6343c31cf576980454"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_hamm_ibn_masud.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/034_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 39.24,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "33ea3a200c34b4c2283bd98521b91283a7b3b3e472b444f46077d62c637b4e03"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_istisqa_ibadak.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/063_03.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.648,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "18756dcea3590767d334ea3a8cbb1c4dfacbb12cb52e993bd5b6313037219bdc"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_karb.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/035_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 20.04,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "c90132b43806fbfe419b44e2655951e6f047a568fe2edcf4b4b608c16d489a68"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_leaving_home_adilla.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/010_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 11.546,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "2a285a1a54d59bab5820287e19d8f2e16c66eeb6b0f6d0318a0c1f31587f9069"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_adhan_response.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/130_06.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 3.936,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "6fcc5769cfbfd044dedab12a8fabe3dd447f5ba37528f8e8cefbc317c0da7897"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_adhan_shahadah.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/015_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 17.3,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "923f8903e83f1ed1bb1b866ed5851778b9cd78884f3d4928033db4840463d24e"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_after_eating.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/070_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 8.592,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "335750ccf31ce4ecacb0866c0b824827f3830d61d2500c34d434280f498b5908"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_after_rain.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/065_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 4.248,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "f30287b8ab7170ce9ae6c7e044eee8ab23060206a84fb6f4401fc12fddd9f7e0"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_after_salah_istighfar.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/025_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 6.84,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "0bcdfbd5313bf95255078b9f022f36b75b4f5c2819b6f144aed78632760c7d98"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_after_witr.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/033_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 16.344,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "88a8af98ed5e33329ff5d667d37a9fbe396f2139fca0c8d6d9812d931299a64f"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_against_enemy_ahzab.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/038_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 17.688,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "9ce084062cb180c6a2454557efdf9d3f58c2411b1f7af6b04a6a723e874d03bb"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_anger.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/042_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 4.512,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "bb0964fae17ca930d437a491787254b842d7675f17007b6a05f8fda63b7452e9"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_arafah.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_19.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 11.616,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "0cbc4c9f0f86f20f8c1c33aa7d07cb8235619e609f218492b320f611ec12226f"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_ayatul_kursi.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/025_08.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 50.688,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "455012acadab38977294ca4dd0500c3fae24e87440113f582dea32c8fa01fd14"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_between_sajdas.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/020_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 4.224,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "c6f6269e64eb5b4148923d0da4712b04289f586251607ba0b58ecb4ad48587ba"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_breaking_fast.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/068_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 8.904,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "956d21681139b2d162b1a0da768e0f007ab721c2841192118f2230767e4ab87f"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_condolence.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/057_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.84,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "e05b3b5e04b38b5c91443491c3b9d96ced9bb7d673e03b02b3655370ea74b59d"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_difficulty_sahl.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/043_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 10.824,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "5a49d71b783c81d0912a220a68d7fbcdcee409fc1b1b1088e75a2eb9aff030e2"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_dogs_barking.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/042_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 4.512,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "bb0964fae17ca930d437a491787254b842d7675f17007b6a05f8fda63b7452e9"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_dressing.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/002_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.038,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "8def68c6b3a488b23dfc949667f81b69747dfd213191fabb670115f7a9c014e3"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_drinking_milk.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/069_04.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 4.907,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "3cf139950540f73c7a1ec55c4dce17b5853fe014205efff9f4c6d9e0fb6b958a"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_entering_home.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/005_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 3.736,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "68f722e075bf8745154da319b358d5da85854c8b80bec3963ec7be4841fa063e"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_entering_market.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/098_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 18.048,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "59aa38adb27c562f8ca6df23db0ca7e445ae55450a72057859c96a5d7d206afc"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_entering_mosque.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/013_03.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 4.804,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "ba5dd2ba0a48fd225ba6499825af00a1e3aa89c01085d39c343af3c3efb5cebe"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_entering_town.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_24.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 6.0,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "7537c5053567ad2678bdd180e2c66a2b67f8fd6f1f66cc1307ee8ddbbeb694a0"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_evil_eye.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/048_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.216,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "92bdfad314bfb819100e7a98cfa6e0160e887039d0cf2c13818b0c6a1121b392"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_farewell_traveller.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/101_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 5.208,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "fca56ff6eb141bd4e8fae9c6b4a9a0abc85de9f05f0fe169a102e0377c826aa1"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_for_one_i_cursed.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/112_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 8.712,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "1cdd2e793d046cc2d9ac159edab521504610b36c15b2706581c24c90a60338a0"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_for_who_gave_drink.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/072_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 6.0,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "2eff172b214a979f0acb34cd8fd0e32cf87b7644300168853c42e38e92792a36"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_four_beloved_words.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/130_04.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 5.996,
+      "bitrate": 128000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "1722ea8f237063478d9e0abe880374b2b754426f65db9a7a236ac1afab879d8b"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_hamdan_kathiran.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/018_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 6.552,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "5a933a87199c0a8e5282ee2eb8820d43f626d498eab0a00f7a8757c4e9872dad"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_hasbunallah.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/036_03.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 4.636,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "f0a4d60ed7071e6f487d2e42425af20c7f20fc4858c958bd7664e0af28b5ca38"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_host.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/071_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 7.704,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "fde241a1b13b572cfb4ecc936078c5341031c563146720780c2acb49ef039e7c"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_iftar_host.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/073_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.072,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "cab71e991083a37145b9e9dc5d533b3183b4e0a6f760ed712b55cb615b7f49c5"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_iftar_ibn_umar.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/068_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.192,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "7438a6f8d730474b6e3bd8160d8389dbdfd3df3f64b52d7d778f39eab9096b9c"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_ikfinihim.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/039_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 5.52,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "8d11ae4a3e2a9a8d4cd61323965ca8b645b2533b309370eb2e83300895b439ec"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_ilbas_jadidan.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/004_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 5.486,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "cc8fcea3496f0f3838bbe77454e8d165f8fb7b3a4f00870a10976e2bbbb8798a"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_intimacy.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/081_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 7.056,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "a23abf0f955de0e7359ef034dfa8e32f2147a0e35eb61b8b07fade90cea33b13"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_ism_azam_ahad_samad.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/024_11.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 18.056,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "084902541ae4cb27c5f33aea4ba184e8e154ba50c144dbfb9291781ad554d945"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_istiftah.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/016_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.408,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "6684124452700984b30fa0b0374689275fc320568e45445263deb3dba0891c81"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_istisqa.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/063_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 8.448,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "3f878fe5e6e2e9d18e5c07743e336a40d1155c9e8b0c0cfffd30189c5d3cef1e"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_jamarat.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/122_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 2.579,
+      "bitrate": 128000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "2a9f818e20fa60924768e83919b6ea5bb4151748c1667bc84a5ef7ba49c9ec78"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_jannah_nar.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/024_07.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 7.656,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "12a1546893760f97bd91cce5924eac6995109ac23a52a9a8243dc9a948b0f5b1"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_la_bas_tahur.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/049_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 3.648,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "0fc311361ff1d7aacb5e5478487e35ff76673bd4c3a8a58f2f5010ef5cc2319b"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_la_hawla_kanz.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/130_06.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 3.936,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "6fcc5769cfbfd044dedab12a8fabe3dd447f5ba37528f8e8cefbc317c0da7897"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_la_mania.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/025_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 8.664,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "6d9e71251c01b0218750aa6d3c27ba058f6f2ece025c5c501849512cb6544074"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_leaving_home.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/010_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 7.155,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "86675cb1480e03e64df6650af93d76a05b4d92d8e55fa785597c655b2866eb94"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_musibah.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/053_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 13.44,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "8467490002eb054392366cb8a7f68f9b6a4b2ca7ea94dda54d9e6b3db84000f5"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_new_clothes.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/003_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 12.957,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "8c6571754a160dc71493eeb7dd519c8215eaddda20380556e4e7cedb89dd8739"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_newlywed.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/079_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 7.056,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "f247784d2c5738727db37b362a58b23a102f468582ca9f00bcac9d1ac28e8664"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_non_muslim_sneezes.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/078_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 4.032,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "50ee6b28213b46ed71380ad50819d6c62ad297cfae5d08a7e6e9591a36e4f245"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_qadarullah.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/046_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 4.608,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "d7eccf7e65b09c42f8dae9233745930e78f5e9c2d67e59982cd0778d03b38d92"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_rabbana_atina.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/117_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 10.68,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "0f4e8cf5707afc9b4ff894c0d1e77b8c9c6160e8e2246c76890461bd103c197b"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_rafiq_ala.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/051_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 7.584,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "58797ac1a3e73533c953eff2c0cc106256209a36dd13488ddcdf283bb7020dc9"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_rain.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/064_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 5.04,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "62b622d870c6f879ed46051cae9f1608b47676d12925d2d264aa25b244b79e94"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_reply_ahl_kitab_salam.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/109_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 2.04,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "6a6eda33bdb05ed2028a4fb121c368bab37d898d3c94289cea5da262f5e417c0"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_ruku.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/017_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 8.304,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "b633060ebe2245dd6dc72fd1d7787085d069cf787f4ce09d1543814c945cbe31"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_ruku_sujood_subhanaka.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/017_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 7.008,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "6e637170f39ec5230be346f46a0e77310cc53726d7bb142a78357fde8058166f"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_safa_marwa.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/118_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 20.553,
+      "bitrate": 128000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "fe60f28c32e4855c9e517bd0acf3c885f84202aa07f7413d9c70311107ce66d5"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_seeing_first_fruit.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/076_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 12.888,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "abebfa2b3a9004d08a4956c944d522b77aa9313c4b91f6c214f27b66ccb45232"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_sell_buy_debt_repaid.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/090_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 3.816,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "5479dd16eec1c7653be6559137eb5ca37c66b29711bfe0e57ba56fc604d855f7"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_sneezing.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/077_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 8.256,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "e6312804b1a3dc46954068d4f2e127d62e042643fa9f6edc1b249b57940680b1"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_subbuhun_quddus.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/017_03.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 7.56,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "a9fe375aa24a7879415838b43a635dcdf462b6c89b851cc11a2311d69c725f86"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_sujood.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/019_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 8.928,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "79d6353b2a91fc7b2dd769e94000faec1f18a53df85f0a1d234e139b90befd9f"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_sujood_dhanbi_kullah.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/019_06.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 10.632,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "bd790b5f0227232fced37c291100df486690e0f75a27e70398c01916f9b869a0"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_sujood_laka_sajadtu.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/019_04.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 17.448,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "377fe3275905a72c5162149ca27b3b23be78eb3336e6b23ce788fd75b255b580"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_sujood_ridaka.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/019_07.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 15.288,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "56976ba9a75cbd8eee23469f939d8b43d696e04eb58bc0ed6dbae026408b6b77"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_thanking.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/087_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 3.024,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "74e1a275cd5608cec33f7e55ebe757138f26d490c24ba63805043e0dea2b1e8f"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_thunder.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/062_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.072,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "2e4a0b4be26526b4ef9615a9dc5ee4f6d0a9b88ac38ce7f5e8597068c07da208"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_toilet_enter.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/006_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 7.465,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "db2bd3b18923a8c7efa49824ca892a515a798a190aa0712abd5837bb8cccb231"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_toilet_exit.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/007_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 2.971,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "c4041fed85fc529519d65f1fd6345a15b94345b3cf0dc20b56045c4fee0281f3"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_traveller_to_resident.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/100_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 5.208,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "53ebebd199f2f49762caaabfaa28924c8c6ed770cf8e83f5df6ec92450535295"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_two_light_words.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/130_03.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 4.584,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "187f8fa5781d4c3b26dd3c1a212f82bba36ae0f5e02a6f8930fe2eb9bef5fda4"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_undressing.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/005_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 3.736,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "68f722e075bf8745154da319b358d5da85854c8b80bec3963ec7be4841fa063e"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_vehicle_stumbles.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/005_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 3.736,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "68f722e075bf8745154da319b358d5da85854c8b80bec3963ec7be4841fa063e"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_waswasa.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/040_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 2.581,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "86f2e5ade33ad912d8a3553997e4c2096a379b149b236ad15a1fff729362d8d2"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_waswasa_salah.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/042_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 4.512,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "bb0964fae17ca930d437a491787254b842d7675f17007b6a05f8fda63b7452e9"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_wind.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/061_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 15.048,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "49ef0a96e5025ab3033110ebce8e27b5a5b7776509e209728034b0d4dba2ff97"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_wudu_before.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/005_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 3.736,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "68f722e075bf8745154da319b358d5da85854c8b80bec3963ec7be4841fa063e"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_yamani_hajar.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/117_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 10.68,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "0f4e8cf5707afc9b4ff894c0d1e77b8c9c6160e8e2246c76890461bd103c197b"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_yunus.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/035_03.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 11.136,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "c43d7fea58db53d3143425d87498815cf57aa5ef6cf1fc014cce45a436bce27f"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_allahumma_bika_asbahna.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_05.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 10.32,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "a8ac73ea06fbe603d54d9735b3a5ab107743524b0815a02bb98c09eb317532f9"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_anxiety_distress.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/034_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 14.04,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "378b1e91984dd6fb8cdd6cededb1037408c5ea6eb97aa243bb9d40df3dcadc35"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_bismillah_la_yadurru.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_13.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 8.376,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "5a4b4e53c3bf7830d53b40f3b68213f768257c0540dc6c92f5fecf4c7de2361d"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_hasbiyallah.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_10.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.024,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "343d307800c5ececb0694d1033a0623e5d549aecdef20894e84904a45cb65cf1"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_morning_blessing.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_08.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 11.448,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "53edbb5a8375bf1092134fd4c9e2286d9f008dc739cf1c2c9960c1f672c28327"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_morning_witness.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_07.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 18.216,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "c43f5c9e7bf8e6732ac906eb9b6fc6685446740f38ded031eb7ccfb405936671"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_raditu_billahi.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_14.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.936,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "09ed4b0314769528a6582f5c25393028aea364929787faee69ffc48626a05ff7"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_rahmataka_arju.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/035_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 14.04,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "f395ee89045968239420367644f105dbea74b1368cf5d3740d1f0250a4cbfd91"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_subhanallah_adada_khalqihi.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_21.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 9.144,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "762082a248aa4b392806b419f6c9ebf01d2bec74edce922c21030cbfe8f5f1b1"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_subhanallah_wa_bihamdihi.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_18.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 3.36,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "d1cbaba921741b8d50ce0440aaf33d49ee05d50818ae20e1f44e77ddef928add"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_talqeen.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/126_01.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 3.48,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "bdb8f2b776422e684741ead6d4bc4d9133e5f554256e43d4583a6443f3af0010"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_ya_hayyu_aslih.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/027_15.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 12.6,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "96d1a4f3bc4166b0c8c8381a9b6cd6d2b77c7307b13c04c1b893107894d2524b"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_zawwadakallah.mp3",
+      "source": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/audios/101_02.mp3",
+      "wordingSource": "https://raw.githubusercontent.com/saliouseck2009/hisnul-muslim-mburoja-api/master/invocations.json",
+      "durationSeconds": 7.512,
+      "bitrate": 128000,
+      "sampleRate": 48000,
+      "channels": 2,
+      "sha256": "9b11467186daf1fa363f2b5adff87ded97b3dba3ac1efb943674ee3a576841c2"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_after_salah_help_dhikr.mp3",
+      "source": "https://www.hisnmuslim.com/audio/ar/59.mp3",
+      "wordingSource": "https://www.hisnmuslim.com/api/ar/husn_ar.json",
+      "durationSeconds": 6.042,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "2d16ca7655ed72525b8d461c1a1e939afab9214575f9325ca8773f461ee0582f"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_allahu_rabbi.mp3",
+      "source": "https://www.hisnmuslim.com/audio/ar/125.mp3",
+      "wordingSource": "https://www.hisnmuslim.com/api/ar/husn_ar.json",
+      "durationSeconds": 6.774,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "83f5c58a45c2404c00a8281f3eb28a503ba3797bd5d11650f901c1b328b0e836"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_inni_saim.mp3",
+      "source": "https://www.hisnmuslim.com/audio/ar/186.mp3",
+      "wordingSource": "https://www.hisnmuslim.com/api/ar/husn_ar.json",
+      "durationSeconds": 10.504,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "e4e82c7928b52a841d322ce33ce6dc7af131b054dc9e280c418b23ecf86f35f2"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_love_for_allah.mp3",
+      "source": "https://www.hisnmuslim.com/audio/ar/200.mp3",
+      "wordingSource": "https://www.hisnmuslim.com/api/ar/husn_ar.json",
+      "durationSeconds": 10.096,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "5a155838b8c4c3b65705c84525ebd613bae81bb3ea43dab24a36fb232e99cc48"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_rabba_jibrail.mp3",
+      "source": "https://www.hisnmuslim.com/audio/ar/30.mp3",
+      "wordingSource": "https://www.hisnmuslim.com/api/ar/husn_ar.json",
+      "durationSeconds": 29.97,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "channels": 2,
+      "sha256": "2ebdba133c2b23321ebe2cf754aa3aba5d7cec25be33819bffe881931bb339d4"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_talbiyah.mp3",
+      "source": "https://www.hisnmuslim.com/audio/ar/233.mp3",
+      "wordingSource": "https://www.hisnmuslim.com/api/ar/husn_ar.json",
+      "durationSeconds": 22.624,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "4d838e3d7322825769125df588fe50bfae388b860d95656b5e34ffdea7795e33"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_tashahhud.mp3",
+      "source": "https://www.hisnmuslim.com/audio/ar/52.mp3",
+      "wordingSource": "https://www.hisnmuslim.com/api/ar/husn_ar.json",
+      "durationSeconds": 33.352,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "4a0017363fc6138198ca5b0ed9eecda20840e3f96984daa2cd0dce7d6bb2ee6b"
+    },
+    {
+      "asset": "recitation_audio/dua/dua_traveller_sahar.mp3",
+      "source": "https://www.hisnmuslim.com/audio/ar/215.mp3",
+      "wordingSource": "https://www.hisnmuslim.com/api/ar/husn_ar.json",
+      "durationSeconds": 20.416,
+      "bitrate": 64000,
+      "sampleRate": 24000,
+      "channels": 2,
+      "sha256": "0584af2c870c707f27e89473aad19295e5cc1258d29292d6f40d6278a94d31f7"
+    },
+    {
       "asset": "recitation_audio/dua/dua_abu_bakr.mp3",
       "source": "https://www.islam-a-tous.com/wp-content/uploads/2011/07/24-invocation-Après-le-dernier-Tachahhud-juste-avant-les-salutations-03.mp3",
       "wordingSource": "https://www.islam-a-tous.com/2011/07/22/invocation-apres-le-dernier-tachahhud-juste-avant-les-salutations/",
@@ -339,6 +1209,6 @@
     "dua_alimal_ghayb": "Source includes an extra final sentence",
     "dua_morning_asbahna": "Source contains the longer complete dua",
     "dua_evening_amsayna": "Source contains the longer complete dua",
-    "dua_tahleel_10_fajr": "Source lacks the app's yuhyi wa yumit phrase"
+    "dua_tahleel_10_fajr": "Mirror and hisnmuslim.com transcripts disagree on yuhyi wa yumit for this recording"
   }
 }

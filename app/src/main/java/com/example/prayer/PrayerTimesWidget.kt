@@ -24,6 +24,7 @@ class PrayerTimesWidget : AppWidgetProvider() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        com.example.core.analytics.AppAnalytics.wake(context, "widget", intent.action)
         super.onReceive(context, intent)
         if (intent.action in setOf(ACTION_REFRESH, Intent.ACTION_TIME_CHANGED,
                 Intent.ACTION_TIMEZONE_CHANGED,

@@ -57,7 +57,7 @@ internal object IndicGuDraft1 {
         "Witr" to "વિટર",
         "Today" to "આજે",
         "All five prayers prayed. Alhamdulillah!" to "પાંચ પ્રાર્થનાઓ. અલ્હમદુલિલ્લાહ!",
-        "Tap ✓ or ✗ to log each prayer." to "દરેક પ્રાર્થનામાં લોગ કરવા માટે'Â'અથવા'Â'પર ટેપ કરો.",
+        "Tap ✓ or ✗ to log each prayer." to "દરેક પ્રાર્થનામાં લોગ કરવા માટે'✓'અથવા'✗'પર ટેપ કરો.",
         "Muslimah mode: today is marked as excused from salah." to "મુસ્લિમ મોડઃ આજે સલાહમાંથી માફ તરીકે ચિહ્નિત કરવામાં આવે છે.",
         "Today's salah" to "આજનો સલાહ",
         "This week" to "આ અઠવાડિયે",

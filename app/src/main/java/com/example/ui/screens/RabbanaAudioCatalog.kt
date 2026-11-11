@@ -34,6 +34,7 @@ internal data class RabbanaAudioState(val active: Int? = null, val playing: Bool
 
 internal class RabbanaAudio(context: Context) {
     val state = MutableStateFlow(RabbanaAudioState())
+    private var audioLoad: com.example.core.analytics.AppAnalytics.AudioLoad? = null
     private val engine = lazy { StreamPlayer.build(context.applicationContext).apply {
         setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH).build(), true)
@@ -42,13 +43,18 @@ internal class RabbanaAudio(context: Context) {
             override fun onEvents(player: Player, events: Player.Events) {
                 if (state.value.active == null || state.value.failed) return
                 if (events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED) && player.playbackState == Player.STATE_ENDED) {
+                    com.example.core.analytics.AppAnalytics.mediaState("rabbana_audio", "completed")
+                    state.value = RabbanaAudioState()
                     stop()
                     return
                 }
+                if (player.playbackState == Player.STATE_READY) audioLoad?.ready()
                 state.value = state.value.copy(playing = player.playWhenReady)
             }
             override fun onPlayerError(error: PlaybackException) {
                 if (state.value.active == null) return
+                audioLoad?.failed()
+                com.example.core.analytics.AppAnalytics.mediaState("rabbana_audio", "failed", "playback_error")
                 state.value = state.value.copy(playing = false, failed = true)
             }
         })
@@ -59,10 +65,13 @@ internal class RabbanaAudio(context: Context) {
     fun play(number: Int, slow: Boolean) {
         val current = state.value
         if (current.active == number && !current.failed) {
+            com.example.core.analytics.AppAnalytics.media("rabbana_audio", if (player.playWhenReady) "pause" else "resume")
             if (player.playWhenReady) player.pause() else player.play()
             return
         }
         val uri = RabbanaAudioCatalog.assetUri(number) ?: return
+        com.example.core.analytics.AppAnalytics.media("rabbana_audio", if (current.active == number) "retry" else "play")
+        com.example.core.analytics.AppAnalytics.content("rabbana_audio", "rabbana_$number", "play")
         com.example.quran.QuranAudioManager.stop()
         com.example.quran.TafsirAudioManager.stop()
         com.example.naat.NaatAudioManager.stop()
@@ -70,13 +79,15 @@ internal class RabbanaAudio(context: Context) {
         state.value = RabbanaAudioState(active = number, playing = true)
         player.setPlaybackSpeed(if (slow) .75f else 1f)
         player.setMediaItem(MediaItem.fromUri(uri))
+        audioLoad = com.example.core.analytics.AppAnalytics.audioLoad("rabbana_audio")
         player.prepare()
         player.play()
     }
 
-    fun setSlow(slow: Boolean) { if (engine.isInitialized()) player.setPlaybackSpeed(if (slow) .75f else 1f) }
+    fun setSlow(slow: Boolean) { com.example.core.analytics.AppAnalytics.setting("rabbana_audio_slow", slow.toString()); if (engine.isInitialized()) player.setPlaybackSpeed(if (slow) .75f else 1f) }
 
     fun stop() {
+        if (state.value.active != null) com.example.core.analytics.AppAnalytics.media("rabbana_audio", "stop")
         // Reset first so the listener ignores the events the player emits while stopping.
         state.value = RabbanaAudioState()
         if (engine.isInitialized()) { player.pause(); player.stop() }

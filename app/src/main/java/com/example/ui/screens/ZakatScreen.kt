@@ -33,8 +33,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.ui.components.ProvenanceCard
+import com.example.ui.components.rememberIsOnline
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import com.example.ui.localization.LocalAppLocale
 import com.example.ui.localization.LocalizedText
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.localizedUiText
 import java.math.BigDecimal
 import java.text.DecimalFormatSymbols
@@ -124,6 +128,7 @@ private fun SharedPreferences.saveZakatInput(input: ZakatInput) {
 @Composable
 internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
     com.example.core.analytics.AnalyticsScreen("zakat_screen")
+    TourScreen("calc_zakat")
 
     val prefs = rememberToolPrefs()
     val context = LocalContext.current
@@ -226,10 +231,10 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
                     color = if (result.due != null) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testTag("zakat_due")
+                    modifier = Modifier.testTag("zakat_due").tourTarget("calc_zakat_due")
                 )
                 Spacer(Modifier.height(8.dp))
-                StatusPill(result.status, statusText, accent)
+                Box(Modifier.tourTarget("calc_zakat_status")) { StatusPill(result.status, statusText, accent) }
                 if (result.status == ZakatStatus.AWAITING_HAWL) {
                     Spacer(Modifier.height(6.dp))
                     Text(
@@ -241,7 +246,7 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
                 val progress = result.nisabProgress
                 if (progress != null && result.status != ZakatStatus.EMPTY && result.nisab != null) {
                     Spacer(Modifier.height(14.dp))
-                    NisabMeter(progress, result.net, result.nisab, basisWeight, accent, ::money)
+                    Box(Modifier.tourTarget("calc_zakat_nisab_meter")) { NisabMeter(progress, result.net, result.nisab, basisWeight, accent, ::money) }
                 }
                 HorizontalDivider(Modifier.padding(vertical = 12.dp), color = accent.copy(alpha = 0.2f))
                 SummaryLine("Total assets", money(result.assets))
@@ -259,17 +264,18 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
                             val send = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_SUBJECT, shareTitle)
-                                putExtra(Intent.EXTRA_TEXT, text)
+                                putExtra(Intent.EXTRA_TEXT, com.example.core.share.AppShareLink.withLink(context, text))
                             }
                             context.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                         },
-                        enabled = result.status != ZakatStatus.EMPTY
+                        enabled = result.status != ZakatStatus.EMPTY,
+                        modifier = Modifier.tourTarget("calc_zakat_share")
                     ) {
                         Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         LocalizedText("Share result")
                     }
-                    TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("zakat_screen", "open_clear_figures", "tap"); confirmClear = true }, enabled = result.status != ZakatStatus.EMPTY || form.debts.isNotBlank()) {
+                    TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("zakat_screen", "open_clear_figures", "tap"); confirmClear = true }, enabled = result.status != ZakatStatus.EMPTY || form.debts.isNotBlank(), modifier = Modifier.tourTarget("calc_zakat_clear")) {
                         Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         LocalizedText("Clear figures")
@@ -282,8 +288,8 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
             ToolCard {
                 StepTitle(1, "Today's rates", accent)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CurrencyPicker(currency, currencies, { currency = it }, Modifier.weight(1f))
-                    SingleChoiceSegmentedButtonRow(Modifier.weight(1.4f)) {
+                    CurrencyPicker(currency, currencies, { currency = it }, Modifier.weight(1f).tourTarget("calc_zakat_currency"))
+                    SingleChoiceSegmentedButtonRow(Modifier.weight(1.4f).tourTarget("calc_zakat_unit")) {
                         MetalUnit.entries.forEachIndexed { index, option ->
                             SegmentedButton(
                                 selected = form.unit == option,
@@ -302,7 +308,8 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
                     { updateRates(form.copy(goldRate = it)) },
                     prefix = currency,
                     suffix = "/ $unitLabel",
-                    isError = result.status == ZakatStatus.NEED_GOLD_RATE
+                    isError = result.status == ZakatStatus.NEED_GOLD_RATE,
+                    modifier = Modifier.tourTarget("calc_zakat_gold_rate")
                 )
                 MoneyField(
                     grouping,
@@ -311,7 +318,8 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
                     { updateRates(form.copy(silverRate = it)) },
                     prefix = currency,
                     suffix = "/ $unitLabel",
-                    isError = result.status == ZakatStatus.NEED_SILVER_RATE
+                    isError = result.status == ZakatStatus.NEED_SILVER_RATE,
+                    modifier = Modifier.tourTarget("calc_zakat_silver_rate")
                 )
                 if (rateSource == ZakatRateSource.LIVE) {
                     LiveRateStatus(
@@ -336,7 +344,7 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f)
                         )
-                        TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("zakat_screen", "use_live_rates", "tap"); rateSource = ZakatRateSource.LIVE; retry++ }) {
+                        TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("zakat_screen", "use_live_rates", "tap"); rateSource = ZakatRateSource.LIVE; retry++ }, modifier = Modifier.tourTarget("calc_zakat_use_live")) {
                             Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
                             LocalizedText("Use live rates")
@@ -355,7 +363,7 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
             ToolCard {
                 StepTitle(2, "Gold & silver", accent)
                 LocalizedText("Gold purity", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().tourTarget("calc_zakat_karat")) {
                     GoldKarat.entries.forEachIndexed { index, option ->
                         SegmentedButton(
                             selected = form.goldKarat == option,
@@ -371,7 +379,8 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
                     form.goldWeight,
                     { form = form.copy(goldWeight = it) },
                     suffix = unitLabel,
-                    supporting = result.goldValue?.takeIf { it.signum() > 0 }?.let { "≈ ${money(it)}" }
+                    supporting = result.goldValue?.takeIf { it.signum() > 0 }?.let { "≈ ${money(it)}" },
+                    modifier = Modifier.tourTarget("calc_zakat_gold_weight")
                 )
                 MoneyField(
                     grouping,
@@ -379,7 +388,8 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
                     form.silverWeight,
                     { form = form.copy(silverWeight = it) },
                     suffix = unitLabel,
-                    supporting = result.silverValue?.takeIf { it.signum() > 0 }?.let { "≈ ${money(it)}" }
+                    supporting = result.silverValue?.takeIf { it.signum() > 0 }?.let { "≈ ${money(it)}" },
+                    modifier = Modifier.tourTarget("calc_zakat_silver_weight")
                 )
                 LocalizedText(
                     "Enter the weight and pick the karat (most jewellery is 22K or 21K). In Hanafi fiqh jewellery is included, even if it is worn; leave out stones and non-gold parts.",
@@ -392,16 +402,16 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
         item(key = "assets") {
             ToolCard {
                 StepTitle(3, "Cash & other assets", accent)
-                MoneyField(grouping, "Cash & bank balance", form.cash, { form = form.copy(cash = it) }, prefix = currency)
-                MoneyField(grouping, "Business stock", form.business, { form = form.copy(business = it) }, prefix = currency)
-                MoneyField(grouping, "Money owed to you", form.receivables, { form = form.copy(receivables = it) }, prefix = currency)
+                MoneyField(grouping, "Cash & bank balance", form.cash, { form = form.copy(cash = it) }, prefix = currency, modifier = Modifier.tourTarget("calc_zakat_cash"))
+                MoneyField(grouping, "Business stock", form.business, { form = form.copy(business = it) }, prefix = currency, modifier = Modifier.tourTarget("calc_zakat_business"))
+                MoneyField(grouping, "Money owed to you", form.receivables, { form = form.copy(receivables = it) }, prefix = currency, modifier = Modifier.tourTarget("calc_zakat_receivables"))
                 AnimatedVisibility(showMoreAssets) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        MoneyField(grouping, "Zakatable investments and shares", form.investments, { form = form.copy(investments = it) }, prefix = currency)
-                        MoneyField(grouping, "Other zakatable assets", form.otherAssets, { form = form.copy(otherAssets = it) }, prefix = currency)
+                        MoneyField(grouping, "Zakatable investments and shares", form.investments, { form = form.copy(investments = it) }, prefix = currency, modifier = Modifier.tourTarget("calc_zakat_investments"))
+                        MoneyField(grouping, "Other zakatable assets", form.otherAssets, { form = form.copy(otherAssets = it) }, prefix = currency, modifier = Modifier.tourTarget("calc_zakat_other_assets"))
                     }
                 }
-                ExpandToggle(showMoreAssets, "More assets", "Hide more assets") { showMoreAssets = !showMoreAssets }
+                ExpandToggle(showMoreAssets, "More assets", "Hide more assets", Modifier.tourTarget("calc_zakat_more_assets")) { showMoreAssets = !showMoreAssets }
                 LocalizedText(
                     "Enter current values in one currency. Include receivables you expect to recover; avoid counting an asset twice.",
                     style = MaterialTheme.typography.bodySmall,
@@ -413,11 +423,11 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
         item(key = "liabilities") {
             ToolCard {
                 StepTitle(4, "What you owe", accent)
-                MoneyField(grouping, "Debts due now", form.debts, { form = form.copy(debts = it) }, prefix = currency)
+                MoneyField(grouping, "Debts due now", form.debts, { form = form.copy(debts = it) }, prefix = currency, modifier = Modifier.tourTarget("calc_zakat_debts"))
                 AnimatedVisibility(showMoreLiabilities) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        MoneyField(grouping, "Bills and taxes already due", form.bills, { form = form.copy(bills = it) }, prefix = currency)
-                        MoneyField(grouping, "Upcoming principal instalments", form.installments, { form = form.copy(installments = it) }, prefix = currency)
+                        MoneyField(grouping, "Bills and taxes already due", form.bills, { form = form.copy(bills = it) }, prefix = currency, modifier = Modifier.tourTarget("calc_zakat_bills"))
+                        MoneyField(grouping, "Upcoming principal instalments", form.installments, { form = form.copy(installments = it) }, prefix = currency, modifier = Modifier.tourTarget("calc_zakat_instalments"))
                         LocalizedText(
                             "For long-term debts, enter only eligible near-term principal payments, not the full balance or interest. Scholars differ on the deductible period.",
                             style = MaterialTheme.typography.bodySmall,
@@ -425,14 +435,14 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
                         )
                     }
                 }
-                ExpandToggle(showMoreLiabilities, "More liabilities", "Hide more liabilities") { showMoreLiabilities = !showMoreLiabilities }
+                ExpandToggle(showMoreLiabilities, "More liabilities", "Hide more liabilities", Modifier.tourTarget("calc_zakat_more_liabilities")) { showMoreLiabilities = !showMoreLiabilities }
             }
         }
 
         item(key = "nisab") {
             ToolCard {
                 StepTitle(5, "Nisab & lunar year", accent)
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().tourTarget("calc_zakat_nisab_mode")) {
                     ZakatNisabMode.entries.forEachIndexed { index, option ->
                         SegmentedButton(
                             selected = form.nisabMode == option,
@@ -492,10 +502,10 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
                         Switch(
                             checked = form.lunarYearPassed,
                             onCheckedChange = { com.example.core.analytics.AppAnalytics.interaction("zakat_screen", "toggle_lunar_year_passed", "toggle"); form = form.copy(lunarYearPassed = it) },
-                            modifier = Modifier.testTag("zakat_hawl")
+                            modifier = Modifier.testTag("zakat_hawl").tourTarget("calc_zakat_lunar_year")
                         )
                     }
-                    OutlinedButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("zakat_screen", "open_hawl_date_picker", "tap"); pickHawlDate = true }, modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("zakat_screen", "open_hawl_date_picker", "tap"); pickHawlDate = true }, modifier = Modifier.fillMaxWidth().tourTarget("calc_zakat_set_date")) {
                         Icon(Icons.Default.Event, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         LocalizedText("Set my zakat date")
@@ -510,10 +520,10 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
         }
 
         item(key = "hadith_rate") {
-            ProvenanceCard(
+            Box(Modifier.tourTarget("calc_zakat_hadith")) { ProvenanceCard(
                 sourceText = "Give a quarter of a tenth: one dirham from every forty.",
                 collectionOrReference = "Sunan Abi Dawud 1572"
-            )
+            ) }
         }
         item(key = "hadith_nisab") {
             ProvenanceCard(
@@ -522,7 +532,7 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
             )
         }
         item(key = "note") {
-            InfoNote("Your figures are saved only on this phone. This is an estimate; for personal cases, ask a trusted mufti.")
+            Box(Modifier.tourTarget("calc_zakat_privacy")) { InfoNote("Your figures are saved only on this phone. This is an estimate; for personal cases, ask a trusted mufti.") }
         }
     }
 
@@ -536,7 +546,7 @@ internal fun ZakatScreen(onBack: () -> Unit, modifier: Modifier) {
                 hawlStart = HijriCalendarHelper.getHijriDate(calendar).let { HijriDay(it.year, it.month, it.day) }
                 pickHawlDate = false
             },
-            onDismiss = { pickHawlDate = false }
+            onDismiss = { com.example.core.analytics.AppAnalytics.interaction("zakat_screen", "dismiss_hawl_date", "dismiss"); pickHawlDate = false }
         )
     }
 
@@ -649,8 +659,8 @@ private fun StepTitle(number: Int, title: String, accent: Color) {
 }
 
 @Composable
-private fun ExpandToggle(expanded: Boolean, showLabel: String, hideLabel: String, onClick: () -> Unit) {
-    TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("zakat_screen", "toggle_more_fields", onClick), contentPadding = PaddingValues(horizontal = 4.dp)) {
+private fun ExpandToggle(expanded: Boolean, showLabel: String, hideLabel: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("zakat_screen", "toggle_more_fields", onClick), modifier = modifier, contentPadding = PaddingValues(horizontal = 4.dp)) {
         Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(4.dp))
         LocalizedText(if (expanded) hideLabel else showLabel)
@@ -690,7 +700,8 @@ private fun MoneyField(
     prefix: String? = null,
     suffix: String? = null,
     supporting: String? = null,
-    isError: Boolean = false
+    isError: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
     OutlinedTextField(
         value = value,
@@ -721,7 +732,7 @@ private fun MoneyField(
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
         shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     )
 }
 
@@ -771,15 +782,19 @@ private fun SummaryLine(label: String, value: String, emphasize: Boolean = false
 
 @Composable
 private fun LiveRateStatus(fetch: RateFetch, date: String?, accent: Color, onRefresh: () -> Unit) {
+    // A failed fetch while online is a server or timeout problem, not a missing connection.
+    val isOnline by rememberIsOnline()
     val (text, color) = when {
         fetch == RateFetch.LOADING -> localizedUiText("Getting today's live rates…") to MaterialTheme.colorScheme.onSurfaceVariant
+        fetch == RateFetch.FAILED && date != null && isOnline ->
+            localizedUiTemplate("Could not get live rates. Using saved rates of {date}", "date" to date) to MaterialTheme.colorScheme.error
         fetch == RateFetch.FAILED && date != null ->
             "${localizedUiText("No internet. Using saved rates of")} $date" to MaterialTheme.colorScheme.error
         fetch == RateFetch.FAILED -> localizedUiText("Could not get live rates. Check the internet or type today's rates.") to MaterialTheme.colorScheme.error
         date != null -> "${localizedUiText("Live rates")} · $date" to SuccessGreen
         else -> localizedUiText("Getting today's live rates…") to MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("zakat_rate_status")) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("zakat_rate_status").tourTarget("calc_zakat_live_status")) {
         if (fetch == RateFetch.LOADING) {
             CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = accent)
         } else {
@@ -792,7 +807,7 @@ private fun LiveRateStatus(fetch: RateFetch, date: String?, accent: Color, onRef
         }
         Spacer(Modifier.width(8.dp))
         Text(text, style = MaterialTheme.typography.bodySmall, color = color, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-        IconButton(onClick = onRefresh, enabled = fetch != RateFetch.LOADING) {
+        IconButton(onClick = onRefresh, enabled = fetch != RateFetch.LOADING, modifier = Modifier.tourTarget("calc_zakat_refresh")) {
             Icon(Icons.Default.Refresh, contentDescription = localizedUiText("Refresh rates"))
         }
     }
@@ -810,7 +825,7 @@ private fun HawlTracker(
     onChange: () -> Unit,
     onRemove: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("zakat_hawl_tracker")) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("zakat_hawl_tracker").tourTarget("calc_zakat_hawl_tracker")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Event, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(10.dp))
@@ -819,8 +834,8 @@ private fun HawlTracker(
                 Text(startHijri, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                 Text(startGregorian, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("zakat_screen", "change_hawl_date", onChange)) { LocalizedText("Change") }
-            IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("zakat_screen", "remove_hawl_date", onRemove)) {
+            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("zakat_screen", "change_hawl_date", onChange), modifier = Modifier.tourTarget("calc_zakat_change_date")) { LocalizedText("Change") }
+            IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("zakat_screen", "remove_hawl_date", onRemove), modifier = Modifier.tourTarget("calc_zakat_remove_date")) {
                 Icon(Icons.Default.Close, contentDescription = localizedUiText("Remove zakat date"))
             }
         }

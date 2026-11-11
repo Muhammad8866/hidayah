@@ -1,5 +1,7 @@
 package com.example.hadith
 
+import com.example.core.search.AppSearch
+
 enum class IndexSort(val label: String) {
     PAGE_ASC("Page first-last"), PAGE_DESC("Page last-first"),
     TITLE_ASC("Title A-Z"), TITLE_DESC("Title Z-A")
@@ -26,19 +28,36 @@ object BookIndex {
         .distinctBy { it.title to it.page }
         .sortedBy { it.page }
 
-    /** Nesting only means something in reading order, so every other view is a flat list. */
+    /**
+     * Nesting only means something in reading order, so every other view is a flat list. A search
+     * runs the app's shared engine over the titles ([AppSearch]: any spelling or script, typos, a
+     * half-typed word, any word order). In the default page order the best match comes first; any
+     * other order sorts the matches. A query with no searchable word shows the whole index.
+     */
     fun visible(entries: List<IndexEntry>, query: String, sort: IndexSort): List<IndexEntry> {
         val needle = query.trim()
-        val nested = needle.isEmpty() && sort == IndexSort.PAGE_ASC
-        val matching = entries.filter { it.title.contains(needle, ignoreCase = true) }
-            .let { list -> if (nested) list else list.map { it.copy(depth = 0) } }
+        // The engine reads only the start of a query, so a pasted page is not folded whole here.
+        val searching = BookSearchText.normalize(needle.take(SEARCHED_CHARS)).isNotEmpty()
+        val matching = if (searching) search(entries).search(needle) else entries
+        val nested = !searching && sort == IndexSort.PAGE_ASC
+        val shown = if (nested) matching else matching.map { it.copy(depth = 0) }
         val byTitle = compareBy<IndexEntry, String>(BookTitles.naturalOrder) { it.title }.thenBy { it.page }
         return when (sort) {
-            IndexSort.PAGE_ASC -> matching
-            IndexSort.PAGE_DESC -> matching.sortedByDescending { it.page }
-            IndexSort.TITLE_ASC -> matching.sortedWith(byTitle)
-            IndexSort.TITLE_DESC -> matching.sortedWith(byTitle.reversed())
+            IndexSort.PAGE_ASC -> shown
+            IndexSort.PAGE_DESC -> shown.sortedByDescending { it.page }
+            IndexSort.TITLE_ASC -> shown.sortedWith(byTitle)
+            IndexSort.TITLE_DESC -> shown.sortedWith(byTitle.reversed())
         }
+    }
+
+    private const val SEARCHED_CHARS = 200
+
+    /** The open book's index, made searchable once and reused for every keystroke. */
+    @Volatile private var lastSearch: Pair<List<IndexEntry>, AppSearch.Ranker<IndexEntry>>? = null
+
+    private fun search(entries: List<IndexEntry>): AppSearch.Ranker<IndexEntry> {
+        lastSearch?.let { (list, ranker) -> if (list === entries) return ranker }
+        return AppSearch.Ranker(entries) { AppSearch.Fields(title = it.title) }.also { lastSearch = entries to it }
     }
 
     /** The entry being read on [page]: the deepest heading that starts on or before it. */

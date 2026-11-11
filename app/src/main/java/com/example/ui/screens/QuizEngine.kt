@@ -113,9 +113,9 @@ internal class QuizEngine(
         fun sources(quran: QuranCorpus?, hadith: HadithCorpus?, language: String): List<QuizSource> {
             val surahs = FullQuranCatalog.surahs
             return listOfNotNull(
-                quran?.let { QuranSurahOfAyahSource(it, surahs) },
+                quran?.let { QuranSurahOfAyahSource(it, surahs, language) },
                 quran?.let { QuranNextAyahSource(it) },
-                quran?.let { QuranMissingWordSource(it, surahs) },
+                quran?.let { QuranMissingWordSource(it, surahs, language) },
                 hadith?.let { HadithCompletionSource(it) },
                 hadith?.let { HadithMissingWordSource(it, quran) },
                 SurahFactsSource(surahs, language),

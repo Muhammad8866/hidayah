@@ -32,7 +32,8 @@ class QuranReaderPreferencesTest {
         val other = QuranReaderPreferences(context, QuranPdfCatalog.byId("lines_9")!!)
         assertTrue(other.bookmarks().isEmpty())
         assertTrue(other.favorites().isEmpty())
-        assertEquals("gallery", other.readingMode())
+        // An edition with no saved choice opens in the app's default page-turn mode.
+        assertEquals("page", other.readingMode())
         reopened.toggleBookmark(10)
         reopened.toggleFavorite(2)
         assertTrue(reader.bookmarks().isEmpty())

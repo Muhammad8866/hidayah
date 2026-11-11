@@ -1,0 +1,1706 @@
+{
+ "audio": "Word drills stream the Quran.com word-by-word recitation for each surah:ayah:word ref, the same source the app's Quran word-by-word reader uses. Letter and harakat drills have no audio.",
+ "lessons": [
+  {
+   "id": "letters",
+   "title": "Single letters",
+   "note": "The Arabic alphabet has 29 letters. Learn each letter's shape and name, and pronounce it from its correct point of articulation.",
+   "items": [
+    {
+     "ar": "ا",
+     "tr": "Alif"
+    },
+    {
+     "ar": "ب",
+     "tr": "Ba"
+    },
+    {
+     "ar": "ت",
+     "tr": "Ta"
+    },
+    {
+     "ar": "ث",
+     "tr": "Tha"
+    },
+    {
+     "ar": "ج",
+     "tr": "Jeem"
+    },
+    {
+     "ar": "ح",
+     "tr": "Ha"
+    },
+    {
+     "ar": "خ",
+     "tr": "Kha"
+    },
+    {
+     "ar": "د",
+     "tr": "Dal"
+    },
+    {
+     "ar": "ذ",
+     "tr": "Dhal"
+    },
+    {
+     "ar": "ر",
+     "tr": "Ra"
+    },
+    {
+     "ar": "ز",
+     "tr": "Zay"
+    },
+    {
+     "ar": "س",
+     "tr": "Seen"
+    },
+    {
+     "ar": "ش",
+     "tr": "Sheen"
+    },
+    {
+     "ar": "ص",
+     "tr": "Sad"
+    },
+    {
+     "ar": "ض",
+     "tr": "Dad"
+    },
+    {
+     "ar": "ط",
+     "tr": "Taa"
+    },
+    {
+     "ar": "ظ",
+     "tr": "Zaa"
+    },
+    {
+     "ar": "ع",
+     "tr": "Ain"
+    },
+    {
+     "ar": "غ",
+     "tr": "Ghain"
+    },
+    {
+     "ar": "ف",
+     "tr": "Fa"
+    },
+    {
+     "ar": "ق",
+     "tr": "Qaf"
+    },
+    {
+     "ar": "ك",
+     "tr": "Kaf"
+    },
+    {
+     "ar": "ل",
+     "tr": "Lam"
+    },
+    {
+     "ar": "م",
+     "tr": "Meem"
+    },
+    {
+     "ar": "ن",
+     "tr": "Noon"
+    },
+    {
+     "ar": "و",
+     "tr": "Waw"
+    },
+    {
+     "ar": "ه",
+     "tr": "Haa"
+    },
+    {
+     "ar": "ء",
+     "tr": "Hamzah"
+    },
+    {
+     "ar": "ي",
+     "tr": "Ya"
+    }
+   ]
+  },
+  {
+   "id": "joined",
+   "title": "Joined letter forms",
+   "note": "Most letters change shape when joined: beginning, middle and end forms. Six letters never join to the letter after them.",
+   "items": [
+    {
+     "ar": "ـا",
+     "tr": "Alif"
+    },
+    {
+     "ar": "بـ  ـبـ  ـب",
+     "tr": "Ba"
+    },
+    {
+     "ar": "تـ  ـتـ  ـت",
+     "tr": "Ta"
+    },
+    {
+     "ar": "ثـ  ـثـ  ـث",
+     "tr": "Tha"
+    },
+    {
+     "ar": "جـ  ـجـ  ـج",
+     "tr": "Jeem"
+    },
+    {
+     "ar": "حـ  ـحـ  ـح",
+     "tr": "Ha"
+    },
+    {
+     "ar": "خـ  ـخـ  ـخ",
+     "tr": "Kha"
+    },
+    {
+     "ar": "ـد",
+     "tr": "Dal"
+    },
+    {
+     "ar": "ـذ",
+     "tr": "Dhal"
+    },
+    {
+     "ar": "ـر",
+     "tr": "Ra"
+    },
+    {
+     "ar": "ـز",
+     "tr": "Zay"
+    },
+    {
+     "ar": "سـ  ـسـ  ـس",
+     "tr": "Seen"
+    },
+    {
+     "ar": "شـ  ـشـ  ـش",
+     "tr": "Sheen"
+    },
+    {
+     "ar": "صـ  ـصـ  ـص",
+     "tr": "Sad"
+    },
+    {
+     "ar": "ضـ  ـضـ  ـض",
+     "tr": "Dad"
+    },
+    {
+     "ar": "طـ  ـطـ  ـط",
+     "tr": "Taa"
+    },
+    {
+     "ar": "ظـ  ـظـ  ـظ",
+     "tr": "Zaa"
+    },
+    {
+     "ar": "عـ  ـعـ  ـع",
+     "tr": "Ain"
+    },
+    {
+     "ar": "غـ  ـغـ  ـغ",
+     "tr": "Ghain"
+    },
+    {
+     "ar": "فـ  ـفـ  ـف",
+     "tr": "Fa"
+    },
+    {
+     "ar": "قـ  ـقـ  ـق",
+     "tr": "Qaf"
+    },
+    {
+     "ar": "كـ  ـكـ  ـك",
+     "tr": "Kaf"
+    },
+    {
+     "ar": "لـ  ـلـ  ـل",
+     "tr": "Lam"
+    },
+    {
+     "ar": "مـ  ـمـ  ـم",
+     "tr": "Meem"
+    },
+    {
+     "ar": "نـ  ـنـ  ـن",
+     "tr": "Noon"
+    },
+    {
+     "ar": "ـو",
+     "tr": "Waw"
+    },
+    {
+     "ar": "هـ  ـهـ  ـه",
+     "tr": "Haa"
+    },
+    {
+     "ar": "يـ  ـيـ  ـي",
+     "tr": "Ya"
+    }
+   ]
+  },
+  {
+   "id": "muqattaat",
+   "title": "Huroof Muqatta'at",
+   "note": "Some surahs open with disjoined letters, read by their letter names. Tap a word to hear it recited from the Quran.",
+   "items": [
+    {
+     "ar": "الٓمّٓۚ",
+     "tr": "alif-lam-meem",
+     "ref": "2:1:1"
+    },
+    {
+     "ar": "الۤمّۤصۤ",
+     "tr": "alif-lam-meem-sad",
+     "ref": "7:1:1"
+    },
+    {
+     "ar": "الٓر",
+     "tr": "alif-lam-ra",
+     "ref": "10:1:1"
+    },
+    {
+     "ar": "الٓـمّٓرٰ",
+     "tr": "alif-lam-meem-ra",
+     "ref": "13:1:1"
+    },
+    {
+     "ar": "كٓهٰيٰـعٓـصٓ ۚ",
+     "tr": "kaf-ha-ya-ain-sad",
+     "ref": "19:1:1"
+    },
+    {
+     "ar": "طٰهٰ ۚ",
+     "tr": "tta-ha",
+     "ref": "20:1:1"
+    },
+    {
+     "ar": "طٰسٓمّٓ",
+     "tr": "tta-seen-meem",
+     "ref": "26:1:1"
+    },
+    {
+     "ar": "طٰسٓ",
+     "tr": "tta-seen",
+     "ref": "27:1:1"
+    },
+    {
+     "ar": "يٰسٓ ۚ",
+     "tr": "ya-seen",
+     "ref": "36:1:1"
+    },
+    {
+     "ar": "صٓ",
+     "tr": "sad",
+     "ref": "38:1:1"
+    },
+    {
+     "ar": "حٰمٓ ۚ",
+     "tr": "hha-meem",
+     "ref": "40:1:1"
+    },
+    {
+     "ar": "عٓسٓقٓ",
+     "tr": "ain-seen-qaf",
+     "ref": "42:2:1"
+    },
+    {
+     "ar": "قٓ ۚ",
+     "tr": "qaf",
+     "ref": "50:1:1"
+    },
+    {
+     "ar": "نٓ",
+     "tr": "noon",
+     "ref": "68:1:1"
+    }
+   ]
+  },
+  {
+   "id": "harakat",
+   "title": "Harakat: Fatha, Kasra, Damma",
+   "note": "Fatha gives an 'a' sound, kasra an 'i' sound and damma a 'u' sound. Read each one short, without stretching it.",
+   "items": [
+    {
+     "ar": "بَ",
+     "tr": "ba"
+    },
+    {
+     "ar": "بِ",
+     "tr": "bi"
+    },
+    {
+     "ar": "بُ",
+     "tr": "bu"
+    },
+    {
+     "ar": "تَ",
+     "tr": "ta"
+    },
+    {
+     "ar": "تِ",
+     "tr": "ti"
+    },
+    {
+     "ar": "تُ",
+     "tr": "tu"
+    },
+    {
+     "ar": "ثَ",
+     "tr": "ta"
+    },
+    {
+     "ar": "ثِ",
+     "tr": "ti"
+    },
+    {
+     "ar": "ثُ",
+     "tr": "tu"
+    },
+    {
+     "ar": "جَ",
+     "tr": "ja"
+    },
+    {
+     "ar": "جِ",
+     "tr": "ji"
+    },
+    {
+     "ar": "جُ",
+     "tr": "ju"
+    },
+    {
+     "ar": "حَ",
+     "tr": "ha"
+    },
+    {
+     "ar": "حِ",
+     "tr": "hi"
+    },
+    {
+     "ar": "حُ",
+     "tr": "hu"
+    },
+    {
+     "ar": "خَ",
+     "tr": "ka"
+    },
+    {
+     "ar": "خِ",
+     "tr": "ki"
+    },
+    {
+     "ar": "خُ",
+     "tr": "ku"
+    },
+    {
+     "ar": "دَ",
+     "tr": "da"
+    },
+    {
+     "ar": "دِ",
+     "tr": "di"
+    },
+    {
+     "ar": "دُ",
+     "tr": "du"
+    },
+    {
+     "ar": "ذَ",
+     "tr": "da"
+    },
+    {
+     "ar": "ذِ",
+     "tr": "di"
+    },
+    {
+     "ar": "ذُ",
+     "tr": "du"
+    },
+    {
+     "ar": "رَ",
+     "tr": "ra"
+    },
+    {
+     "ar": "رِ",
+     "tr": "ri"
+    },
+    {
+     "ar": "رُ",
+     "tr": "ru"
+    },
+    {
+     "ar": "زَ",
+     "tr": "za"
+    },
+    {
+     "ar": "زِ",
+     "tr": "zi"
+    },
+    {
+     "ar": "زُ",
+     "tr": "zu"
+    },
+    {
+     "ar": "سَ",
+     "tr": "sa"
+    },
+    {
+     "ar": "سِ",
+     "tr": "si"
+    },
+    {
+     "ar": "سُ",
+     "tr": "su"
+    },
+    {
+     "ar": "شَ",
+     "tr": "sa"
+    },
+    {
+     "ar": "شِ",
+     "tr": "si"
+    },
+    {
+     "ar": "شُ",
+     "tr": "su"
+    },
+    {
+     "ar": "صَ",
+     "tr": "sa"
+    },
+    {
+     "ar": "صِ",
+     "tr": "si"
+    },
+    {
+     "ar": "صُ",
+     "tr": "su"
+    },
+    {
+     "ar": "ضَ",
+     "tr": "da"
+    },
+    {
+     "ar": "ضِ",
+     "tr": "di"
+    },
+    {
+     "ar": "ضُ",
+     "tr": "du"
+    },
+    {
+     "ar": "طَ",
+     "tr": "ta"
+    },
+    {
+     "ar": "طِ",
+     "tr": "ti"
+    },
+    {
+     "ar": "طُ",
+     "tr": "tu"
+    },
+    {
+     "ar": "ظَ",
+     "tr": "za"
+    },
+    {
+     "ar": "ظِ",
+     "tr": "zi"
+    },
+    {
+     "ar": "ظُ",
+     "tr": "zu"
+    },
+    {
+     "ar": "عَ",
+     "tr": "aa"
+    },
+    {
+     "ar": "عِ",
+     "tr": "ai"
+    },
+    {
+     "ar": "عُ",
+     "tr": "au"
+    },
+    {
+     "ar": "غَ",
+     "tr": "ga"
+    },
+    {
+     "ar": "غِ",
+     "tr": "gi"
+    },
+    {
+     "ar": "غُ",
+     "tr": "gu"
+    },
+    {
+     "ar": "فَ",
+     "tr": "fa"
+    },
+    {
+     "ar": "فِ",
+     "tr": "fi"
+    },
+    {
+     "ar": "فُ",
+     "tr": "fu"
+    },
+    {
+     "ar": "قَ",
+     "tr": "qa"
+    },
+    {
+     "ar": "قِ",
+     "tr": "qi"
+    },
+    {
+     "ar": "قُ",
+     "tr": "qu"
+    },
+    {
+     "ar": "كَ",
+     "tr": "ka"
+    },
+    {
+     "ar": "كِ",
+     "tr": "ki"
+    },
+    {
+     "ar": "كُ",
+     "tr": "ku"
+    },
+    {
+     "ar": "لَ",
+     "tr": "la"
+    },
+    {
+     "ar": "لِ",
+     "tr": "li"
+    },
+    {
+     "ar": "لُ",
+     "tr": "lu"
+    },
+    {
+     "ar": "مَ",
+     "tr": "ma"
+    },
+    {
+     "ar": "مِ",
+     "tr": "mi"
+    },
+    {
+     "ar": "مُ",
+     "tr": "mu"
+    },
+    {
+     "ar": "نَ",
+     "tr": "na"
+    },
+    {
+     "ar": "نِ",
+     "tr": "ni"
+    },
+    {
+     "ar": "نُ",
+     "tr": "nu"
+    },
+    {
+     "ar": "وَ",
+     "tr": "wa"
+    },
+    {
+     "ar": "وِ",
+     "tr": "wi"
+    },
+    {
+     "ar": "وُ",
+     "tr": "wu"
+    },
+    {
+     "ar": "هَ",
+     "tr": "ha"
+    },
+    {
+     "ar": "هِ",
+     "tr": "hi"
+    },
+    {
+     "ar": "هُ",
+     "tr": "hu"
+    },
+    {
+     "ar": "ءَ",
+     "tr": "a"
+    },
+    {
+     "ar": "ءِ",
+     "tr": "i"
+    },
+    {
+     "ar": "ءُ",
+     "tr": "u"
+    },
+    {
+     "ar": "يَ",
+     "tr": "ya"
+    },
+    {
+     "ar": "يِ",
+     "tr": "yi"
+    },
+    {
+     "ar": "يُ",
+     "tr": "yu"
+    }
+   ]
+  },
+  {
+   "id": "harakat_words",
+   "title": "Words with harakat",
+   "note": "Read these Quran words letter by letter with their short vowels, then join them smoothly.",
+   "items": [
+    {
+     "ar": "خَتَمَ",
+     "tr": "khatama",
+     "ref": "2:7:1"
+    },
+    {
+     "ar": "وَمِنَ",
+     "tr": "wamina",
+     "ref": "2:8:1"
+    },
+    {
+     "ar": "كَمَثَلِ",
+     "tr": "kamathali",
+     "ref": "2:17:2"
+    },
+    {
+     "ar": "ذَهَبَ",
+     "tr": "dhahaba",
+     "ref": "2:17:10"
+    },
+    {
+     "ar": "حَذَرَ",
+     "tr": "ḥadhara",
+     "ref": "2:19:15"
+    },
+    {
+     "ar": "لَذَهَبَ",
+     "tr": "ladhahaba",
+     "ref": "2:20:17"
+    },
+    {
+     "ar": "جَعَلَ",
+     "tr": "jaʿala",
+     "ref": "2:22:2"
+    },
+    {
+     "ar": "اَمَرَ",
+     "tr": "amara",
+     "ref": "2:27:10"
+    },
+    {
+     "ar": "خَلَقَ",
+     "tr": "khalaqa",
+     "ref": "2:29:3"
+    },
+    {
+     "ar": "وَهُوَ",
+     "tr": "wahuwa",
+     "ref": "2:29:16"
+    },
+    {
+     "ar": "تَبِعَ",
+     "tr": "tabiʿa",
+     "ref": "2:38:10"
+    },
+    {
+     "ar": "بِكُمُ",
+     "tr": "bikumu",
+     "ref": "2:50:3"
+    },
+    {
+     "ar": "عَلِمَ",
+     "tr": "ʿalima",
+     "ref": "2:60:15"
+    },
+    {
+     "ar": "وَعَمِلَ",
+     "tr": "waʿamila",
+     "ref": "2:62:13"
+    },
+    {
+     "ar": "شِيَةَ",
+     "tr": "shiyata",
+     "ref": "2:71:15"
+    },
+    {
+     "ar": "فَهِىَ",
+     "tr": "fahiya",
+     "ref": "2:74:7"
+    }
+   ]
+  },
+  {
+   "id": "tanween",
+   "title": "Tanween",
+   "note": "Tanween is a doubled harakah that adds a 'n' sound at the end: an, in, un.",
+   "items": [
+    {
+     "ar": "بً",
+     "tr": "ban"
+    },
+    {
+     "ar": "بٍ",
+     "tr": "bin"
+    },
+    {
+     "ar": "بٌ",
+     "tr": "bun"
+    },
+    {
+     "ar": "تً",
+     "tr": "tan"
+    },
+    {
+     "ar": "تٍ",
+     "tr": "tin"
+    },
+    {
+     "ar": "تٌ",
+     "tr": "tun"
+    },
+    {
+     "ar": "ثً",
+     "tr": "tan"
+    },
+    {
+     "ar": "ثٍ",
+     "tr": "tin"
+    },
+    {
+     "ar": "ثٌ",
+     "tr": "tun"
+    },
+    {
+     "ar": "جً",
+     "tr": "jan"
+    },
+    {
+     "ar": "جٍ",
+     "tr": "jin"
+    },
+    {
+     "ar": "جٌ",
+     "tr": "jun"
+    },
+    {
+     "ar": "حً",
+     "tr": "han"
+    },
+    {
+     "ar": "حٍ",
+     "tr": "hin"
+    },
+    {
+     "ar": "حٌ",
+     "tr": "hun"
+    },
+    {
+     "ar": "خً",
+     "tr": "kan"
+    },
+    {
+     "ar": "خٍ",
+     "tr": "kin"
+    },
+    {
+     "ar": "خٌ",
+     "tr": "kun"
+    },
+    {
+     "ar": "دً",
+     "tr": "dan"
+    },
+    {
+     "ar": "دٍ",
+     "tr": "din"
+    },
+    {
+     "ar": "دٌ",
+     "tr": "dun"
+    },
+    {
+     "ar": "ذً",
+     "tr": "dan"
+    },
+    {
+     "ar": "ذٍ",
+     "tr": "din"
+    },
+    {
+     "ar": "ذٌ",
+     "tr": "dun"
+    },
+    {
+     "ar": "رً",
+     "tr": "ran"
+    },
+    {
+     "ar": "رٍ",
+     "tr": "rin"
+    },
+    {
+     "ar": "رٌ",
+     "tr": "run"
+    },
+    {
+     "ar": "زً",
+     "tr": "zan"
+    },
+    {
+     "ar": "زٍ",
+     "tr": "zin"
+    },
+    {
+     "ar": "زٌ",
+     "tr": "zun"
+    },
+    {
+     "ar": "سً",
+     "tr": "san"
+    },
+    {
+     "ar": "سٍ",
+     "tr": "sin"
+    },
+    {
+     "ar": "سٌ",
+     "tr": "sun"
+    },
+    {
+     "ar": "شً",
+     "tr": "san"
+    },
+    {
+     "ar": "شٍ",
+     "tr": "sin"
+    },
+    {
+     "ar": "شٌ",
+     "tr": "sun"
+    },
+    {
+     "ar": "صً",
+     "tr": "san"
+    },
+    {
+     "ar": "صٍ",
+     "tr": "sin"
+    },
+    {
+     "ar": "صٌ",
+     "tr": "sun"
+    },
+    {
+     "ar": "ضً",
+     "tr": "dan"
+    },
+    {
+     "ar": "ضٍ",
+     "tr": "din"
+    },
+    {
+     "ar": "ضٌ",
+     "tr": "dun"
+    },
+    {
+     "ar": "طً",
+     "tr": "tan"
+    },
+    {
+     "ar": "طٍ",
+     "tr": "tin"
+    },
+    {
+     "ar": "طٌ",
+     "tr": "tun"
+    },
+    {
+     "ar": "ظً",
+     "tr": "zan"
+    },
+    {
+     "ar": "ظٍ",
+     "tr": "zin"
+    },
+    {
+     "ar": "ظٌ",
+     "tr": "zun"
+    },
+    {
+     "ar": "عً",
+     "tr": "aan"
+    },
+    {
+     "ar": "عٍ",
+     "tr": "ain"
+    },
+    {
+     "ar": "عٌ",
+     "tr": "aun"
+    },
+    {
+     "ar": "غً",
+     "tr": "gan"
+    },
+    {
+     "ar": "غٍ",
+     "tr": "gin"
+    },
+    {
+     "ar": "غٌ",
+     "tr": "gun"
+    },
+    {
+     "ar": "فً",
+     "tr": "fan"
+    },
+    {
+     "ar": "فٍ",
+     "tr": "fin"
+    },
+    {
+     "ar": "فٌ",
+     "tr": "fun"
+    },
+    {
+     "ar": "قً",
+     "tr": "qan"
+    },
+    {
+     "ar": "قٍ",
+     "tr": "qin"
+    },
+    {
+     "ar": "قٌ",
+     "tr": "qun"
+    },
+    {
+     "ar": "كً",
+     "tr": "kan"
+    },
+    {
+     "ar": "كٍ",
+     "tr": "kin"
+    },
+    {
+     "ar": "كٌ",
+     "tr": "kun"
+    },
+    {
+     "ar": "لً",
+     "tr": "lan"
+    },
+    {
+     "ar": "لٍ",
+     "tr": "lin"
+    },
+    {
+     "ar": "لٌ",
+     "tr": "lun"
+    },
+    {
+     "ar": "مً",
+     "tr": "man"
+    },
+    {
+     "ar": "مٍ",
+     "tr": "min"
+    },
+    {
+     "ar": "مٌ",
+     "tr": "mun"
+    },
+    {
+     "ar": "نً",
+     "tr": "nan"
+    },
+    {
+     "ar": "نٍ",
+     "tr": "nin"
+    },
+    {
+     "ar": "نٌ",
+     "tr": "nun"
+    },
+    {
+     "ar": "وً",
+     "tr": "wan"
+    },
+    {
+     "ar": "وٍ",
+     "tr": "win"
+    },
+    {
+     "ar": "وٌ",
+     "tr": "wun"
+    },
+    {
+     "ar": "هً",
+     "tr": "han"
+    },
+    {
+     "ar": "هٍ",
+     "tr": "hin"
+    },
+    {
+     "ar": "هٌ",
+     "tr": "hun"
+    },
+    {
+     "ar": "ءً",
+     "tr": "an"
+    },
+    {
+     "ar": "ءٍ",
+     "tr": "in"
+    },
+    {
+     "ar": "ءٌ",
+     "tr": "un"
+    },
+    {
+     "ar": "يً",
+     "tr": "yan"
+    },
+    {
+     "ar": "يٍ",
+     "tr": "yin"
+    },
+    {
+     "ar": "يٌ",
+     "tr": "yun"
+    }
+   ]
+  },
+  {
+   "id": "tanween_words",
+   "title": "Words with tanween",
+   "note": "Quran words that end in tanween. Notice the 'n' sound at the end of each word.",
+   "items": [
+    {
+     "ar": "هُدًى",
+     "tr": "hudan",
+     "ref": "2:2:6"
+    },
+    {
+     "ar": "سَوَآءٌ",
+     "tr": "sawāon",
+     "ref": "2:6:4"
+    },
+    {
+     "ar": "عَذَابٌ",
+     "tr": "ʿadhābun",
+     "ref": "2:7:11"
+    },
+    {
+     "ar": "فِرَاشًا",
+     "tr": "firāshan",
+     "ref": "2:22:5"
+    },
+    {
+     "ar": "مَآءً",
+     "tr": "māan",
+     "ref": "2:22:11"
+    },
+    {
+     "ar": "ثَمَرَةٍ",
+     "tr": "thamaratin",
+     "ref": "2:25:17"
+    },
+    {
+     "ar": "مَثَلًا",
+     "tr": "mathalan",
+     "ref": "2:26:7"
+    },
+    {
+     "ar": "جَاعِلٌ",
+     "tr": "jāʿilun",
+     "ref": "2:30:6"
+    },
+    {
+     "ar": "رَغَدًا",
+     "tr": "raghadan",
+     "ref": "2:35:9"
+    },
+    {
+     "ar": "كَافِرٍۢ",
+     "tr": "kāfirin",
+     "ref": "2:41:10"
+    },
+    {
+     "ar": "ثَمَنًا",
+     "tr": "thamanan",
+     "ref": "2:41:15"
+    },
+    {
+     "ar": "شَفَاعَةٌ",
+     "tr": "shafāʿatun",
+     "ref": "2:48:12"
+    },
+    {
+     "ar": "بَلَاۤءٌ",
+     "tr": "balāon",
+     "ref": "2:49:15"
+    },
+    {
+     "ar": "طَعَامٍ",
+     "tr": "ṭaʿāmin",
+     "ref": "2:61:7"
+    },
+    {
+     "ar": "بِغَضَبٍ",
+     "tr": "bighaḍabin",
+     "ref": "2:61:42"
+    },
+    {
+     "ar": "قِرَدَةً",
+     "tr": "qiradatan",
+     "ref": "2:65:11"
+    }
+   ]
+  },
+  {
+   "id": "khari",
+   "title": "Standing harakat",
+   "note": "A standing fatha, standing kasra or inverted damma is read long, like a madd, for two counts.",
+   "items": [
+    {
+     "ar": "مٰلِكِ",
+     "tr": "māliki",
+     "ref": "1:4:1"
+    },
+    {
+     "ar": "ذٰلِكَ",
+     "tr": "dhālika",
+     "ref": "2:2:1"
+    },
+    {
+     "ar": "الۡڪِتٰبُ",
+     "tr": "l-kitābu",
+     "ref": "2:2:2"
+    },
+    {
+     "ar": "اُولٰٓٮِٕكَ",
+     "tr": "ulāika",
+     "ref": "2:5:1"
+    },
+    {
+     "ar": "عَلٰى",
+     "tr": "ʿalā",
+     "ref": "2:5:2"
+    },
+    {
+     "ar": "عَلَىٰ",
+     "tr": "ʿalā",
+     "ref": "2:7:3"
+    },
+    {
+     "ar": "وَعَلٰى",
+     "tr": "waʿalā",
+     "ref": "2:7:5"
+    },
+    {
+     "ar": "اٰمَنَ",
+     "tr": "āmana",
+     "ref": "2:13:6"
+    },
+    {
+     "ar": "اِلٰى",
+     "tr": "ilā",
+     "ref": "2:14:9"
+    },
+    {
+     "ar": "حَوۡلَهٗ",
+     "tr": "ḥawlahu",
+     "ref": "2:17:9"
+    },
+    {
+     "ar": "ظُلُمٰتٍ",
+     "tr": "ẓulumātin",
+     "ref": "2:17:15"
+    },
+    {
+     "ar": "ظُلُمٰتٌ",
+     "tr": "ẓulumātun",
+     "ref": "2:19:6"
+    },
+    {
+     "ar": "بِهٖ",
+     "tr": "bihi",
+     "ref": "2:22:13"
+    },
+    {
+     "ar": "هٰذَا",
+     "tr": "hādhā",
+     "ref": "2:25:20"
+    },
+    {
+     "ar": "بِهٰذَا",
+     "tr": "bihādhā",
+     "ref": "2:26:27"
+    },
+    {
+     "ar": "سَمٰوٰتٍؕ",
+     "tr": "samāwātin",
+     "ref": "2:29:15"
+    }
+   ]
+  },
+  {
+   "id": "madd",
+   "title": "Huroof Madd",
+   "note": "Alif after fatha, waw sakin after damma and ya sakin after kasra stretch the sound for two counts.",
+   "items": [
+    {
+     "ar": "صِرَاطَ",
+     "tr": "ṣirāṭa",
+     "ref": "1:7:1"
+    },
+    {
+     "ar": "وَلَا",
+     "tr": "walā",
+     "ref": "1:7:8"
+    },
+    {
+     "ar": "لَا",
+     "tr": "lā",
+     "ref": "2:2:3"
+    },
+    {
+     "ar": "فِيۡهِۛۚ",
+     "tr": "fīhi",
+     "ref": "2:2:5"
+    },
+    {
+     "ar": "بِمَۤا",
+     "tr": "bimā",
+     "ref": "2:4:3"
+    },
+    {
+     "ar": "وَمَاۤ",
+     "tr": "wamā",
+     "ref": "2:4:6"
+    },
+    {
+     "ar": "اُولٰٓٮِٕكَ",
+     "tr": "ulāika",
+     "ref": "2:5:1"
+    },
+    {
+     "ar": "وَاُولٰٓٮِٕكَ",
+     "tr": "wa-ulāika",
+     "ref": "2:5:6"
+    },
+    {
+     "ar": "كَفَرُوۡا",
+     "tr": "kafarū",
+     "ref": "2:6:3"
+    },
+    {
+     "ar": "سَوَآءٌ",
+     "tr": "sawāon",
+     "ref": "2:6:4"
+    },
+    {
+     "ar": "غِشَاوَةٌ ",
+     "tr": "ghishāwatun",
+     "ref": "2:7:9"
+    },
+    {
+     "ar": "عَذَابٌ",
+     "tr": "ʿadhābun",
+     "ref": "2:7:11"
+    },
+    {
+     "ar": "عَظِيۡمٌ",
+     "tr": "ʿaẓīmun",
+     "ref": "2:7:12"
+    },
+    {
+     "ar": "اٰمَنُوۡا ۚ",
+     "tr": "āmanū",
+     "ref": "2:9:4"
+    },
+    {
+     "ar": "فِىۡ",
+     "tr": "fī",
+     "ref": "2:10:1"
+    },
+    {
+     "ar": "اَلِيۡمٌۢۙ",
+     "tr": "alīmun",
+     "ref": "2:10:9"
+    }
+   ]
+  },
+  {
+   "id": "leen",
+   "title": "Huroof Leen",
+   "note": "Waw or ya with sukoon after a fatha is read softly and gently, without stretching.",
+   "items": [
+    {
+     "ar": "يَوۡمِ",
+     "tr": "yawmi",
+     "ref": "1:4:2"
+    },
+    {
+     "ar": "غَيۡرِ",
+     "tr": "ghayri",
+     "ref": "1:7:5"
+    },
+    {
+     "ar": "رَيۡبَۛۚۖ",
+     "tr": "rayba",
+     "ref": "2:2:4"
+    },
+    {
+     "ar": "اِلَيۡكَ",
+     "tr": "ilayka",
+     "ref": "2:4:5"
+    },
+    {
+     "ar": "خَلَوۡا",
+     "tr": "khalaw",
+     "ref": "2:14:8"
+    },
+    {
+     "ar": "حَوۡلَهٗ",
+     "tr": "ḥawlahu",
+     "ref": "2:17:9"
+    },
+    {
+     "ar": "اَوۡ",
+     "tr": "aw",
+     "ref": "2:19:1"
+    },
+    {
+     "ar": "وَلَوۡ",
+     "tr": "walaw",
+     "ref": "2:20:14"
+    },
+    {
+     "ar": "رَيۡبٍ",
+     "tr": "raybin",
+     "ref": "2:23:4"
+    },
+    {
+     "ar": "فَوۡقَهَا ؕ",
+     "tr": "fawqahā",
+     "ref": "2:26:11"
+    },
+    {
+     "ar": "كَيۡفَ",
+     "tr": "kayfa",
+     "ref": "2:28:1"
+    },
+    {
+     "ar": "اِلَيۡهِ",
+     "tr": "ilayhi",
+     "ref": "2:28:12"
+    },
+    {
+     "ar": "غَيۡبَ",
+     "tr": "ghayba",
+     "ref": "2:33:14"
+    },
+    {
+     "ar": "وَزَوۡجُكَ",
+     "tr": "wazawjuka",
+     "ref": "2:35:5"
+    },
+    {
+     "ar": "حَيۡثُ",
+     "tr": "ḥaythu",
+     "ref": "2:35:10"
+    },
+    {
+     "ar": "عَلَيۡهِؕ",
+     "tr": "ʿalayhi",
+     "ref": "2:37:7"
+    }
+   ]
+  },
+  {
+   "id": "sukoon",
+   "title": "Sukoon (Jazm)",
+   "note": "A letter with sukoon (jazm) has no vowel; join it to the letter before it.",
+   "items": [
+    {
+     "ar": "بِسۡمِ",
+     "tr": "bis'mi",
+     "ref": "1:1:1"
+    },
+    {
+     "ar": "نَعۡبُدُ",
+     "tr": "naʿbudu",
+     "ref": "1:5:2"
+    },
+    {
+     "ar": "الۡڪِتٰبُ",
+     "tr": "l-kitābu",
+     "ref": "2:2:2"
+    },
+    {
+     "ar": "اُنۡزِلَ",
+     "tr": "unzila",
+     "ref": "2:4:4"
+    },
+    {
+     "ar": "مِنۡ",
+     "tr": "min",
+     "ref": "2:4:8"
+    },
+    {
+     "ar": "قَبۡلِكَۚ",
+     "tr": "qablika",
+     "ref": "2:4:9"
+    },
+    {
+     "ar": "هُمۡ",
+     "tr": "hum",
+     "ref": "2:4:11"
+    },
+    {
+     "ar": "اَمۡ",
+     "tr": "am",
+     "ref": "2:6:7"
+    },
+    {
+     "ar": "لَمۡ",
+     "tr": "lam",
+     "ref": "2:6:8"
+    },
+    {
+     "ar": "مَنۡ",
+     "tr": "man",
+     "ref": "2:8:3"
+    },
+    {
+     "ar": "لَهُمۡ",
+     "tr": "lahum",
+     "ref": "2:11:3"
+    },
+    {
+     "ar": "نَحۡنُ",
+     "tr": "naḥnu",
+     "ref": "2:11:10"
+    },
+    {
+     "ar": "مَعَكُمۡۙ",
+     "tr": "maʿakum",
+     "ref": "2:14:13"
+    },
+    {
+     "ar": "بِهِمۡ",
+     "tr": "bihim",
+     "ref": "2:15:3"
+    },
+    {
+     "ar": "رَبِحَتۡ",
+     "tr": "rabiḥat",
+     "ref": "2:16:7"
+    },
+    {
+     "ar": "بُكۡمٌ",
+     "tr": "buk'mun",
+     "ref": "2:18:2"
+    }
+   ]
+  },
+  {
+   "id": "shaddah",
+   "title": "Shaddah (Tashdeed)",
+   "note": "A letter with shaddah is read twice: once with sukoon, then again with its harakah.",
+   "items": [
+    {
+     "ar": "لِلّٰهِ",
+     "tr": "lillahi",
+     "ref": "1:2:2"
+    },
+    {
+     "ar": "رَبِّ",
+     "tr": "rabbi",
+     "ref": "1:2:3"
+    },
+    {
+     "ar": "اِيَّاكَ",
+     "tr": "iyyāka",
+     "ref": "1:5:1"
+    },
+    {
+     "ar": "رَّبِّهِمۡ",
+     "tr": "rabbihim",
+     "ref": "2:5:5"
+    },
+    {
+     "ar": "اللّٰهُ",
+     "tr": "l-lahu",
+     "ref": "2:7:2"
+    },
+    {
+     "ar": "وَّلَهُمۡ",
+     "tr": "walahum",
+     "ref": "2:7:10"
+    },
+    {
+     "ar": "يَّقُوۡلُ",
+     "tr": "yaqūlu",
+     "ref": "2:8:4"
+    },
+    {
+     "ar": "اللّٰهَ",
+     "tr": "l-laha",
+     "ref": "2:9:2"
+    },
+    {
+     "ar": "اِلَّاۤ",
+     "tr": "illā",
+     "ref": "2:9:7"
+    },
+    {
+     "ar": "لَّا",
+     "tr": "lā",
+     "ref": "2:12:6"
+    },
+    {
+     "ar": "اَللّٰهُ",
+     "tr": "al-lahu",
+     "ref": "2:15:1"
+    },
+    {
+     "ar": "الَّذِى",
+     "tr": "alladhī",
+     "ref": "2:17:3"
+    },
+    {
+     "ar": "كَصَيِّبٍ",
+     "tr": "kaṣayyibin",
+     "ref": "2:19:2"
+    },
+    {
+     "ar": "وَّرَعۡدٌ",
+     "tr": "waraʿdun",
+     "ref": "2:19:7"
+    },
+    {
+     "ar": "وَّبَرۡقٌ ۚ",
+     "tr": "wabarqun",
+     "ref": "2:19:8"
+    },
+    {
+     "ar": "كُلَّمَاۤ",
+     "tr": "kullamā",
+     "ref": "2:20:5"
+    }
+   ]
+  },
+  {
+   "id": "ghunnah",
+   "title": "Ghunnah: Noon and Meem with Shaddah",
+   "note": "Noon or meem with shaddah is read with ghunnah, a nasal sound held for about two counts.",
+   "items": [
+    {
+     "ar": "الٓمّٓۚ",
+     "tr": "alif-lam-meem",
+     "ref": "2:1:1"
+    },
+    {
+     "ar": "وَمِمَّا",
+     "tr": "wamimmā",
+     "ref": "2:3:6"
+    },
+    {
+     "ar": "مِّنۡ",
+     "tr": "min",
+     "ref": "2:5:4"
+    },
+    {
+     "ar": "اِنَّ",
+     "tr": "inna",
+     "ref": "2:6:1"
+    },
+    {
+     "ar": "النَّاسِ",
+     "tr": "l-nāsi",
+     "ref": "2:8:2"
+    },
+    {
+     "ar": "اٰمَنَّا",
+     "tr": "āmannā",
+     "ref": "2:8:5"
+    },
+    {
+     "ar": "مَّرَضٌۙ",
+     "tr": "maraḍun",
+     "ref": "2:10:3"
+    },
+    {
+     "ar": "اِنَّمَا",
+     "tr": "innamā",
+     "ref": "2:11:9"
+    },
+    {
+     "ar": "اِنَّهُمۡ",
+     "tr": "innahum",
+     "ref": "2:12:2"
+    },
+    {
+     "ar": "النَّاسُ",
+     "tr": "l-nāsu",
+     "ref": "2:13:7"
+    },
+    {
+     "ar": "اٰمَنَّا ۖۚ",
+     "tr": "āmannā",
+     "ref": "2:14:6"
+    },
+    {
+     "ar": "اِنَّا",
+     "tr": "innā",
+     "ref": "2:14:12"
+    },
+    {
+     "ar": "فَلَمَّاۤ",
+     "tr": "falammā",
+     "ref": "2:17:6"
+    },
+    {
+     "ar": "صُمٌّۢ",
+     "tr": "ṣummun",
+     "ref": "2:18:1"
+    },
+    {
+     "ar": "مِّنَ",
+     "tr": "mina",
+     "ref": "2:19:3"
+    },
+    {
+     "ar": "مَّشَوۡا",
+     "tr": "mashaw",
+     "ref": "2:20:8"
+    }
+   ]
+  }
+ ]
+}

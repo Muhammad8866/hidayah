@@ -23,11 +23,11 @@ data class QuranPdf(
 
 object QuranPdfCatalog {
     /** Where the non-bundled PDFs are hosted, unchanged; the file name is appended. */
-    const val BASE_URL = "https://github.com/Muhammad8866/deen-companion-quran/releases/download/v1/"
+    const val BASE_URL = "https://github.com/Muhammad8866/hidayah/releases/download/quran-pdfs-v1/"
 
     val all: List<QuranPdf> = listOf(
         QuranPdf(
-            id = "deeniyat_11", title = "Quraan-E-Karim (11 Lines)", subtitle = "Deeniyat edition, original 11-line pages", fileName = "quran_deeniyat_11_lines.pdf", bundled = false,
+            id = "deeniyat_11", title = "Quraan-E-Karim (11 Lines)", subtitle = "Original 11-line pages", fileName = "quran_deeniyat_11_lines.pdf", bundled = false,
             sizeBytes = 118192240L, pageCount = 1410,
             sha256 = "1bcd044b35d9b514acee62bcc29508737ec3a8074253b70a83114cfd5d53e228",
             surahPages = intArrayOf(2, 3, 107, 166, 231, 281, 333, 394, 416, 463, 495, 529, 560, 575, 590, 603, 638, 666, 693, 710, 734, 755, 778, 797, 821, 837, 862, 882, 907, 925, 941, 951, 958, 981, 996, 1010, 1024, 1041, 1055, 1076, 1098, 1112, 1128, 1144, 1151, 1161, 1172, 1183, 1194, 1201, 1208, 1215, 1220, 1227, 1233, 1240, 1249, 1260, 1268, 1276, 1282, 1287, 1291, 1293, 1298, 1304, 1309, 1315, 1320, 1325, 1329, 1333, 1338, 1342, 1346, 1350, 1354, 1358, 1361, 1365, 1368, 1370, 1372, 1375, 1377, 1380, 1381, 1383, 1385, 1388, 1389, 1391, 1392, 1393, 1394, 1395, 1396, 1397, 1399, 1400, 1401, 1402, 1403, 1403, 1404, 1405, 1405, 1406, 1406, 1407, 1408, 1408, 1409, 1409),

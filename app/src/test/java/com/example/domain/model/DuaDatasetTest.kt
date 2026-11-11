@@ -94,6 +94,67 @@ class DuaDatasetTest {
         assertEquals(duas, DuaDatasetRepository.filter(DuaDatasetRepository.ALL_CATEGORY, ""))
     }
 
+    private fun ids(query: String) = DuaDatasetRepository.searchDuas(query).map { it.id }
+
+    @Test
+    fun `search finds a dua by its well-known name, best match first`() {
+        assertEquals(listOf("dua_ayatul_kursi"), ids("ayatul kursi"))
+        assertEquals(listOf("dua_ayatul_kursi"), ids("ayat al kursi"))
+        assertEquals(listOf("dua_hasbunallah"), ids("hasbunallah"))
+        assertEquals(listOf("dua_entering_market"), ids("bazar"))
+        assertEquals(listOf("dua_qunoot_witr", "dua_qunoot_hanafi"), ids("qunoot"))
+        assertEquals("dua_waking_up", ids("Bukhari 6312").first())
+        assertEquals("dua_travel", ids("travel").first())
+        assertEquals("dua_travel", ids("safar ki dua").first())
+    }
+
+    @Test
+    fun `joined and split Roman spellings find the same duas`() {
+        assertTrue(ids("subhanallah").contains("dua_subhanallah_wa_bihamdihi"))
+        assertTrue(ids("subhan allah").contains("dua_subhanallah_wa_bihamdihi"))
+        assertTrue(ids("subhanallah").contains("dua_four_beloved_words"))
+        assertTrue(ids("subhan allah").contains("dua_four_beloved_words"))
+    }
+
+    @Test
+    fun `a correct word is not buried under look-alike words`() {
+        val sleep = ids("neend")
+        assertTrue(sleep.contains("dua_waking_up"))
+        assertTrue("dua_wind" !in sleep)
+        assertTrue(ids("khana").size < duas.size / 4)
+    }
+
+    @Test
+    fun `arabic and hindi script queries are searched`() {
+        assertTrue(ids("بسم الله").contains("dua_before_eating"))
+        assertTrue(ids("सफ़र").contains("dua_travel"))
+    }
+
+    @Test
+    fun `the reader's localized text is searched and follows a language change`() {
+        val first = DuaDatasetRepository.filter(DuaDatasetRepository.ALL_CATEGORY, "xyzlocal") {
+            if (it.id == "dua_waking_up") "xyzlocal phrase" else ""
+        }
+        assertEquals(listOf("dua_waking_up"), first.map { it.id })
+        val second = DuaDatasetRepository.filter(DuaDatasetRepository.ALL_CATEGORY, "xyzlocal") {
+            if (it.id == "dua_travel") "xyzlocal phrase" else ""
+        }
+        assertEquals(listOf("dua_travel"), second.map { it.id })
+        assertTrue(ids("xyzlocal").isEmpty())
+    }
+
+    @Test
+    fun `bad input keeps or empties the list without breaking`() {
+        assertEquals(duas, DuaDatasetRepository.searchDuas("💥"))
+        assertEquals(duas, DuaDatasetRepository.searchDuas("-- , ."))
+        assertTrue(ids("x".repeat(5_000)).isEmpty())
+        assertTrue(ids("zzzz ".repeat(2_000)).isEmpty())
+        assertEquals(
+            listOf("dua_before_sleep", "dua_sleep_wadatu_janbi"),
+            DuaDatasetRepository.filter("Sleep & Awakening", "bismika").map { it.id }
+        )
+    }
+
     @Test
     fun `tasbeeh presets keep the persisted phrase format`() {
         assertEquals("Subhan Allah (سُبْحَانَ اللَّهِ)", TasbeehPreset.ALL.first().phrase)

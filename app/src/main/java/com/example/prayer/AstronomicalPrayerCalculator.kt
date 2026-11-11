@@ -86,8 +86,10 @@ object AstronomicalPrayerCalculator {
         validateCoordinates(latitude, longitude)
         validateConfig(config)
         val date = localNoon(calendar)
-        val ephemeris = calculateSolarParameters(date, latitude, longitude)
-        val horizon = horizonTimes(date, latitude, longitude)
+        // Polar day or night: use the nearest latitude where the sun still rises and sets.
+        val solarLatitude = nearestLatitudeWithSunriseAndSunset(date, latitude, longitude)
+        val ephemeris = calculateSolarParameters(date, solarLatitude, longitude)
+        val horizon = horizonTimes(date, solarLatitude, longitude)
             ?: throw IllegalStateException(
                 "Sunrise or sunset does not occur on this date at the selected coordinates. " +
                     "A polar-circle resolution method is required."
@@ -95,7 +97,7 @@ object AstronomicalPrayerCalculator {
 
         val fajrAngle = config.fajrAngleOverride ?: config.method.fajrAngle
         val ishaAngle = config.ishaAngleOverride ?: config.method.ishaAngle
-        val calculatedFajr = solarEventHours(date, latitude, longitude, -fajrAngle, morning = true)
+        val calculatedFajr = solarEventHours(date, solarLatitude, longitude, -fajrAngle, morning = true)
         var fajr = calculatedFajr ?: Double.NEGATIVE_INFINITY
 
         val ishaIntervalMinutes = config.method.ishaIntervalMinutes?.let { standardInterval ->
@@ -105,15 +107,15 @@ object AstronomicalPrayerCalculator {
         var isha = if (ishaIntervalMinutes != null) {
             horizon.sunsetHours + ishaIntervalMinutes / 60.0
         } else {
-            solarEventHours(date, latitude, longitude, -ishaAngle, morning = false)
+            solarEventHours(date, solarLatitude, longitude, -ishaAngle, morning = false)
                 ?: Double.POSITIVE_INFINITY
         }
 
         if (config.highLatitudeRule != HighLatitudeRule.NONE) {
             val previousDate = (date.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }
             val nextDate = (date.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) }
-            val previousHorizon = horizonTimes(previousDate, latitude, longitude)
-            val nextHorizon = horizonTimes(nextDate, latitude, longitude)
+            val previousHorizon = horizonTimes(previousDate, solarLatitude, longitude)
+            val nextHorizon = horizonTimes(nextDate, solarLatitude, longitude)
             if (previousHorizon == null || nextHorizon == null) {
                 throw IllegalStateException(
                     "A neighbouring sunrise or sunset is unavailable at this polar location."
@@ -132,7 +134,7 @@ object AstronomicalPrayerCalculator {
 
             val portions = HighLatitudePolicy.nightPortions(
                 rule = config.highLatitudeRule,
-                latitudeDeg = latitude,
+                latitudeDeg = solarLatitude,
                 fajrAngle = fajrAngle,
                 ishaAngle = ishaAngle
             )
@@ -157,7 +159,7 @@ object AstronomicalPrayerCalculator {
             )
         }
 
-        val asr = asrHours(date, latitude, longitude, config.asrMethod.factor)
+        val asr = asrHours(date, solarLatitude, longitude, config.asrMethod.factor)
             ?: throw IllegalStateException("The configured Asr shadow length is not reached on this date.")
         val methodDhuhrAdjustment = config.method.dhuhrAdjustmentMinutes
 
@@ -212,6 +214,23 @@ object AstronomicalPrayerCalculator {
             set(Calendar.HOUR_OF_DAY, minuteOfDay / 60)
             set(Calendar.MINUTE, minuteOfDay % 60)
         }.timeInMillis
+    }
+
+    /**
+     * Returns [latitude] itself when the sun rises and sets on [date] and the days either side.
+     * Otherwise it steps toward the equator in half degrees, no further than 65 degrees, which
+     * is the nearest-latitude (aqrab al-bilad) resolution for polar dates.
+     */
+    private fun nearestLatitudeWithSunriseAndSunset(date: Calendar, latitude: Double, longitude: Double): Double {
+        val days = listOf(-1, 0, 1).map { offset ->
+            (date.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, offset) }
+        }
+        var candidate = latitude
+        while (true) {
+            if (days.all { horizonTimes(it, candidate, longitude) != null }) return candidate
+            if (abs(candidate) <= POLAR_FALLBACK_LATITUDE) return candidate
+            candidate = sign(candidate) * maxOf(POLAR_FALLBACK_LATITUDE, abs(candidate) - 0.5)
+        }
     }
 
     private fun horizonTimes(calendar: Calendar, latitude: Double, longitude: Double): HorizonTimes? {
@@ -413,4 +432,5 @@ object AstronomicalPrayerCalculator {
     private const val MINUTE_EPSILON = 1e-6
     private const val MINUTES_PER_DAY = 24 * 60
     private const val RAMADAN_MONTH = 9
+    private const val POLAR_FALLBACK_LATITUDE = 65.0
 }

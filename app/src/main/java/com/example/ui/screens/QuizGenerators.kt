@@ -6,8 +6,12 @@ import com.example.domain.model.englishMeaning
 import com.example.domain.model.i18n.textIn
 import com.example.festival.Aamal
 import com.example.festival.FestivalDefinition
+import com.example.prayer.HijriCalendarHelper
 import com.example.ui.localization.bilingualContent
+import com.example.ui.localization.isRtlAppLanguage
 import com.example.ui.localization.localizePhrase
+import com.example.ui.localization.localizeUiTemplate
+import com.example.ui.localization.localizeUiText
 import kotlin.random.Random
 
 /**
@@ -154,10 +158,10 @@ internal class QuranCorpus(val ayat: List<Ayah>) {
     }
 }
 
-private fun quranReference(surah: Int, ayah: Int) = "Quran $surah:$ayah · Tanzil.net"
+internal fun quranReference(surah: Int, ayah: Int) = "Quran $surah:$ayah"
 
 /** "Which surah is this ayah from?" for every ayah whose wording occurs only once. */
-internal class QuranSurahOfAyahSource(private val quran: QuranCorpus, private val surahs: List<Surah>) : QuizSource {
+internal class QuranSurahOfAyahSource(private val quran: QuranCorpus, private val surahs: List<Surah>, private val language: String = "en") : QuizSource {
     override val key = "qs"
     private val candidates = quran.ayat.filter { quran.isUnique(it) && it.passage.wordCount in 4..40 }
     override val size get() = candidates.size
@@ -166,8 +170,8 @@ internal class QuranSurahOfAyahSource(private val quran: QuranCorpus, private va
         val ayah = candidates.getOrNull(index) ?: return null
         val others = seeded(key, index).distinct(3, { nextInt(1, surahs.size + 1) }) { it != ayah.surah } ?: return null
         return QuizQuestion(
-            "$key:$index", "Which surah is this ayah from?", surahs[ayah.surah - 1].englishName,
-            others.map { surahs[it - 1].englishName }, quranReference(ayah.surah, ayah.number),
+            "$key:$index", "Which surah is this ayah from?", localizeUiText(surahs[ayah.surah - 1].englishName, language),
+            others.map { localizeUiText(surahs[it - 1].englishName, language) }, quranReference(ayah.surah, ayah.number),
             passage = ayah.passage.text, passageArabic = true
         )
     }
@@ -201,7 +205,7 @@ internal class QuranNextAyahSource(private val quran: QuranCorpus) : QuizSource 
 }
 
 /** "Fill in the missing word" for ayat of five words or more. */
-internal class QuranMissingWordSource(private val quran: QuranCorpus, private val surahs: List<Surah>) : QuizSource {
+internal class QuranMissingWordSource(private val quran: QuranCorpus, private val surahs: List<Surah>, private val language: String = "en") : QuizSource {
     override val key = "qw"
     private val candidates = quran.ayat.filter { it.passage.wordCount in 5..40 }
     override val size get() = candidates.size
@@ -212,7 +216,7 @@ internal class QuranMissingWordSource(private val quran: QuranCorpus, private va
         return QuizQuestion(
             "$key:$index", "Fill in the missing word ({x})", blank.answer, blank.distractors,
             quranReference(ayah.surah, ayah.number), passage = blank.text, passageArabic = true, optionsArabic = true,
-            promptArg = "${surahs[ayah.surah - 1].englishName} ${ayah.surah}:${ayah.number}"
+            promptArg = "${localizeUiText(surahs[ayah.surah - 1].englishName, language)} ${ayah.surah}:${ayah.number}"
         )
     }
 }
@@ -296,10 +300,10 @@ internal class SurahFactsSource(private val surahs: List<Surah>, private val lan
         val surah = surahs[index % surahs.size]
         val n = surah.number
         val random = seeded(key, index)
-        fun name(number: Int) = surahs[number - 1].englishName
+        fun name(number: Int) = localizeUiText(surahs[number - 1].englishName, language)
         fun nearby(vararg exclude: Int) = random.distinct(3, { (n + nextInt(-6, 7)).coerceIn(1, surahs.size) }) { it !in exclude }
             ?.map(::name)
-        val reference = "Quran · Surah $n (${surah.englishName})"
+        val reference = "${localizeUiText("Quran", language)} · ${localizeUiTemplate("Surah {name}", language, mapOf("name" to "$n (${name(n)})"))}"
         val id = "$key:$index"
         return when (fact) {
             0 -> QuizQuestion(id, "Which surah is number {x} in the Quran?", name(n), nearby(n) ?: return null, reference, promptArg = "$n")
@@ -307,23 +311,23 @@ internal class SurahFactsSource(private val surahs: List<Surah>, private val lan
                 val count = surah.totalAyat
                 val wrong = random.distinct(3, { count + listOf(-10, -5, -3, -2, -1, 1, 2, 3, 5, 10)[nextInt(10)] }) { it > 0 && it != count }
                     ?: return null
-                QuizQuestion(id, "How many ayat are in Surah {x}?", "$count", wrong.map { "$it" }, reference, promptArg = surah.englishName)
+                QuizQuestion(id, "How many ayat are in Surah {x}?", "$count", wrong.map { "$it" }, reference, promptArg = name(n))
             }
             2 -> QuizQuestion(
                 id, "Which surah has this Arabic name?", name(n), nearby(n) ?: return null, reference,
                 passage = surah.arabicName, passageArabic = true
             )
             3 -> if (n == surahs.size) null else
-                QuizQuestion(id, "Which surah comes after Surah {x}?", name(n + 1), nearby(n, n + 1) ?: return null, reference, promptArg = surah.englishName)
+                QuizQuestion(id, "Which surah comes after Surah {x}?", name(n + 1), nearby(n, n + 1) ?: return null, reference, promptArg = name(n))
             4 -> if (n == 1) null else
-                QuizQuestion(id, "Which surah comes before Surah {x}?", name(n - 1), nearby(n, n - 1) ?: return null, reference, promptArg = surah.englishName)
+                QuizQuestion(id, "Which surah comes before Surah {x}?", name(n - 1), nearby(n, n - 1) ?: return null, reference, promptArg = name(n))
             else -> {
                 // Some names (Ya-Sin, Qaf, Luqman) are their own meaning.
                 if (language in setOf("ur", "hi")) return null
                 val meaning = localizePhrase(surah.englishMeaning, language)
-                if (lettersOnly(meaning) == lettersOnly(surah.englishName) || surahs.count { it.englishMeaning == meaning } > 1) return null
+                if (lettersOnly(meaning) == lettersOnly(surah.englishName) || lettersOnly(meaning) == lettersOnly(name(n)) || surahs.count { it.englishMeaning == meaning } > 1) return null
                 val others = random.distinct(3, { surahs[nextInt(surahs.size)] }) { it.number != n && it.englishMeaning != meaning } ?: return null
-                QuizQuestion(id, "Which surah's name means “{x}”?", surah.englishName, others.map { it.englishName }, reference, promptArg = meaning)
+                QuizQuestion(id, "Which surah's name means “{x}”?", name(n), others.map { name(it.number) }, reference, promptArg = meaning)
             }
         }
     }
@@ -409,7 +413,10 @@ internal class AamalSource(
         bilingualContent(festival.localName, festival.name, language).text
 
     private fun date(festival: FestivalDefinition) =
-        "${festival.hijriDay} ${(HIJRI_MONTHS[language] ?: HIJRI_MONTHS.getValue("en"))[festival.hijriMonth - 1]}"
+        "${festival.hijriDay} ${HIJRI_MONTHS[language]?.get(festival.hijriMonth - 1)
+            // Like the calendar screens: Arabic month names for right-to-left languages.
+            ?: if (isRtlAppLanguage(language)) HijriCalendarHelper.create(1, festival.hijriMonth, 1).monthNameArabic
+            else HIJRI_MONTHS.getValue("en")[festival.hijriMonth - 1]}"
 
     override fun question(index: Int): QuizQuestion? {
         val random = seeded(key, index)
@@ -418,7 +425,7 @@ internal class AamalSource(
             val wrong = random.distinct(3, { festivals[nextInt(festivals.size)] }) { it.hijriMonth != festival.hijriMonth } ?: return null
             return QuizQuestion(
                 id, "On which occasion is this deed especially recommended?", festivalName(festival), wrong.map(::festivalName),
-                if (language == "en") deed.englishSource else deed.source,
+                bilingualContent(deed.source, deed.englishSource, language).text,
                 passage = bilingualContent(deed.title, deed.englishTitle, language).text
             )
         }
@@ -426,7 +433,7 @@ internal class AamalSource(
         val wrong = random.distinct(3, { dated[nextInt(dated.size)] }) { date(it) != date(festival) } ?: return null
         return QuizQuestion(
             id, "On which Hijri date is {x}?", date(festival), wrong.map(::date),
-            "Islamic calendar · ${festival.name}", promptArg = festivalName(festival)
+            "${localizeUiText("Islamic calendar", language)} · ${festivalName(festival)}", promptArg = festivalName(festival)
         )
     }
 

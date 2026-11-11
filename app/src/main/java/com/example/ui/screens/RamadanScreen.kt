@@ -1,4 +1,5 @@
 package com.example.ui.screens
+import com.example.ui.tour.tourTarget
 import androidx.compose.material.icons.filled.LocationOff
 import com.example.ui.components.ScreenHeader
 import com.example.ui.localization.LocalizedText
@@ -165,15 +166,17 @@ private fun RamadanContent(
                     onBack = onBack,
                     onRefresh = { com.example.core.analytics.AppAnalytics.interaction("ramadan_screen", "refresh_ramadan", "refresh"); viewModel.refreshRealtimeDate() }
                 )
-                "hero" -> live?.let { LiveCountdownCard(it, now) }
-                "complete" -> MessageCard(
-                    icon = Icons.Default.Celebration,
-                    title = "Eid Mubarak",
-                    text = "Ramadan is complete. May Allah accept your fasts and worship.",
-                    highlighted = true
-                )
+                "hero" -> live?.let { Box(Modifier.tourTarget("ramadan_live_countdown")) { LiveCountdownCard(it, now) } }
+                "complete" -> Box(Modifier.tourTarget("ramadan_complete")) {
+                    MessageCard(
+                        icon = Icons.Default.Celebration,
+                        title = "Eid Mubarak",
+                        text = "Ramadan is complete. May Allah accept your fasts and worship.",
+                        highlighted = true
+                    )
+                }
                 "progress" -> MonthProgressCard(activeRoza, completedFasts = live?.let { it.day.roza - 1 } ?: schedule.days.size)
-                "qadr" -> live?.let { LaylatulQadrCard(it.upcomingNight) }
+                "qadr" -> live?.let { Box(Modifier.tourTarget("ramadan_laylatul_qadr")) { LaylatulQadrCard(it.upcomingNight) } }
                 "dua" -> DuaCard()
             }
         }
@@ -262,7 +265,7 @@ private fun UpcomingRamadanContent(
             // Split by local calendar days: Ramadan starts at Maghrib, not midnight,
             // so dividing elapsed milliseconds by 24 hours shows a misleading day count.
             val (remainingDays, remainingTime) = calendarCountdown(now, upcoming.startsAtMillis, timeZone)
-            HeroCard(testTag = "ramadan_countdown") {
+            Box(Modifier.tourTarget("ramadan_upcoming_countdown")) { HeroCard(testTag = "ramadan_countdown") {
                 Icon(Icons.Default.NightsStay, contentDescription = null, tint = GoldAccent,
                     modifier = Modifier.padding(bottom = 6.dp).size(28.dp))
                 HeroLabel("Ramadan begins in")
@@ -282,11 +285,11 @@ private fun UpcomingRamadanContent(
                 Spacer(modifier = Modifier.height(12.dp))
                 HeroInfoLine(Icons.Default.NightsStay, template("First Taraweeh night begins at Maghrib: {date}", "date" to firstNightText))
                 HeroInfoLine(Icons.Default.WbSunny, template("Estimated first fast: {date}", "date" to firstFastText))
-            }
+            } }
         }
 
         item(key = "first_times") {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.tourTarget("ramadan_first_times")) {
                 TimeCard("First Sehri (ends)", firstDay.sehriFormatted, Icons.Default.DarkMode, Modifier.weight(1f))
                 TimeCard("First Iftar", firstDay.iftarFormatted, Icons.Default.WbTwilight, Modifier.weight(1f))
             }
@@ -294,12 +297,12 @@ private fun UpcomingRamadanContent(
 
         if (isShawwal) {
             item(key = "shawwal") {
-                MessageCard(
+                Box(Modifier.tourTarget("ramadan_shawwal")) { MessageCard(
                     icon = Icons.Default.AutoAwesome,
                     title = "Six fasts of Shawwal",
                     text = "Whoever fasts Ramadan and follows it with six days of Shawwal, it is as if he fasted the whole year.",
                     reference = "Sahih Muslim 1164"
-                )
+                ) }
             }
         }
 
@@ -332,7 +335,7 @@ private fun RamadanHeader(title: String, hijriYear: Int, subtitle: String, onBac
         titleSuffix = "$hijriYear ${if (isRtlAppLanguage(LocalAppLanguage.current)) "هـ" else "AH"}",
         onBack = onBack
     ) {
-        IconButton(onClick = onRefresh) {
+        IconButton(onClick = onRefresh, modifier = Modifier.tourTarget("ramadan_refresh")) {
             Icon(Icons.Default.Refresh, contentDescription = localizedUiText("Refresh Ramadan timings"))
         }
     }
@@ -393,7 +396,7 @@ private fun LiveCountdownCard(live: RamadanTimetable.LiveStatus, now: Long) {
 @Composable
 private fun MonthProgressCard(activeRoza: Int, completedFasts: Int) {
     val ashra = RamadanTimetable.ashraOf(activeRoza)
-    AppCard(modifier = Modifier.fillMaxWidth().testTag("ramadan_progress")) {
+    AppCard(modifier = Modifier.fillMaxWidth().testTag("ramadan_progress").tourTarget("ramadan_month_progress")) {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -485,7 +488,7 @@ private fun LaylatulQadrCard(upcomingNight: Int) {
 
 @Composable
 private fun DuaCard() {
-    AppCard(modifier = Modifier.fillMaxWidth()) {
+    AppCard(modifier = Modifier.fillMaxWidth().tourTarget("ramadan_duas")) {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 IconBadge(Icons.AutoMirrored.Filled.MenuBook, accent = MaterialTheme.colorScheme.primary, size = 36.dp, iconSize = 20.dp)
@@ -539,7 +542,7 @@ private fun LazyListScope.timetableItems(
 
 @Composable
 private fun TimetableHeader(title: String, onJumpToToday: (() -> Unit)?) {
-    Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxWidth()) {
+    Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxWidth().tourTarget("ramadan_timetable")) {
         Column(modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(min = 40.dp)) {
                 LocalizedText(
@@ -549,7 +552,7 @@ private fun TimetableHeader(title: String, onJumpToToday: (() -> Unit)?) {
                     modifier = Modifier.weight(1f)
                 )
                 if (onJumpToToday != null) {
-                    TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("ramadan_screen", "jump_to_today", onJumpToToday), modifier = Modifier.heightIn(min = 48.dp).testTag("ramadan_jump_today")) {
+                    TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("ramadan_screen", "jump_to_today", onJumpToToday), modifier = Modifier.heightIn(min = 48.dp).testTag("ramadan_jump_today").tourTarget("ramadan_jump_today")) {
                         Icon(Icons.Default.Today, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         LocalizedText("Go to today")
@@ -588,7 +591,7 @@ private fun ColumnLabel(text: String, modifier: Modifier, textAlign: TextAlign =
 private fun AshraDividerRow(ashra: Int) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp).tourTarget("ramadan_ashra")
     ) {
         LocalizedText(
             text = ashraTitle(ashra),
@@ -628,6 +631,7 @@ private fun TimetableRow(day: RamadanTimetable.RamadanDay, state: RowState, time
             .fillMaxWidth()
             .alpha(if (state == RowState.PAST) 0.6f else 1f)
             .testTag("ramadan_day_${day.roza}")
+            .tourTarget(if (isToday) "ramadan_today_row" else "ramadan_timetable_row")
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = if (isToday) 14.dp else 10.dp),
@@ -680,7 +684,7 @@ private fun TimetableRow(day: RamadanTimetable.RamadanDay, state: RowState, time
 
 @Composable
 private fun Footnotes(text: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp).tourTarget("ramadan_footnotes")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(12.dp))
             Spacer(modifier = Modifier.width(6.dp))

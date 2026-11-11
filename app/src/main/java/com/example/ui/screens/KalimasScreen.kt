@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import com.example.ui.tour.tourTarget
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -63,6 +65,7 @@ fun KalimasScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val audioState by audio.state.collectAsState()
 
     var query by rememberSaveable { mutableStateOf("") }
+    com.example.core.analytics.AnalyticsSearch("kalimas_screen", query)
     var filter by rememberSaveable { mutableStateOf(KalimaFilter.ALL) }
     var mode by rememberSaveable { mutableStateOf(KalimaReadMode.FULL) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
@@ -99,8 +102,12 @@ fun KalimasScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         }
     }
 
-    if (settingsOpen) KalimaSettingsSheet(user, store, onDismiss = { settingsOpen = false })
-    if (quizOpen) KalimaQuizDialog(english = english, onDismiss = { quizOpen = false })
+    if (settingsOpen) KalimaSettingsSheet(user, store, onDismiss = {
+        com.example.core.analytics.AppAnalytics.interaction("kalimas_screen", "dismiss_settings", "dismiss"); settingsOpen = false
+    })
+    if (quizOpen) KalimaQuizDialog(english = english, onDismiss = {
+        com.example.core.analytics.AppAnalytics.interaction("kalimas_screen", "dismiss_quiz", "dismiss"); quizOpen = false
+    })
 }
 
 @Composable
@@ -111,8 +118,8 @@ private fun KalimaHub(
     onOpen: (String) -> Unit, onOpenSettings: () -> Unit, onQuiz: () -> Unit, onBack: () -> Unit
 ) {
     val listState = rememberLazyListState()
+    com.example.core.analytics.AnalyticsScroll("kalimas_screen", listState)
     val english = user.meaning == KalimaMeaning.ENGLISH
-    var sourceExpanded by rememberSaveable { mutableStateOf(false) }
     val shown = remember(query, filter, user.favorites, user.memorized) {
         KalimasContent.search(query).filter {
             when (filter) {
@@ -137,7 +144,7 @@ private fun KalimaHub(
         ) {
             item(key = "header") {
                 ScreenHeader("6 Kalime & Iman", subtitle = "Iman-e-Mujmal aur Iman-e-Mufassal", onBack = onBack) {
-                    IconButton(onClick = onOpenSettings, modifier = Modifier.testTag("kalimas_settings")) {
+                    IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("kalimas_screen", "open_settings", onOpenSettings), modifier = Modifier.testTag("kalimas_settings").tourTarget("kalima_settings")) {
                         Icon(Icons.Default.Tune, contentDescription = localizedUiText("Reading settings"))
                     }
                 }
@@ -155,11 +162,11 @@ private fun KalimaHub(
                 )
             }
             item(key = "search") {
-                AppSearchField(query, onQueryChange, "Search", Modifier.testTag("kalimas_search"))
+                AppSearchField(query, onQueryChange, "Search", Modifier.testTag("kalimas_search").tourTarget("kalima_search"))
             }
             item(key = "filters") {
                 Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("kalimas_filters"),
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("kalimas_filters").tourTarget("kalima_filters"),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     KalimaFilter.entries.forEach { option ->
@@ -169,7 +176,7 @@ private fun KalimaHub(
                             KalimaFilter.NOT_MEMORISED -> total - memorisedCount
                         }
                         FilterChip(
-                            selected = filter == option, onClick = { onFilterChange(option) },
+                            selected = filter == option, onClick = { com.example.core.analytics.AppAnalytics.interaction("kalimas_screen", "filter", "select", item = option.tag); onFilterChange(option) },
                             label = { Text(localizedUiText(option.label) + (count?.let { " · $it" } ?: "")) },
                             leadingIcon = if (filter == option) ({ Icon(Icons.Default.Check, null, Modifier.size(16.dp)) }) else null,
                             shape = CircleShape,
@@ -178,7 +185,7 @@ private fun KalimaHub(
                     }
                 }
             }
-            if (shown.isEmpty()) item(key = "empty") {
+            if (shown.isEmpty()) item(key = "empty") { Box(Modifier.tourTarget("kalima_empty")) {
                 if (query.isNotBlank()) {
                     StateMessage(icon = Icons.Default.SearchOff, title = "No results found",
                         actionText = "Clear search", onAction = { onQueryChange("") })
@@ -187,7 +194,7 @@ private fun KalimaHub(
                         message = if (filter == KalimaFilter.FAVOURITES) "Tap the star on a card to add it to Favourites." else null,
                         actionText = "Show all", onAction = { onFilterChange(KalimaFilter.ALL) })
                 }
-            }
+            } }
             KalimaGroup.entries.forEach { group ->
                 val inGroup = shown.filter { it.group == group }
                 if (inGroup.isNotEmpty()) {
@@ -210,7 +217,7 @@ private fun KalimaHub(
                 }
             }
             item(key = "footer") {
-                KalimaAboutCard(english, sourceExpanded) { sourceExpanded = !sourceExpanded }
+                Box(Modifier.tourTarget("kalima_about")) { KalimaAboutCard(english) }
             }
         }
         KalimaNowPlayingBar(audio, KalimasContent.entries, Modifier.align(Alignment.BottomCenter))
@@ -219,7 +226,7 @@ private fun KalimaHub(
 
 @Composable
 private fun KalimaSectionTitle(title: String, memorised: Int, total: Int) {
-    Row(Modifier.fillMaxWidth().padding(top = Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(top = Spacing.sm).tourTarget("kalima_section"), verticalAlignment = Alignment.CenterVertically) {
         LocalizedText(
             title, Modifier.weight(1f).semantics { heading() },
             style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold

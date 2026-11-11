@@ -17,8 +17,8 @@ class CmSearchPolicyTest {
 
     @Test fun travelCannotBypassCooldown() {
         assertEquals(CmSearchPolicy.Block.COOLDOWN,
-            CmSearchPolicy.blocked(noon + 14 * 60_000, location(22.52), budget()))
-        assertNull(CmSearchPolicy.blocked(noon + 15 * 60_000, location(22.52), budget()))
+            CmSearchPolicy.blocked(noon + 1 * 60_000, location(22.52), budget()))
+        assertNull(CmSearchPolicy.blocked(noon + 2 * 60_000, location(22.52), budget()))
     }
 
     @Test fun stationaryUserCannotSearchAgainThatDay() {
@@ -32,13 +32,14 @@ class CmSearchPolicyTest {
         var state: CmSearchBudget? = null
         for (i in 0 until 5) {
             val at = noon + i * 16 * 60_000
-            val place = location(22.5 + i * 0.01)
+            // 0.02° of latitude is about 2.2 km, beyond TRAVEL_METRES, so each search is in a new area.
+            val place = location(22.5 + i * 0.02)
             assertNull(CmSearchPolicy.blocked(at, place, state))
             state = CmSearchPolicy.next(at, place, state)
             assertEquals(i + 1, state.count)
         }
         assertEquals(CmSearchPolicy.Block.DAILY_LIMIT,
-            CmSearchPolicy.blocked(noon + 5 * 16 * 60_000, location(22.56), state))
+            CmSearchPolicy.blocked(noon + 5 * 16 * 60_000, location(22.6), state))
     }
 
     @Test fun stationarySearchResetsOnNextIndiaDay() {

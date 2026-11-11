@@ -152,12 +152,6 @@ class RecitationStoreTest {
         assertEquals("", recitationShareText("", "", "", "", ""))
     }
 
-    @Test fun matchesAllWords() {
-        assertTrue(recitationMatches("", "anything"))
-        assertTrue(recitationMatches("  kursi AYAT ", "Ayat al Kursi 2:255"))
-        assertFalse(recitationMatches("kursi falaq", "Ayat al Kursi 2:255"))
-    }
-
     @Test fun wazaifCategoriesCoverWazaif() {
         assertEquals(3, RecitationCollection.wazaifCategories.size)
         assertEquals(RecitationCollection.wazaifCategories.toSet(), RecitationCollection.wazaif.map { it.category }.toSet())

@@ -47,6 +47,7 @@ object TafsirAudioManager {
     private var queue: List<TafsirAudioTrack> = emptyList()
     private var queueIndex = 0
     private var player: ExoPlayer? = null
+    private var audioLoad: com.example.core.analytics.AppAnalytics.AudioLoad? = null
     private var ticker: Job? = null
     private val downloads = mutableMapOf<String, Job>()
     private val downloadSlots = Semaphore(3)
@@ -125,8 +126,8 @@ object TafsirAudioManager {
         if (queueIndex > 0) prepare(queue[--queueIndex]) else seekTo(0)
     }
 
+    /** Called for every drag frame of the seek bar; the bar reports one "seek" event when the drag ends. */
     fun seekTo(positionMs: Int) {
-        com.example.core.analytics.AppAnalytics.media("tafsir_audio", "seek")
         player?.seekTo(positionMs.toLong())
         _state.value = _state.value.copy(positionMs = positionMs)
         rememberPosition(positionMs)
@@ -152,6 +153,7 @@ object TafsirAudioManager {
             durationMs = 0, resumeId = track.id, resumePositionMs = positionMs, error = null
         )
         persist(track.id, positionMs)
+        audioLoad = com.example.core.analytics.AppAnalytics.audioLoad("tafsir_audio")
         val candidate = StreamPlayer.build(context)
         player = candidate
         candidate.setAudioAttributes(
@@ -173,6 +175,7 @@ object TafsirAudioManager {
                 if (playbackState == Player.STATE_BUFFERING) {
                     _state.value = _state.value.copy(isBuffering = true)
                 } else if (playbackState == Player.STATE_READY) {
+                    audioLoad?.ready()
                     _state.value = _state.value.copy(isBuffering = false,
                         durationMs = candidate.duration.safeMillis())
                     startTicker()
@@ -192,6 +195,7 @@ object TafsirAudioManager {
             override fun onPlayerError(error: PlaybackException) {
                 if (player !== candidate) return
                 com.example.core.analytics.AppAnalytics.mediaState("tafsir_audio", "failed", "playback_error")
+                audioLoad?.failed()
                 ticker?.cancel()
                 _state.value = _state.value.copy(isPlaying = false, isBuffering = false,
                     error = "Tafseer audio could not be played. Tap Play to retry.")
@@ -210,13 +214,15 @@ object TafsirAudioManager {
     private fun startTicker() {
         ticker?.cancel()
         ticker = scope.launch {
+            var ticks = 0
             while (true) {
                 val current = player ?: break
                 val position = current.currentPosition.safeMillis()
                 _state.value = _state.value.copy(positionMs = position,
                     durationMs = current.duration.safeMillis())
-                rememberPosition(position)
-                delay(1000)
+                // The slider moves smoothly; the resume point is saved about every five seconds.
+                if (++ticks % 20 == 0) rememberPosition(position)
+                delay(250)
             }
         }
     }
@@ -233,17 +239,24 @@ object TafsirAudioManager {
     }
 
     fun download(track: TafsirAudioTrack) {
-        if (!::context.isInitialized || !track.isStreamable || file(track).exists() || track.id in downloads) return
+        if (!::context.isInitialized || !track.isStreamable || file(track).exists()) return
+        // A cancelled job stays mapped until it has cleaned up its shared `.part` file.
+        val previous = downloads[track.id]
+        if (previous != null && !previous.isCancelled) return
         downloads[track.id] = scope.launch {
+            val job = coroutineContext[Job]
+            previous?.join()
             _state.value = _state.value.copy(downloading = _state.value.downloading + track.id)
-            val result = downloadSlots.withPermit { withContext(Dispatchers.IO) {
+            // On cancel the IO hop rethrows, so the mapping is released in finally.
+            val result = try { downloadSlots.withPermit { withContext(Dispatchers.IO) {
                 runCatching {
                     val temp = File(directory, "${track.id}.part")
                     FastNet.download(track.audioUrl, temp)
                     if (!temp.renameTo(file(track))) error("Could not save audio")
                 }
-            } }
-            downloads.remove(track.id)
+            } } } finally {
+                if (downloads[track.id] === job) downloads.remove(track.id)
+            }
             _state.value = _state.value.copy(
                 downloading = _state.value.downloading - track.id,
                 downloaded = if (result.isSuccess) _state.value.downloaded + track.id else _state.value.downloaded,
@@ -256,9 +269,9 @@ object TafsirAudioManager {
 
     /** Stops the running downloads of [tracks]; partial files are discarded. */
     fun cancelDownloads(tracks: List<TafsirAudioTrack>) {
-        val ids = tracks.map { it.id }.filter { it in downloads }
+        val ids = tracks.map { it.id }.filter { downloads[it]?.isCancelled == false }
         if (ids.isEmpty()) return
-        ids.forEach { downloads.remove(it)?.cancel() }
+        ids.forEach { downloads[it]?.cancel() }
         _state.value = _state.value.copy(downloading = _state.value.downloading - ids.toSet())
     }
 

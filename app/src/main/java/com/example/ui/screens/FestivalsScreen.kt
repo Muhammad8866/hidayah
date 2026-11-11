@@ -2,6 +2,7 @@
 
 package com.example.ui.screens
 
+import com.example.ui.localization.localizeUiTemplate
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -14,7 +15,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -61,6 +61,9 @@ import com.example.ui.components.StateMessage
 import com.example.ui.components.TonalPill
 import com.example.ui.components.groupedShape
 import com.example.ui.components.pressScale
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.appLocale
@@ -128,11 +131,11 @@ fun FestivalsScreen(
         item(key = "header") {
             ScreenHeader(
                 title = "Islamic occasions",
-                subtitle = if (uiState.languageCode == "hi") "आज: ${formatHijriDate(uiState.hijriDate, "hi")} • ${uiState.selectedCity.name}"
-                    else "Today: ${formatHijriDate(uiState.hijriDate, uiState.languageCode)} • ${uiState.selectedCity.name}",
+                subtitle = localizedUiTemplate("Today: {date} • {city}", "date" to formatHijriDate(uiState.hijriDate, uiState.languageCode), "city" to uiState.selectedCity.name),
                 onBack = onBack
             ) {
                 IconButton(
+                    modifier = Modifier.tourTarget("hadithcal_festivals_refresh"),
                     onClick = { AppAnalytics.interaction("festivals_screen", "refresh_festivals", "tap"); viewModel.refreshFestivals() },
                     enabled = !uiState.isFestivalsLoading
                 ) {
@@ -152,14 +155,14 @@ fun FestivalsScreen(
                     onAction = { viewModel.refreshFestivals() }
                 )
             }
-            schedule != null -> {
+            else -> {
                 if (next != null) item(key = "next_${next.key}") {
                     val (done, total) = progressOf(next)
                     NextOccasionHero(next, done, total, onOpen = { openFestival(next) })
                 }
 
                 if (laterByMonth.isNotEmpty()) item(key = "upcoming_title") {
-                    FestivalSectionLabel("Upcoming", Modifier.padding(top = Spacing.md))
+                    FestivalSectionLabel("Upcoming", Modifier.padding(top = Spacing.md).tourTarget("hadithcal_festivals_upcoming"))
                 }
                 laterByMonth.forEach { (month, inMonth) ->
                     item(key = "month_${month.first}_${month.second}") {
@@ -203,7 +206,7 @@ fun FestivalsScreen(
 
                 item(key = "dates_note") {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = Spacing.lg, start = Spacing.xs, end = Spacing.xs),
+                        modifier = Modifier.fillMaxWidth().padding(top = Spacing.lg, start = Spacing.xs, end = Spacing.xs).tourTarget("hadithcal_festivals_note"),
                         verticalAlignment = Alignment.Top
                     ) {
                         Icon(
@@ -214,7 +217,7 @@ fun FestivalsScreen(
                         Spacer(Modifier.width(Spacing.sm))
                         LocalizedText(
                             modifier = Modifier.weight(1f),
-                            text = "${schedule.regionLabel}. Dates depend on local moon sighting. Ahl-e-Sunnat (Hanafi) guidance; not every occasion is an Eid.",
+                            text = localizedUiTemplate("{region}. Dates depend on local moon sighting. Ahl-e-Sunnat (Hanafi) guidance; not every occasion is an Eid.", "region" to localizedUiText(schedule.regionLabel)),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -233,7 +236,7 @@ fun FestivalsScreen(
                 progressStore.toggle(open.definition.id, open.hijriYear, index)
                 progressRevision++
             },
-            onDismiss = { openKey = null }
+            onDismiss = { AppAnalytics.interaction("festivals_screen", "dismiss_festival_details", "dismiss"); openKey = null }
         )
     }
 }
@@ -270,7 +273,7 @@ private fun nightEveText(festival: IslamicFestival): String? {
     val locale = appLocale(language)
     val date = festivalCalendar(festival)
     val eve = (date.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, -1) }
-    return localizeUiText("Night: ${SimpleDateFormat("EEE, d MMM", locale).format(eve.time)} after Maghrib", language)
+    return localizeUiTemplate("Night: {date} after Maghrib", language, mapOf("date" to SimpleDateFormat("EEE, d MMM", locale).format(eve.time)))
 }
 
 @Composable
@@ -285,7 +288,7 @@ private fun NextOccasionHero(festival: IslamicFestival, done: Int, total: Int, o
 
     HeroSurface(
         onClick = onOpen,
-        modifier = Modifier.fillMaxWidth().testTag("festival_card_${def.id}")
+        modifier = Modifier.fillMaxWidth().testTag("festival_card_${def.id}").tourTarget("hadithcal_festivals_next")
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -450,6 +453,7 @@ private fun FestivalRow(
             .fillMaxWidth()
             .pressScale(interaction)
             .testTag("festival_card_${def.id}")
+            .tourTarget("hadithcal_festivals_row")
     ) {
         Row(
             Modifier.padding(horizontal = Spacing.md, vertical = Spacing.md).heightIn(min = 56.dp),
@@ -538,10 +542,11 @@ private fun EarlierToggle(count: Int, expanded: Boolean, onToggle: () -> Unit) {
             .fillMaxWidth()
             .padding(top = Spacing.md)
             .clip(MaterialTheme.shapes.medium)
-            .clickable(role = Role.Button, onClick = onToggle)
+            .clickable(role = Role.Button, onClick = com.example.core.analytics.AppAnalytics.trackAction("festivals_screen", "toggle_earlier", onToggle))
             .heightIn(min = 48.dp)
             .padding(horizontal = Spacing.xs)
-            .testTag("festivals_earlier"),
+            .testTag("festivals_earlier")
+            .tourTarget("hadithcal_festivals_earlier"),
         verticalAlignment = Alignment.CenterVertically
     ) {
         LocalizedText(
@@ -582,6 +587,7 @@ private fun FestivalDetailSheet(
     val hijri = formatHijriDate(HijriCalendarHelper.create(def.hijriDay, def.hijriMonth, festival.hijriYear), language)
     val eve = nightEveText(festival)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    TourScreen("hadithcal_festival_detail")
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -592,12 +598,12 @@ private fun FestivalDetailSheet(
         Column(
             Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(com.example.core.analytics.rememberAnalyticsScrollState("festivals_screen"))
                 .padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.xxxl),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg)
         ) {
             // Title block
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.tourTarget("hadithcal_festival_title"), verticalAlignment = Alignment.CenterVertically) {
                 IconBadge(
                     if (def.isNight) Icons.Default.NightsStay else Icons.Default.Celebration,
                     accent = MaterialTheme.colorScheme.primary, size = 48.dp, iconSize = 26.dp
@@ -621,7 +627,7 @@ private fun FestivalDetailSheet(
             }
 
             // When
-            AppCard(contentPadding = PaddingValues(Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            AppCard(modifier = Modifier.tourTarget("hadithcal_festival_when"), contentPadding = PaddingValues(Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 DetailFact(Icons.Default.Event, dateText)
                 DetailFact(Icons.Default.CalendarMonth, ltr(hijri))
                 if (eve != null) DetailFact(Icons.Default.NightsStay, eve)
@@ -629,7 +635,7 @@ private fun FestivalDetailSheet(
 
             // Significance
             val description = localizePhrase(def.description, language)
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Column(Modifier.tourTarget("hadithcal_festival_about"), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 if (description == def.description && language != "en") FallbackLanguageLabel("English")
                 Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
             }
@@ -679,7 +685,7 @@ private fun AamalChecklist(
     val count = done.count { it < aamal.size }
     val fraction by animateFloatAsState(count.toFloat() / aamal.size.coerceAtLeast(1), label = "aamal_progress")
 
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.animateContentSize()) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.animateContentSize().tourTarget("hadithcal_festival_aamal")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             LocalizedText(
                 "What to do",
@@ -702,13 +708,13 @@ private fun AamalChecklist(
         shown.forEachIndexed { index, (title, detail, source) ->
             val checked = index in done
             Surface(
-                onClick = { onToggle(index) },
+                onClick = { com.example.core.analytics.AppAnalytics.interaction("festivals_screen", "aamal_item", "toggle", item = festivalId); onToggle(index) },
                 shape = groupedShape(index, shown.size, outer = 18.dp, inner = 6.dp),
                 color = if (checked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface,
-                modifier = Modifier.fillMaxWidth().testTag("festival_aamal_${festivalId}_$index")
+                modifier = Modifier.fillMaxWidth().testTag("festival_aamal_${festivalId}_$index").tourTarget("hadithcal_festival_deed")
             ) {
                 Row(Modifier.padding(start = Spacing.xs, end = Spacing.md, top = Spacing.xs, bottom = Spacing.md), verticalAlignment = Alignment.Top) {
-                    Checkbox(checked = checked, onCheckedChange = { onToggle(index) })
+                    Checkbox(checked = checked, onCheckedChange = { com.example.core.analytics.AppAnalytics.interaction("festivals_screen", "aamal_item", "toggle", item = festivalId); onToggle(index) })
                     Column(Modifier.weight(1f).padding(top = Spacing.md), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(title.text, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         Text(detail.text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -740,7 +746,7 @@ private fun CautionsCard(festivalId: String) {
         outlined = false,
         contentPadding = PaddingValues(Spacing.lg),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
-        modifier = Modifier.fillMaxWidth().testTag("festival_cautions_$festivalId")
+        modifier = Modifier.fillMaxWidth().testTag("festival_cautions_$festivalId").tourTarget("hadithcal_festival_cautions")
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.ReportGmailerrorred, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
@@ -772,7 +778,7 @@ private fun CautionsCard(festivalId: String) {
 
 @Composable
 private fun FallbackLanguageLabel(languageName: String) {
-    Text(languageName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    LocalizedText(languageName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable

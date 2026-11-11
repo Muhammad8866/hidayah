@@ -55,7 +55,7 @@ internal object IndicSdDraft17 {
         "Studying the life of Ghaus-e-Azam" to "غاس اعظم جی جیون جو اڀیاس ڪرڻ",
         "Read the advice in his books 'Futuh al-Ghaib' / 'Ghunyat-ut-Talibeen' and act upon it." to "ھن جی ڪتابن'ڦتوح الغائب'/'غونیت التلیبین'۾ ڏنل صلاح پڙھو ۽ ان تی عمل ڪریو۔",
         "Dua for Rajab" to "راجاب لاء دعا",
-        "اللّٰهُمَّ بَارِكْ لَنَا فِي رَجَبٍ وَشَعْبَانَ وَبَلِّغْنَا رَمَضَانَ — O Allah! Bless us in Rajab and Sha'ban, and let us reach Ramadan." to "اللّٰهُمَّ بَارِكْ لَنَا فِي رَجَبٍ وَشَعْبَانَ وَبَلِّغْنَا رَمَضَانَ - ای اللہ! اسان کی रजب ۽ شبن ۾ سلام ڪر، ۽ اچو تہ رمضان تائین پہچون۔",
+        "اللّٰهُمَّ بَارِكْ لَنَا فِي رَجَبٍ وَشَعْبَانَ وَبَلِّغْنَا رَمَضَانَ — O Allah! Bless us in Rajab and Sha'ban, and let us reach Ramadan." to "اللّٰهُمَّ بَارِكْ لَنَا فِي رَجَبٍ وَشَعْبَانَ وَبَلِّغْنَا رَمَضَانَ - ای اللہ! اسان کی رجب ۽ شبن ۾ سلام ڪر، ۽ اچو تہ رمضان تائین پہچون۔",
         "Musnad Ahmad 2346 (weak, but recited for virtues)" to "مصناد احمد 2346 (ڪمزور، پر سٺی لاء پڙھندو ہو)",
         "Voluntary fasts" to "خود ارتی روزو",
         "Rajab is a sacred month — keep voluntary fasts in it (especially Monday/Thursday and the Ayyam-e-Beez, the 13th, 14th and 15th)." to "راجب ہڪ پاڪ دھن آھی-ان ۾ پنھنجی مرضی سان روزو رکو (خاص طئور تی سومر/جمعرات ۽ اییم-بیز، 13 ہین، 14 ہین ۽ 15 ہین)",

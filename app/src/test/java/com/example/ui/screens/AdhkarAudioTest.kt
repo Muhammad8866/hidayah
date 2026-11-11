@@ -11,8 +11,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.domain.model.AdhkarDatasetRepository
 import com.example.domain.model.DuaDatasetRepository
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -36,28 +36,48 @@ class AdhkarAudioTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val sessions = AdhkarDatasetRepository.MORNING_ADHKAR + AdhkarDatasetRepository.EVENING_ADHKAR
         sessions.distinctBy { it.id }.filter { AdhkarAudioCatalog.has(it.id) }.forEach { dua ->
-            val asset = requireNotNull(AdhkarAudioCatalog.uriFor(dua.id)).removePrefix("asset:///")
-            context.assets.open(asset).use {
-                assertTrue("Missing audio for ${dua.id}", it.readBytes().size > 1000)
+            requireNotNull(AdhkarAudioCatalog.urisFor(dua.id)).forEach { uri ->
+                assertTrue("Not bundled for ${dua.id}: $uri", uri.startsWith("asset:///"))
+                context.assets.open(uri.removePrefix("asset:///")).use {
+                    assertTrue("Missing audio for ${dua.id}", it.readBytes().size > 1000)
+                }
             }
         }
     }
 
     @Test
-    fun eveningUsesItsOwnWordsRatherThanMorningRecordings() {
-        listOf("allahumma_bika", "witness", "blessing").forEach { part ->
-            val morning = if (part == "allahumma_bika") "dua_allahumma_bika_asbahna" else "dua_morning_$part"
-            val evening = if (part == "allahumma_bika") "dua_allahumma_bika_amsayna" else "dua_evening_$part"
-            assertTrue(AdhkarAudioCatalog.has(evening))
-            assertNotEquals(AdhkarAudioCatalog.uriFor(morning), AdhkarAudioCatalog.uriFor(evening))
+    fun unlicensedHisnRecordingsAreNoLongerBundled() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        listOf("dua_sayyidul_istighfar", "dua_evening_witness", "dua_kalimat_tammat").forEach { id ->
+            assertFalse(AdhkarAudioCatalog.has(id))
+            assertTrue(runCatching { context.assets.open("adhkar_audio/$id.mp3").close() }.isFailure)
         }
-        assertTrue(AdhkarAudioCatalog.has("dua_amsayna_fitrah"))
-        assertNotEquals(AdhkarAudioCatalog.uriFor("dua_fitratil_islam"), AdhkarAudioCatalog.uriFor("dua_amsayna_fitrah"))
+    }
+
+    @Test
+    fun remoteMappingKeepsOnlyHttpsHashedLicensedEntries() {
+        val hash = "a".repeat(64)
+        fun entry(id: String, url: String, sha: String = hash, evidence: String = "https://example.org/licence") =
+            """{"duaId":"$id","url":"$url","sha256":"$sha","wordingSource":"w","license":"CC-BY-4.0","licenseEvidenceUrl":"$evidence"}"""
+        val parsed = DuaRemoteAudio.parse("""{"recordings":[${listOf(
+            entry("ok", "https://example.org/a.mp3"),
+            entry("plain_http", "http://example.org/a.mp3"),
+            entry("bad_hash", "https://example.org/a.mp3", sha = "123"),
+            entry("no_evidence", "https://example.org/a.mp3", evidence = "")
+        ).joinToString(",")}]}""")
+        assertEquals(setOf("ok"), parsed.keys)
+    }
+
+    @Test
+    fun bundledRemoteMappingParses() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val json = context.assets.open("dua_audio_remote.json").bufferedReader().use { it.readText() }
+        DuaRemoteAudio.parse(json).values.forEach { assertTrue(it.url.startsWith("https://")) }
     }
 
     @Test
     fun failedRecordingShowsRetryInsteadOfSilentlyDisappearing() {
-        val dua = requireNotNull(DuaDatasetRepository.byId("dua_sayyidul_istighfar"))
+        val dua = requireNotNull((AdhkarDatasetRepository.MORNING_ADHKAR + AdhkarDatasetRepository.EVENING_ADHKAR).firstOrNull { it.id == "dua_muawwidhat" })
         AdhkarAudioPlayer.failedId.value = dua.id
         compose.setContent { MaterialTheme { AdhkarAudioControls(dua) } }
         compose.onNodeWithTag("adhkar_audio_${dua.id}").assertIsDisplayed()

@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import com.example.ui.localization.localizeUiTemplate
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -43,6 +44,7 @@ import com.example.ui.components.rememberIsOnline
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.NavigateBefore
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
@@ -76,6 +78,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.core.search.AppSearch
 import com.example.hadith.BookIndex
 import com.example.hadith.BookSearchIndex
 import com.example.hadith.BookTitles
@@ -83,11 +86,10 @@ import com.example.hadith.IndexSort
 import com.example.hadith.HadithBook
 import com.example.ui.components.BackIconButton
 import com.example.hadith.HadithCatalog
-import com.example.hadith.IslamicBooksCatalog
-import com.example.hadith.MuslimahBooksCatalog
 import com.example.hadith.WorldLibrary
 import com.example.hadith.HadithPdfStore
 import com.example.hadith.HadithRepository
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizeUiText
@@ -98,6 +100,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import com.example.ui.components.groupedShape
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.contentDescription
@@ -186,11 +190,10 @@ internal data class LibraryCopy(
 
 internal val HadithCopy = LibraryCopy(
     title = "Hadith Library",
-    subtitle = "Kutub al-Sittah and classical collections",
+    subtitle = "Kutub al-Sittah",
     searchHint = "Search a book or a topic…",
     collectionsLabel = "Collections",
-    sourcePolicy = "Complete Arabic sets come from Dawat-e-Islami's library, Hindi Kutub al-Sittah sets from the Ekummat collection, and English publisher editions from Emaan Library/OpenMaktaba. " +
-        "Downloads are saved byte-for-byte and PDF pages are never translated, rewritten, reordered, or modified. " +
+    sourcePolicy = "Downloads are saved byte-for-byte and PDF pages are never translated, rewritten, reordered, or modified. " +
         "Collection, volume, chapter, and page navigation happens in the app around the original PDF."
 )
 
@@ -206,21 +209,11 @@ private val collectionInfo = mapOf(
     "muwatta" to CollectionInfo("مؤطا امام مالک", "Imam Malik ibn Anas · d. 179 AH", false),
     "musnad_ahmad" to CollectionInfo("مسند امام احمد", "Imam Ahmad ibn Hanbal · d. 241 AH", false),
     "darimi" to CollectionInfo("سنن الدارمی", "Imam Abdullah ibn Abd ar-Rahman ad-Darimi · d. 255 AH", false),
-    IslamicBooksCatalog.BAHAR to CollectionInfo("بہارِ شریعت", "Sadr ash-Shariah Mufti Amjad Ali Azmi · d. 1367 AH", false),
-    IslamicBooksCatalog.ANWAR to CollectionInfo("انوارِ شریعت", "Faqih-e-Millat Mufti Jalaluddin Ahmad Amjadi · d. 1422 AH", false),
-    IslamicBooksCatalog.SHAWAHID to CollectionInfo("شواہد النبوۃ", "Mawlana Nur ad-Din Abd ar-Rahman Jami · d. 898 AH", false),
-    IslamicBooksCatalog.MAARIJ to CollectionInfo("معارج النبوۃ", "Mulla Muin ad-Din Kashifi al-Harawi · d. 907 AH", false),
-    // Authors as named on each book's page in Dawat-e-Islami's library; blank where it names none.
-    "muslimah_islami_behno_ki_namaz" to CollectionInfo("اسلامی بہنوں کی نماز", "Ameer-e-Ahle Sunnat Maulana Muhammad Ilyas Attar Qadri", false),
-    "muslimah_jannati_zevar" to CollectionInfo("جنتی زیور", "Allama Abdul Mustafa Azmi · Al-Madinatul Ilmiyah edition", false),
-    "muslimah_sunni_bahishti_zewar" to CollectionInfo("سنی بہشتی زیور", "Khalil-e-Millat Mufti Muhammad Khalil Khan Qadri Barkati", false),
-    "muslimah_khawateen_kay_masail" to CollectionInfo("خواتین کے مسائل", "", false),
-    "muslimah_chahal_hadees_baraye_khawateen_e_islam" to CollectionInfo("چہل حدیث برائے خواتین اسلام", "", false),
-    "muslimah_chadar_aur_char_diwari" to CollectionInfo("چادر اور چار دیواری", "Khalil-e-Millat Mufti Muhammad Khalil Khan Qadri Barkati", false),
-    "muslimah_aurat_aur_parda" to CollectionInfo("عورت اور پردہ", "Professor Dr. Muhammad Masood Ahmad", false),
-    "muslimah_aurat_aur_aazadi" to CollectionInfo("عورت اور آزادی", "", false),
-    "muslimah_saas_bahu_main_sulha_ka_raaz" to CollectionInfo("ساس بہو میں صلح کا راز", "Al-Madinatul Ilmiyah · Dawat-e-Islami", false),
-    "muslimah_jannati_khawateen" to CollectionInfo("جنتی خواتین", "Maulana Abu Usaid Ubaid Raza Attari Madani", false)
+    // Urdu commentaries on the six books, named with their commentators.
+    "nematul_bari" to CollectionInfo("نعمۃ الباری فی شرح صحیح البخاری", "Allama Ghulam Rasool Saeedi", false),
+    "sharh_muslim" to CollectionInfo("شرح صحیح مسلم", "Allama Ghulam Rasool Saeedi", false),
+    "nematul_wadood" to CollectionInfo("نعمۃ الودود فی شرح سنن ابی داؤد", "Mufti Abd al-Mustafa Muhammad Mujahid al-Qadiri", false),
+    "sharh_tirmidhi" to CollectionInfo("شرح جامع ترمذی", "Mufti Muhammad Hashim Khan al-Attari al-Madani", false)
 )
 
 private fun infoFor(collectionId: String, name: String) =
@@ -236,7 +229,23 @@ private fun languageLabel(code: String) = when (code) {
     else -> WorldLibrary.languageName(code) ?: code.uppercase()
 }
 
-private val LanguageOrder = listOf("ar", "ur", "en", "hi", "kn", "fa")
+private val LanguageOrder = listOf("ar", "ur", "en", "hi", "kn", "fa", "bn", "sd", "ps", "fr")
+
+/**
+ * What the library's search box reads for one collection: its name, its Arabic title, its
+ * compiler, the title of every volume and the name's other spellings. Arabic and Urdu spellings
+ * of a title (صحيح البخاري, صحیح بخاری) fold to the same words in the search engine.
+ */
+internal fun hadithCollectionSearchFields(collectionId: String, name: String, books: List<HadithBook>): AppSearch.Fields {
+    val info = infoFor(collectionId, name)
+    return AppSearch.Fields(
+        title = name,
+        nativeTitle = info.arabic,
+        author = info.compiler,
+        other = (books.flatMap { listOfNotNull(it.romanTitle, it.nativeTitle) } + HadithCatalog.searchAliases(collectionId))
+            .filter(String::isNotBlank).distinct()
+    )
+}
 
 private data class HadithCollection(val id: String, val name: String, val books: List<HadithBook>) {
     val info get() = infoFor(id, name)
@@ -244,10 +253,17 @@ private data class HadithCollection(val id: String, val name: String, val books:
         .sortedBy { LanguageOrder.indexOf(it).let { i -> if (i < 0) 99 else i } }
 }
 
-private fun volumeLabel(book: HadithBook) =
-    book.volumeTitle ?: if (book.volumeCount == 1) "Complete edition" else "Volume ${book.volume} of ${book.volumeCount}"
+@Composable
+private fun volumeLabel(book: HadithBook): String = when {
+    // Sets still being published are numbered without a total ("Volume 3").
+    book.volumeTitle == "Volume ${book.volume}" -> localizedUiTemplate("Volume {volume}", "volume" to book.volume)
+    book.volumeTitle != null -> localizedUiText(book.volumeTitle)
+    book.volumeCount == 1 -> localizedUiText("Complete edition")
+    else -> localizedUiTemplate("Volume {volume} of {total}", "volume" to book.volume, "total" to book.volumeCount)
+}
 
 /** An edition is named in its own script; a set adds which volume this file is. */
+@Composable
 private fun editionTitle(book: HadithBook): String {
     val native = book.nativeTitle ?: return volumeLabel(book)
     return if (book.volumeCount == 1 && book.volumeTitle == null) native else "$native · ${volumeLabel(book)}"
@@ -303,22 +319,23 @@ internal fun HadithLibrary(
     LaunchedEffect(books, changes) {
         offline = withContext(Dispatchers.IO) { books.filter(HadithPdfStore::isDownloaded).map { it.id }.toSet() }
     }
-    val visibleCollections = remember(collections, query, language, sort, offline) {
-        val needle = query.trim()
+    // Built once per list, so a keystroke only searches it.
+    val collectionSearch = remember(collections) {
+        AppSearch.Ranker(collections) { hadithCollectionSearchFields(it.id, it.name, it.books) }
+    }
+    val visibleCollections = remember(collectionSearch, query, language, sort, offline) {
+        val found = collectionSearch.search(query)
         val byTitle = compareBy<HadithCollection, String>(BookTitles.naturalOrder) { it.name }
-        // Every sort is stable, so ties keep the library's own order.
+        // Every sort is stable, so ties keep the search's order. Library order shows the best match first.
         when (sort) {
-            LibrarySort.LIBRARY -> collections
-            LibrarySort.TITLE_ASC -> collections.sortedWith(byTitle)
-            LibrarySort.TITLE_DESC -> collections.sortedWith(byTitle.reversed())
-            LibrarySort.VOLUMES -> collections.sortedByDescending { it.books.size }
-            LibrarySort.OFFLINE -> collections.sortedByDescending { c -> c.books.count { it.id in offline } }
+            LibrarySort.LIBRARY -> found
+            LibrarySort.TITLE_ASC -> found.sortedWith(byTitle)
+            LibrarySort.TITLE_DESC -> found.sortedWith(byTitle.reversed())
+            LibrarySort.VOLUMES -> found.sortedByDescending { it.books.size }
+            LibrarySort.OFFLINE -> found.sortedByDescending { c -> c.books.count { it.id in offline } }
         }.mapNotNull { c ->
-            val matches = needle.isBlank() || c.name.contains(needle, true) ||
-                c.info.arabic.contains(needle) || c.info.compiler.contains(needle, true) ||
-                c.books.any { it.romanTitle.contains(needle, true) || it.nativeTitle?.contains(needle, true) == true }
             val shown = c.books.filter { language == HadithCatalog.ALL_LANGUAGES || it.languageCode == language }
-            if (matches && shown.isNotEmpty()) c.copy(books = shown) else null
+            if (shown.isNotEmpty()) c.copy(books = shown) else null
         }
     }
     val recent = remember(books, reading) {
@@ -330,8 +347,6 @@ internal fun HadithLibrary(
     }
     val selected = selectedId?.let { id -> collections.firstOrNull { it.id == id } }
 
-    val searchIndex by BookSearchIndex.state.collectAsState()
-    val searchReady = searchIndex is BookSearchIndex.State.Ready
     val searchBooks = remember(books, language) {
         books.filter { language == HadithCatalog.ALL_LANGUAGES || it.languageCode == language }
     }
@@ -339,10 +354,9 @@ internal fun HadithLibrary(
     var outcome by remember { mutableStateOf(BookSearchIndex.remembered(query, searchBooks)) }
     var searching by remember { mutableStateOf(false) }
     val pageHits = outcome?.hits.orEmpty()
-    LaunchedEffect(Unit) { BookSearchIndex.checkForUpdate() }
-    LaunchedEffect(query, searchBooks, searchReady) {
+    LaunchedEffect(query, searchBooks) {
         val needle = query.trim()
-        if (needle.length < 2 || !searchReady) {
+        if (needle.length < 2) {
             outcome = null
             searching = false
             return@LaunchedEffect
@@ -350,12 +364,16 @@ internal fun HadithLibrary(
         BookSearchIndex.remembered(needle, searchBooks)?.let {
             outcome = it
             searching = false
+            outcome = BookSearchIndex.withExcerpts(needle, searchBooks, it)
             return@LaunchedEffect
         }
         searching = true
         delay(250)
-        outcome = BookSearchIndex.search(needle, searchBooks)
+        val found = BookSearchIndex.search(needle, searchBooks)
+        outcome = found
         searching = false
+        // The pages are listed at once; their preview text follows when the network allows.
+        outcome = BookSearchIndex.withExcerpts(needle, searchBooks, found)
     }
     // While searching, results are split between matching books and matching pages. A new query
     // starts on whichever side has answers; the reader can then switch freely.
@@ -372,10 +390,8 @@ internal fun HadithLibrary(
             val failed = targets.count { HadithPdfStore.download(it).isFailure }
             bulkCollection = null
             snackbar.showSnackbar(
-                localizeUiText(
-                    if (failed == 0) "All volumes are available offline." else "$failed downloads failed; tap again to resume.",
-                    appLanguage
-                )
+                if (failed == 0) localizeUiText("All volumes are available offline.", appLanguage)
+                else localizeUiTemplate("{count} downloads failed; tap again to resume.", appLanguage, mapOf("count" to failed.toString()))
             )
         }
     }
@@ -438,7 +454,7 @@ internal fun HadithLibrary(
                                 hint = copy.searchHint,
                                 onSearch = { focusManager.clearFocus() },
                                 onClear = { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "clear_library_search", "tap"); query = "" },
-                                modifier = Modifier.testTag("hadith_search")
+                                modifier = Modifier.testTag("hadith_search").tourTarget("hadithcal_search")
                             )
                             // Two compact menus replace the old rows of language and sort chips.
                             Row(
@@ -458,7 +474,8 @@ internal fun HadithLibrary(
                                             com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "select_book_language", "tap", item = choices[i])
                                             language = choices[i]
                                         },
-                                        modifier = Modifier.testTag("hadith_language_filter")
+                                        menuId = "language",
+                                        modifier = Modifier.testTag("hadith_language_filter").tourTarget("hadithcal_language")
                                     )
                                 }
                                 LibraryMenuChip(
@@ -471,10 +488,11 @@ internal fun HadithLibrary(
                                         com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "select_sort", "tap", item = "sort_$i")
                                         sort = LibrarySort.entries[i]
                                     },
-                                    modifier = Modifier.testTag("hadith_sort")
+                                    menuId = "sort",
+                                    modifier = Modifier.testTag("hadith_sort").tourTarget("hadithcal_sort")
                                 )
                             }
-                            if (query.isBlank()) TopicChips(onPick = { query = it })
+                            if (query.isBlank()) Box(Modifier.tourTarget("hadithcal_topics")) { TopicChips(onPick = { query = it }) }
                         }
                     }
 
@@ -490,12 +508,13 @@ internal fun HadithLibrary(
                                 ResumeCard(
                                     book = book,
                                     offline = book.id in offline,
-                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    modifier = Modifier.padding(horizontal = 16.dp).tourTarget("hadithcal_continue"),
                                     onClick = { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "continue_reading", "tap", item = book.analyticsId()); onOpen(book) }
                                 )
                             }
                             if (recent.size > 1) item(key = "recent") {
                                 LazyRow(
+                                    modifier = Modifier.tourTarget("hadithcal_recent"),
                                     contentPadding = PaddingValues(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
@@ -520,7 +539,7 @@ internal fun HadithLibrary(
                                         SittahTile(
                                             collection = collection,
                                             offlineCount = collection.books.count { it.id in offline },
-                                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                                            modifier = Modifier.weight(1f).fillMaxHeight().tourTarget("hadithcal_sittah"),
                                             onClick = { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "open_collection", "tap", item = collection.id); selectedId = collection.id }
                                         )
                                     }
@@ -544,13 +563,13 @@ internal fun HadithLibrary(
                         }
                     } else {
                         item(key = "scope") {
-                            SearchScopeSwitch(
+                            Box(Modifier.tourTarget("hadithcal_search_scope")) { SearchScopeSwitch(
                                 booksLabel = copy.collectionsLabel,
                                 booksCount = visibleCollections.size,
-                                pagesCount = if (searchReady) pageHits.size else null,
+                                pagesCount = pageHits.size,
                                 selected = activeScope,
                                 onSelect = { searchScope = it }
-                            )
+                            ) }
                         }
                         if (activeScope == 0) {
                             if (visibleCollections.isEmpty()) item(key = "no_books") {
@@ -570,24 +589,14 @@ internal fun HadithLibrary(
                                 )
                             }
                         } else {
-                            if (searchReady) {
-                                item(key = "understood") { UnderstoodLine(outcome?.understood.orEmpty(), searching) }
-                                itemsIndexed(pageHits, key = { index, _ -> "page-hit-$index" }) { _, hit ->
-                                    PageHitCard(hit, onClick = { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "open_page_search_hit", "tap", item = hit.book.analyticsId()); onOpenAt(hit.book, hit.page) })
-                                }
-                                item(key = "index_note") {
-                                    SearchIndexNote(
-                                        empty = pageHits.isEmpty() && query.trim().length >= 2,
-                                        searching = searching || outcome == null,
-                                        updateAvailable = (searchIndex as? BookSearchIndex.State.Ready)?.updateAvailable == true,
-                                        onUpdate = BookSearchIndex::download
-                                    )
-                                }
-                            } else item(key = "index_card") {
-                                SearchIndexCard(
-                                    progress = (searchIndex as? BookSearchIndex.State.Downloading)?.progress,
-                                    failed = (searchIndex as? BookSearchIndex.State.Missing)?.failed == true,
-                                    onDownload = BookSearchIndex::download
+                            item(key = "understood") { UnderstoodLine(outcome?.understood.orEmpty(), searching) }
+                            itemsIndexed(pageHits, key = { index, _ -> "page-hit-$index" }) { _, hit ->
+                                Box(Modifier.tourTarget("hadithcal_page_hit")) { PageHitCard(hit, onClick = { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "open_page_search_hit", "tap", item = hit.book.analyticsId()); onOpenAt(hit.book, hit.page) }) }
+                            }
+                            item(key = "index_note") {
+                                SearchIndexNote(
+                                    empty = pageHits.isEmpty() && query.trim().length >= 2,
+                                    searching = searching || outcome == null
                                 )
                             }
                         }
@@ -595,6 +604,7 @@ internal fun HadithLibrary(
                     item(key = "source") {
                         Row(
                             Modifier.fillMaxWidth()
+                                .tourTarget("hadithcal_source_note")
                                 .clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "open_source_info", "tap"); showSource = true }
                                 .heightIn(min = 48.dp)
                                 .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -619,7 +629,7 @@ internal fun HadithLibrary(
         AlertDialog(
             onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "dismiss_source_info", "dismiss"); showSource = false },
             icon = { Icon(Icons.Default.Verified, null, tint = HadithAccent) },
-            title = { LocalizedText("Source and translation policy") },
+            title = { LocalizedText("About this library") },
             text = {
                 LocalizedText(copy.sourcePolicy)
             },
@@ -632,7 +642,7 @@ internal fun HadithLibrary(
             onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "dismiss_remove_download", "dismiss"); confirmDelete = null },
             icon = { Icon(Icons.Default.DeleteOutline, null, tint = MaterialTheme.colorScheme.error) },
             title = { LocalizedText("Remove download?") },
-            text = { LocalizedText("${book.romanTitle} will remain available online.") },
+            text = { LocalizedText(localizedUiTemplate("{title} will remain available online.", "title" to book.romanTitle)) },
             confirmButton = {
                 TextButton({ com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "confirm_remove_download", "tap"); HadithPdfStore.delete(book); confirmDelete = null }) {
                     LocalizedText("Remove", color = MaterialTheme.colorScheme.error)
@@ -658,13 +668,15 @@ private fun LibraryMenuChip(
     options: List<String>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
+    /** Fixed id of this menu ("language", "sort") for Analytics; never the label text. */
+    menuId: String,
     modifier: Modifier = Modifier
 ) {
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
         FilterChip(
             selected = active,
-            onClick = { open = true },
+            onClick = { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "open_filter_menu", "tap", item = menuId); open = true },
             label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal) },
             leadingIcon = { Icon(icon, null, Modifier.size(16.dp)) },
             trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, Modifier.size(18.dp)) },
@@ -686,7 +698,7 @@ private fun LibraryMenuChip(
                 selectedBorderColor = HadithGreen
             )
         )
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        DropdownMenu(expanded = open, onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "dismiss_filter_menu", "dismiss", item = menuId); open = false }) {
             options.forEachIndexed { index, option ->
                 DropdownMenuItem(
                     text = { Text(option, fontWeight = if (index == selectedIndex) FontWeight.Bold else FontWeight.Normal) },
@@ -753,15 +765,15 @@ internal fun HadithHero(
                 LocalizedText(title, color = Color.White, fontSize = 21.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 LocalizedText(subtitle, color = HadithGold, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            IconButton(onInfo) {
-                Icon(Icons.Default.Info, localizedUiText("Source information"), tint = Color.White.copy(alpha = .9f))
+            IconButton(onInfo, Modifier.tourTarget("hadithcal_source_info")) {
+                Icon(Icons.Default.Info, localizedUiText("About this library"), tint = Color.White.copy(alpha = .9f))
             }
         }
         if (stats.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             // One quiet strip instead of three boxed tiles: the numbers matter, not the chrome.
             Row(
-                Modifier.padding(start = if (onBack != null) 12.dp else 0.dp, end = 8.dp)
+                Modifier.tourTarget("hadithcal_stats").padding(start = if (onBack != null) 12.dp else 0.dp, end = 8.dp)
                     .fillMaxWidth()
                     .background(Color.White.copy(alpha = .08f), RoundedCornerShape(14.dp))
                     .padding(vertical = 8.dp),
@@ -848,7 +860,7 @@ private fun SectionTitle(text: String, trailing: String? = null) = LibrarySectio
 @Composable
 internal fun SortChips(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
     Row(
-        modifier.fillMaxWidth().horizontalScroll(com.example.core.analytics.rememberAnalyticsScrollState("hadith_screen")),
+        modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -885,7 +897,7 @@ internal fun LanguageChips(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier.fillMaxWidth().horizontalScroll(com.example.core.analytics.rememberAnalyticsScrollState("hadith_screen")),
+        modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         (listOf(HadithCatalog.ALL_LANGUAGES) + options).forEach { code ->
@@ -972,7 +984,7 @@ private fun ResumeCard(book: HadithBook, offline: Boolean, onClick: () -> Unit, 
                     Spacer(Modifier.height(6.dp))
                 }
                 LocalizedText(
-                    if (book.pageCount > 0) "Page $page of ${book.pageCount}" else "Page $page",
+                    if (book.pageCount > 0) localizedUiTemplate("Page {page} of {total}", "page" to page, "total" to book.pageCount) else localizedUiTemplate("Page {page}", "page" to page),
                     color = HadithGold, fontSize = 12.sp, fontWeight = FontWeight.SemiBold
                 )
             }
@@ -1041,86 +1053,31 @@ private fun PageHitCard(hit: BookSearchIndex.Hit, onClick: () -> Unit) {
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                LocalizedText(
-                    "${hit.book.collectionName} · ${languageLabel(hit.book.languageCode)}",
+                Text(
+                    "${localizedUiText(hit.book.collectionName)} · ${languageLabel(hit.book.languageCode)}",
                     fontWeight = FontWeight.Bold, fontSize = 13.sp, color = HadithInk,
                     maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
                 LocalizedText(
-                    (if (hit.heading != null) "Chapter · " else "") + "${volumeLabel(hit.book)} · Page ${hit.page + 1}",
+                    if (hit.heading != null) localizedUiTemplate("Chapter · {volume} · Page {page}", "volume" to volumeLabel(hit.book), "page" to hit.page + 1)
+                    else localizedUiTemplate("{volume} · Page {page}", "volume" to volumeLabel(hit.book), "page" to hit.page + 1),
                     fontSize = 12.sp, color = HadithGoldDark, fontWeight = FontWeight.SemiBold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.height(4.dp))
-                if (rtl) Text(
-                    excerpt, fontFamily = ArabicFontFamily, fontSize = 17.sp, lineHeight = 30.sp, color = HadithInk,
-                    maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(),
-                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl)
-                ) else Text(
-                    excerpt, fontSize = 13.sp, lineHeight = 18.sp, maxLines = 4, overflow = TextOverflow.Ellipsis,
-                    color = if (hit.heading != null) HadithInk else HadithMuted
-                )
+                // A page's preview text is missing while offline; the book and page still lead there.
+                if (hit.snippet.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    if (rtl) Text(
+                        excerpt, fontFamily = ArabicFontFamily, fontSize = 17.sp, lineHeight = 30.sp, color = HadithInk,
+                        maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(),
+                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl)
+                    ) else Text(
+                        excerpt, fontSize = 13.sp, lineHeight = 18.sp, maxLines = 4, overflow = TextOverflow.Ellipsis,
+                        color = if (hit.heading != null) HadithInk else HadithMuted
+                    )
+                }
             }
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = HadithMuted)
-        }
-    }
-}
-
-/** Offers the one-time search index download, or shows its progress. */
-@Composable
-private fun SearchIndexCard(progress: Float?, failed: Boolean, onDownload: () -> Unit) {
-    val isOnline by rememberIsOnline()
-    // A download that failed offline starts again by itself once the connection is back.
-    OnReconnect(enabled = failed && progress == null) { onDownload() }
-    Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(20.dp),
-        color = HadithCard,
-        border = BorderStroke(1.dp, HadithLine)
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier.size(40.dp).background(HadithGold.copy(alpha = .16f), RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center
-                ) { Icon(Icons.Default.Search, null, tint = HadithGoldDark) }
-                Spacer(Modifier.width(12.dp))
-                LocalizedText("Search inside the books", fontWeight = FontWeight.Bold, color = HadithInk, modifier = Modifier.weight(1f))
-            }
-            Spacer(Modifier.height(8.dp))
-            LocalizedText(
-                "Type a topic in any language and open the book on the page about it. This needs a one-time download of about 25 MB.",
-                fontSize = 13.sp, color = HadithMuted
-            )
-            if (failed) {
-                Spacer(Modifier.height(6.dp))
-                LocalizedText(
-                    "Download failed. Check your internet connection.",
-                    fontSize = 12.sp, color = MaterialTheme.colorScheme.error
-                )
-            }
-            Spacer(Modifier.height(12.dp))
-            if (progress == null) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Button(
-                        onDownload, Modifier.heightIn(min = 48.dp).testTag("hadith_search_index_download"),
-                        enabled = isOnline,
-                        shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(containerColor = HadithGreen)
-                    ) {
-                        Icon(Icons.Default.Download, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        LocalizedText(if (failed) "Retry" else "Download")
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    NeedsInternetChip()
-                }
-            } else {
-                LocalizedText("Downloading… ${(progress * 100).toInt()}%", fontSize = 12.sp, color = HadithInk)
-                Spacer(Modifier.height(6.dp))
-                if (progress > 0f) LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth(), color = HadithAccent)
-                else LinearProgressIndicator(Modifier.fillMaxWidth(), color = HadithAccent)
-            }
         }
     }
 }
@@ -1129,7 +1086,7 @@ private fun SearchIndexCard(progress: Float?, failed: Boolean, onDownload: () ->
 @Composable
 private fun TopicChips(onPick: (String) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().horizontalScroll(com.example.core.analytics.rememberAnalyticsScrollState("hadith_screen")),
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1163,7 +1120,7 @@ private fun UnderstoodLine(understood: List<String>, searching: Boolean) {
 }
 
 @Composable
-private fun SearchIndexNote(empty: Boolean, searching: Boolean, updateAvailable: Boolean, onUpdate: () -> Unit) {
+private fun SearchIndexNote(empty: Boolean, searching: Boolean) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         if (empty) {
             if (searching) {
@@ -1177,7 +1134,6 @@ private fun SearchIndexNote(empty: Boolean, searching: Boolean, updateAvailable:
             "Scanned editions (Urdu, Hindi, Persian, Kannada) cannot be searched inside. Arabic books are matched by chapter title.",
             fontSize = 11.sp, color = HadithMuted, textAlign = TextAlign.Center
         )
-        if (updateAvailable) TextButton(onUpdate) { LocalizedText("Update search index", color = HadithAccent) }
     }
 }
 
@@ -1197,7 +1153,7 @@ private fun CollectionMedallion(size: androidx.compose.ui.unit.Dp) {
 @Composable
 private fun CollectionCounts(volumes: Int, offlineCount: Int, languages: List<String>) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Default.LibraryBooks, localizedUiText(VolumesLabel), tint = HadithMuted, modifier = Modifier.size(14.dp))
+        Icon(Icons.AutoMirrored.Filled.LibraryBooks, localizedUiText(VolumesLabel), tint = HadithMuted, modifier = Modifier.size(14.dp))
         Spacer(Modifier.width(3.dp))
         Text(volumes.toString(), fontSize = 12.sp, color = HadithMuted, fontWeight = FontWeight.SemiBold)
         if (offlineCount > 0) {
@@ -1267,7 +1223,7 @@ private fun CollectionCard(
     val press = remember { MutableInteractionSource() }
     Surface(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).pressScale(press, pressedScale = 0.98f).testTag("hadith_collection_${collection.id}"),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).pressScale(press, pressedScale = 0.98f).testTag("hadith_collection_${collection.id}").tourTarget("hadithcal_collection_card"),
         shape = shape,
         color = HadithCard,
         interactionSource = press
@@ -1338,8 +1294,12 @@ private fun CollectionDetail(
     val resume = remember(collection, reading) {
         collection.books.filter { HadithPdfStore.lastOpened(it) > 0L }.maxByOrNull { HadithPdfStore.lastOpened(it) }
     }
+    // Warms only the one volume most likely read next (about 2 MB), so Read opens from cached blocks.
+    val next = resume ?: shown.firstOrNull()
+    LaunchedEffect(next?.id) { next?.let(HadithPdfStore::prefetch) }
     val isOnline by rememberIsOnline()
     val haptics = LocalHapticFeedback.current
+    TourScreen("hadithcal_collection")
 
     LazyColumn(
         Modifier.fillMaxSize().testTag("hadith_volume_list"),
@@ -1348,6 +1308,7 @@ private fun CollectionDetail(
     ) {
         item(key = "title") {
             Surface(
+                modifier = Modifier.tourTarget("hadithcal_collection_header"),
                 shape = RoundedCornerShape(24.dp),
                 color = HadithCard,
                 border = BorderStroke(1.dp, HadithGold.copy(alpha = .45f))
@@ -1372,7 +1333,7 @@ private fun CollectionDetail(
                     // Icon + number reads the same in every language.
                     val pages = collection.books.sumOf { it.pageCount }
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        DetailStat(Icons.Default.LibraryBooks, "${collection.books.size}", VolumesLabel)
+                        DetailStat(Icons.AutoMirrored.Filled.LibraryBooks, "${collection.books.size}", VolumesLabel)
                         DetailStat(Icons.Default.Translate, "${collection.languages.size}", "Language")
                         if (pages > 0) DetailStat(Icons.Default.Description, "$pages", "Page")
                     }
@@ -1383,13 +1344,14 @@ private fun CollectionDetail(
             ResumeCard(
                 book = resume,
                 offline = resume.id in offline,
+                modifier = Modifier.tourTarget("hadithcal_collection_resume"),
                 onClick = { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "continue_reading", "tap", item = resume.analyticsId()); onOpen(resume) }
             )
         }
         if (collection.languages.size > 1) item(key = "languages") {
             if (collection.languages.size <= 3) {
                 val choices = listOf(HadithCatalog.ALL_LANGUAGES) + collection.languages
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().testTag("hadith_collection_languages")) {
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().testTag("hadith_collection_languages").tourTarget("hadithcal_collection_language")) {
                     choices.forEachIndexed { index, code ->
                         SegmentedButton(
                             selected = activeLanguage == code,
@@ -1412,7 +1374,7 @@ private fun CollectionDetail(
                         }
                     }
                 }
-            } else LanguageChips(collection.languages, activeLanguage, onLanguage)
+            } else Box(Modifier.tourTarget("hadithcal_collection_language")) { LanguageChips(collection.languages, activeLanguage, onLanguage) }
         }
         item(key = "download_all") {
             // Reading is the main action once a volume is started; saving everything is secondary then.
@@ -1431,7 +1393,7 @@ private fun CollectionDetail(
                 Button(
                     onClick = { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "download_collection", "tap"); haptics.performHapticFeedback(HapticFeedbackType.LongPress); onDownloadAll(pending) },
                     enabled = pending.isNotEmpty() && !bulkBusy && isOnline,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("hadith_download_all"),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("hadith_download_all").tourTarget("hadithcal_download_all"),
                     shape = RoundedCornerShape(50),
                     border = if (resume != null) BorderStroke(1.dp, HadithLine) else null,
                     colors = colors
@@ -1445,8 +1407,8 @@ private fun CollectionDetail(
                     LocalizedText(
                         when {
                             bulkBusy -> "Downloading…"
-                            pending.isEmpty() -> "All ${shown.size} volumes saved offline"
-                            else -> "Download ${pending.size} volumes for offline"
+                            pending.isEmpty() -> localizedUiTemplate("All {count} volumes saved offline", "count" to shown.size)
+                            else -> localizedUiTemplate("Download {count} volumes for offline", "count" to pending.size)
                         }
                     )
                 }
@@ -1531,7 +1493,7 @@ internal fun VolumeRow(
     val press = remember { MutableInteractionSource() }
     Surface(
         onClick = com.example.core.analytics.AppAnalytics.trackItemAction("hadith_screen", "open_book", book.analyticsId(), onOpen),
-        modifier = Modifier.fillMaxWidth().pressScale(press, pressedScale = 0.98f).testTag("hadith_book_${book.id}"),
+        modifier = Modifier.fillMaxWidth().pressScale(press, pressedScale = 0.98f).testTag("hadith_book_${book.id}").tourTarget("hadithcal_volume"),
         color = HadithCard,
         shape = shape,
         border = if (downloaded) BorderStroke(1.dp, HadithOffline.copy(alpha = .35f)) else null,
@@ -1588,7 +1550,7 @@ internal fun VolumeRow(
                         )
                         Spacer(Modifier.width(8.dp))
                         LocalizedText(
-                            "Continue from page ${lastPage + 1}",
+                            localizedUiTemplate("Continue from page {page}", "page" to lastPage + 1),
                             fontSize = 11.sp, color = HadithGoldDark, fontWeight = FontWeight.SemiBold, maxLines = 1
                         )
                     }
@@ -1608,7 +1570,7 @@ internal fun VolumeRow(
                 }
             }
             when {
-                downloaded -> IconButton({ haptics.performHapticFeedback(HapticFeedbackType.LongPress); onDelete() }, Modifier.testTag("hadith_delete_${book.id}")) {
+                downloaded -> IconButton({ haptics.performHapticFeedback(HapticFeedbackType.LongPress); onDelete() }, Modifier.testTag("hadith_delete_${book.id}").tourTarget("hadithcal_volume_delete")) {
                     Icon(Icons.Default.DeleteOutline, localizedUiText("Remove download"), tint = HadithMuted)
                 }
                 progress != null -> Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
@@ -1616,7 +1578,7 @@ internal fun VolumeRow(
                 }
                 else -> IconButton(
                     { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onDownload() },
-                    Modifier.testTag("hadith_download_${book.id}"),
+                    Modifier.testTag("hadith_download_${book.id}").tourTarget("hadithcal_volume_download"),
                     enabled = isOnline
                 ) {
                     Icon(Icons.Default.Download, localizedUiText("Download"), tint = if (isOnline) HadithAccent else HadithMuted)
@@ -1639,6 +1601,7 @@ internal fun HadithPdfReader(
     onBack: () -> Unit
 ) {
     com.example.core.analytics.AnalyticsScreen("hadith_pdf_reader")
+    TourScreen("hadithcal_reader")
     LaunchedEffect(book.id) { com.example.core.analytics.AppAnalytics.content("pdf_book", book.analyticsId()) }
 
     var document by remember(book.id) { mutableStateOf<HadithPdfStore.Document?>(null) }
@@ -1676,7 +1639,7 @@ internal fun HadithPdfReader(
                 )
                 fetched != null -> {
                     LocalizedText(
-                        if (fetched > 0f) "Loading official PDF… ${(fetched * 100).toInt()}%" else "Loading official PDF…",
+                        if (fetched > 0f) localizedUiTemplate("Loading official PDF… {percent}%", "percent" to (fetched * 100).toInt()) else "Loading official PDF…",
                         textAlign = TextAlign.Center, color = HadithInk
                     )
                     Spacer(Modifier.height(10.dp))
@@ -1705,12 +1668,12 @@ private fun HadithReaderBar(
             .padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onBack, Modifier.testTag("hadith_reader_back")) {
+        IconButton(onBack, Modifier.testTag("hadith_reader_back").tourTarget("hadithcal_reader_close")) {
             Icon(Icons.Default.Close, localizedUiText("Close"), tint = Color.White)
         }
         Column(
             Modifier.weight(1f)
-                .then(if (onSubtitleClick != null) Modifier.clickable(role = Role.Button, onClick = com.example.core.analytics.AppAnalytics.trackAction("hadith_screen", "open_page_dialog_title", onSubtitleClick)).testTag("hadith_page_navigator") else Modifier)
+                .then(if (onSubtitleClick != null) Modifier.clickable(role = Role.Button, onClick = com.example.core.analytics.AppAnalytics.trackAction("hadith_screen", "open_page_dialog_title", onSubtitleClick)).testTag("hadith_page_navigator").tourTarget("hadithcal_reader_title") else Modifier)
                 .padding(vertical = 4.dp)
         ) {
             LocalizedText(title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1765,6 +1728,7 @@ private fun HadithPdfPager(
                     type = "application/pdf"
                     putExtra(Intent.EXTRA_STREAM, uri)
                     putExtra(Intent.EXTRA_SUBJECT, book.romanTitle)
+                    putExtra(Intent.EXTRA_TEXT, com.example.core.share.AppShareLink.withLink(context, book.romanTitle))
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
                 context.startActivity(Intent.createChooser(send, context.getString(com.example.R.string.app_name)))
@@ -1786,7 +1750,7 @@ private fun HadithPdfPager(
         if (!isImmersive) {
             HadithReaderBar(
                 title = book.collectionName,
-                subtitle = "${volumeLabel(book)} · Page ${state.currentPage + 1} of $count",
+                subtitle = localizedUiTemplate("{volume} · Page {page} of {total}", "volume" to volumeLabel(book), "page" to state.currentPage + 1, "total" to count),
                 onSubtitleClick = { showPageDialog = true },
                 detail = chapterNow,
                 onBack = onBack
@@ -1798,7 +1762,7 @@ private fun HadithPdfPager(
                         HadithPdfStore.toggleBookmark(book, state.currentPage)
                         marks = HadithPdfStore.bookmarks(book)
                     },
-                    Modifier.testTag("hadith_bookmark")
+                    Modifier.testTag("hadith_bookmark").tourTarget("hadithcal_reader_bookmark")
                 ) {
                     Icon(
                         if (marked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
@@ -1806,16 +1770,16 @@ private fun HadithPdfPager(
                         tint = if (marked) HadithGold else Color.White
                     )
                 }
-                IconButton({ com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "open_chapter_index", "tap"); showChapterDialog = true }, Modifier.testTag("hadith_pdf_index")) {
+                IconButton({ com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "open_chapter_index", "tap"); showChapterDialog = true }, Modifier.testTag("hadith_pdf_index").tourTarget("hadithcal_reader_index")) {
                     Icon(Icons.Default.FormatListNumbered, localizedUiText("PDF index"), tint = Color.White)
                 }
                 // Share and full screen are occasional actions, so they live in one menu.
                 Box {
-                    IconButton({ showMenu = true }, Modifier.testTag("hadith_reader_menu")) {
+                    IconButton({ showMenu = true }, Modifier.testTag("hadith_reader_menu").tourTarget("hadithcal_reader_menu")) {
                         if (sharing) CircularProgressIndicator(Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                         else Icon(Icons.Default.MoreVert, localizedUiText("More"), tint = Color.White)
                     }
-                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "dismiss_reader_menu", "dismiss"); showMenu = false }) {
                         DropdownMenuItem(
                             text = { LocalizedText("Share Hadith PDF") },
                             leadingIcon = { Icon(Icons.Default.Share, null) },
@@ -1835,7 +1799,7 @@ private fun HadithPdfPager(
         Box(Modifier.weight(1f).fillMaxWidth()) {
             HorizontalPager(
                 state = state,
-                modifier = Modifier.fillMaxSize().testTag("hadith_pdf_pager"),
+                modifier = Modifier.fillMaxSize().testTag("hadith_pdf_pager").tourTarget("hadithcal_reader_page"),
                 beyondViewportPageCount = 1,
                 reverseLayout = rtlBook,
                 userScrollEnabled = !zoomed,
@@ -1846,7 +1810,10 @@ private fun HadithPdfPager(
                     index = index,
                     active = index == state.currentPage,
                     onZoomChange = { zoomed = it },
-                    onTap = { onImmersiveChange(!isImmersive) }
+                    onTap = {
+                        com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "page_tap_immersive", "toggle")
+                        onImmersiveChange(!isImmersive)
+                    }
                 )
             }
             if (isImmersive) {
@@ -1855,7 +1822,7 @@ private fun HadithPdfPager(
                     shape = RoundedCornerShape(50),
                     border = BorderStroke(1.dp, HadithGold.copy(alpha = .35f)),
                     shadowElevation = 6.dp,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp)
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp).tourTarget("hadithcal_reader_fullscreen_bar")
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton({ com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "previous_page_full_screen", "tap"); turn(-1) }, enabled = state.currentPage > 0) {
@@ -1879,7 +1846,7 @@ private fun HadithPdfPager(
                 Modifier.fillMaxWidth().background(HadithCard).padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton({ com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "previous_page", "tap"); turn(-1) }, enabled = state.currentPage > 0) {
+                IconButton({ com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "previous_page", "tap"); turn(-1) }, enabled = state.currentPage > 0, modifier = Modifier.tourTarget("hadithcal_reader_prev")) {
                     Icon(Icons.AutoMirrored.Filled.NavigateBefore, localizedUiText("Previous page"), tint = HadithAccent)
                 }
                 Slider(
@@ -1890,7 +1857,7 @@ private fun HadithPdfPager(
                         dragging = null
                     },
                     valueRange = 0f..last.toFloat(),
-                    modifier = Modifier.weight(1f).testTag("hadith_page_slider"),
+                    modifier = Modifier.weight(1f).testTag("hadith_page_slider").tourTarget("hadithcal_reader_slider"),
                     colors = SliderDefaults.colors(
                         thumbColor = HadithAccent,
                         activeTrackColor = HadithGold,
@@ -1902,10 +1869,10 @@ private fun HadithPdfPager(
                     fontWeight = FontWeight.Bold,
                     color = HadithAccent,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.widthIn(min = 48.dp).clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "open_page_dialog", "tap"); showPageDialog = true }
+                    modifier = Modifier.widthIn(min = 48.dp).tourTarget("hadithcal_reader_page_number").clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "open_page_dialog", "tap"); showPageDialog = true }
                         .padding(vertical = 12.dp)
                 )
-                IconButton({ com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "next_page", "tap"); turn(1) }, enabled = state.currentPage < last) {
+                IconButton({ com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "next_page", "tap"); turn(1) }, enabled = state.currentPage < last, modifier = Modifier.tourTarget("hadithcal_reader_next")) {
                     Icon(Icons.AutoMirrored.Filled.NavigateNext, localizedUiText("Next page"), tint = HadithAccent)
                 }
             }
@@ -1923,7 +1890,7 @@ private fun HadithPdfPager(
                 OutlinedTextField(
                     value = pageText,
                     onValueChange = { pageText = it.filter(Char::isDigit).take(5) },
-                    label = { LocalizedText("Page (1 - $count)") },
+                    label = { LocalizedText(localizedUiTemplate("Page (1 - {count})", "count" to count)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth().testTag("hadith_page_input")
@@ -1944,6 +1911,8 @@ private fun HadithPdfPager(
 
     if (showChapterDialog) {
         var indexLoading by remember { mutableStateOf(chapters.isEmpty()) }
+        // The index may need the whole PDF; the store keeps that download going if the dialog closes.
+        val indexProgress by HadithPdfStore.progress.collectAsState()
         LaunchedEffect(document) {
             HadithPdfStore.loadChapters(book, document)
             indexLoading = false
@@ -1964,10 +1933,13 @@ private fun HadithPdfPager(
         }
         AlertDialog(
             onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "dismiss_chapter_index", "dismiss"); showChapterDialog = false },
-            title = { LocalizedText("PDF index - ${book.collectionName}") },
+            title = { LocalizedText(localizedUiTemplate("PDF index - {title}", "title" to book.collectionName)) },
             text = {
                 Column(Modifier.fillMaxWidth()) {
-                    IndexTabs(selected = indexTab, bookmarkCount = marks.size, onSelect = { indexTab = it })
+                    IndexTabs(selected = indexTab, bookmarkCount = marks.size, onSelect = {
+                        com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "index_tab", "select", item = if (it == 1) "bookmarks" else "chapters")
+                        indexTab = it
+                    })
                     Spacer(Modifier.height(10.dp))
                     if (indexTab == 1) {
                         BookmarkList(
@@ -1986,7 +1958,16 @@ private fun HadithPdfPager(
                         )
                         return@Column
                     }
-                    if (indexLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    if (indexLoading) {
+                        val fetched = indexProgress[book.id]
+                        if (fetched != null && fetched > 0f) {
+                            LocalizedText(
+                                localizedUiTemplate("Loading official PDF… {percent}%", "percent" to (fetched * 100).toInt()),
+                                fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            LinearProgressIndicator(progress = { fetched }, Modifier.fillMaxWidth())
+                        } else LinearProgressIndicator(Modifier.fillMaxWidth())
+                    }
                     OutlinedTextField(
                         value = chapterQuery,
                         onValueChange = { chapterQuery = it },
@@ -2014,7 +1995,7 @@ private fun HadithPdfPager(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         indexed.isNotEmpty() -> LocalizedText(
-                            "${indexed.size} of ${entries.size} entries",
+                            localizedUiTemplate("{done} of {total} entries", "done" to indexed.size, "total" to entries.size),
                             Modifier.padding(top = 2.dp, bottom = 4.dp),
                             fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -2185,7 +2166,7 @@ private fun HadithPdfPage(
             val image = remember(page) { page.asImageBitmap() }
             Image(
                 bitmap = image,
-                contentDescription = localizedUiText("Page ${index + 1}"),
+                contentDescription = localizedUiTemplate("Page {page}", "page" to index + 1),
                 contentScale = ContentScale.Fit,
                 filterQuality = FilterQuality.High,
                 modifier = Modifier.fillMaxSize()
@@ -2193,6 +2174,7 @@ private fun HadithPdfPage(
                         detectTapGestures(
                             onTap = { onTap() },
                             onDoubleTap = { tap ->
+                                com.example.core.analytics.AppAnalytics.interaction("hadith_screen", "double_tap_zoom", if (scale > 1f) "zoom_out" else "zoom_in")
                                 if (scale > 1f) {
                                     scale = 1f
                                     offset = Offset.Zero

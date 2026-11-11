@@ -1,0 +1,19 @@
+{
+  "method": "No audio files are bundled for Madani Qaidah. Word drills stream the word-by-word recitation the app's Quran reader already uses.",
+  "wordAudio": {
+    "resolvedBy": "WbwWord.audioUrls (app/src/main/java/com/example/quran/WordByWordRepository.kt)",
+    "hosts": [
+      "https://github.com/Muhammad8866/hidayah/releases/download/wbw-audio-v1/wbw_SSS_AAA_WWW.mp3",
+      "https://audio.qurancdn.com/wbw/SSS_AAA_WWW.mp3"
+    ],
+    "lessons": ["muqattaat", "harakat_words", "tanween_words", "khari", "madd", "leen", "sukoon", "shaddah", "ghunnah"]
+  },
+  "silentLessons": ["letters", "joined", "harakat", "tanween"],
+  "rejectedCandidates": [
+    {
+      "source": "https://commons.wikimedia.org/wiki/Category:Arabic_pronunciation (uploader Ruaa GHAREEB, files like Bapron.wav, Alifp.wav)",
+      "license": "CC BY-SA 4.0",
+      "reason": "File descriptions do not match file names (Dalp.wav says 'khaaaaa', Kafp.wav says 'qaaaaaaaf'); needs a human listening review before any letter can be trusted."
+    }
+  ]
+}

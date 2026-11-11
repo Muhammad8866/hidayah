@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import com.example.ui.tour.tourTarget
+
 import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -93,7 +95,7 @@ internal fun RozaSunnahFastsCard(today: LocalDate, modifier: Modifier = Modifier
     val dateFormat = remember(locale) { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale) }
     val weekdayFormat = remember(locale) { DateTimeFormatter.ofPattern("EEEE", locale) }
     val days = remember(today) { RozaSunnahFasts.upcoming(today) }
-    AppCard(modifier.fillMaxWidth().testTag("roza_sunnah_card"), contentPadding = PaddingValues(0.dp)) {
+    AppCard(modifier.fillMaxWidth().testTag("roza_sunnah_card").tourTarget("ramadan_roza_sunnah"), contentPadding = PaddingValues(0.dp)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionTitle("Upcoming Sunnah fasts")
             days.forEachIndexed { index, day ->
@@ -126,7 +128,7 @@ internal fun RozaQazaPlanCard(balance: Int, today: LocalDate, modifier: Modifier
         perWeek = value.coerceIn(1, 7)
         prefs.edit().putInt(RozaQazaPlanner.PREF_KEY, perWeek).apply()
     }
-    AppCard(modifier.fillMaxWidth().testTag("roza_plan_card"), contentPadding = PaddingValues(0.dp)) {
+    AppCard(modifier.fillMaxWidth().testTag("roza_plan_card").tourTarget("ramadan_roza_qaza_plan"), contentPadding = PaddingValues(0.dp)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionTitle("Qaza completion plan")
             val weeks = RozaQazaPlanner.weeksNeeded(balance, perWeek)
@@ -136,12 +138,12 @@ internal fun RozaQazaPlanCard(balance: Int, today: LocalDate, modifier: Modifier
                 return@Column
             }
             LocalizedText("Qaza fasts per week", style = MaterialTheme.typography.labelLarge)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FilledTonalIconButton(onClick = { setPerWeek(perWeek - 1) }, enabled = perWeek > 1, modifier = Modifier.size(48.dp).testTag("roza_plan_less")) {
+            Row(Modifier.tourTarget("ramadan_roza_plan_pace"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                FilledTonalIconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "qaza_plan_less"); setPerWeek(perWeek - 1) }, enabled = perWeek > 1, modifier = Modifier.size(48.dp).testTag("roza_plan_less")) {
                     Icon(Icons.Default.Remove, contentDescription = localizedUiText("Decrease"))
                 }
                 Text(numbers.format(perWeek), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, modifier = Modifier.testTag("roza_plan_per_week"))
-                FilledTonalIconButton(onClick = { setPerWeek(perWeek + 1) }, enabled = perWeek < 7, modifier = Modifier.size(48.dp).testTag("roza_plan_more")) {
+                FilledTonalIconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "qaza_plan_more"); setPerWeek(perWeek + 1) }, enabled = perWeek < 7, modifier = Modifier.size(48.dp).testTag("roza_plan_more")) {
                     Icon(Icons.Default.Add, contentDescription = localizedUiText("Increase"))
                 }
             }

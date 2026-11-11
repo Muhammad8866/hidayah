@@ -16,7 +16,7 @@ class HajjUmrahGuideTest {
     }
 
     @Test fun tawafHasRamlOnlyInFirstThreeRounds() {
-        assertEquals("Raml: men walk briskly with short steps", counterStage(CounterKind.TAWAF, 2).hint)
+        assertEquals("Rounds 1–3: men do Raml only in a Tawaf followed by Sa'i", counterStage(CounterKind.TAWAF, 2).hint)
         assertEquals("Walk at a normal pace", counterStage(CounterKind.TAWAF, 3).hint)
         assertEquals(7, counterStage(CounterKind.TAWAF, 99).subCount)
     }

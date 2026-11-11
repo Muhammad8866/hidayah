@@ -9,7 +9,6 @@ import com.example.feature.communitymasjid.data.remote.CmWriteOutcome
 import com.example.feature.communitymasjid.domain.CmTimingRules
 import com.example.feature.communitymasjid.location.CmLocationProvider
 import com.example.feature.communitymasjid.model.CmCommunityRecord
-import com.example.feature.communitymasjid.model.CmDownReason
 import com.example.feature.communitymasjid.model.CmHistoryEntry
 import com.example.feature.communitymasjid.model.CmMosque
 import com.example.feature.communitymasjid.model.CmMyVotes
@@ -57,16 +56,11 @@ data class CmUiState(
     val communityConfigured: Boolean = true,
     val communityError: String? = null,
     val detail: CmDetailState? = null,
-    val isAddingMosque: Boolean = false,
     val guidelinesAccepted: Boolean = false,
     val isDeletingData: Boolean = false,
     val message: String? = null
 ) {
-    /** Masjids voted down by the community are left out of the list. */
-    val visibleMosques: List<CmMosque>
-        get() = mosques.filter { mosque ->
-            records[mosque.docId]?.let { CmTimingRules.isVotedDown(it.upVotes, it.downVotes) } != true
-        }
+    val visibleMosques: List<CmMosque> get() = mosques
 }
 
 /** Presence of the user relative to one masjid, derived from the latest fix. */
@@ -89,7 +83,6 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
             it.copy(
                 isLocating = false,
                 isLoadingList = false,
-                isAddingMosque = false,
                 detail = it.detail?.copy(isLoading = false, isSubmitting = false, isHistoryLoading = false),
                 message = friendly(error)
             )
@@ -341,29 +334,6 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
         }
     }
 
-    /** 👍 / 👎 on the masjid itself. Enough 👎 remove it from the list. */
-    fun voteMosque(vote: Int, reason: CmDownReason?) {
-        val detail = _state.value.detail ?: return
-        if (detail.isSubmitting) return
-        val mosque = detail.mosque
-        runVote(mosque) { presence ->
-            when (val outcome = repository.voteMosque(mosque, vote, reason, presence)) {
-                is CmWriteOutcome.Voted -> {
-                    com.example.core.analytics.AppAnalytics.milestone("community_masjid", "masjid_vote_saved")
-                    if (outcome.votedDown) {
-                        removeMosque(mosque.docId)
-                        "Enough people reported this masjid — it has been removed from the list."
-                    } else {
-                        "Vote saved (👍 ${outcome.up} · 👎 ${outcome.down})."
-                    }
-                }
-                CmWriteOutcome.Unchanged -> "You already voted this way"
-                CmWriteOutcome.OwnContent -> "You cannot vote on a masjid you added"
-                else -> "This masjid no longer exists"
-            }
-        }
-    }
-
     private fun runVote(mosque: CmMosque, action: suspend (CmPresence) -> String) {
         updateDetail(mosque.docId) { it.copy(isSubmitting = true) }
         viewModelScope.launch(guard) {
@@ -385,93 +355,12 @@ class CommunityMasjidViewModel(application: Application) : AndroidViewModel(appl
         }
     }
 
-    private fun removeMosque(docId: String) {
-        detailJob?.cancel()
-        _state.update { state ->
-            state.copy(
-                mosques = state.mosques.filterNot { it.docId == docId },
-                detail = state.detail?.takeUnless { it.mosque.docId == docId }
-            )
-        }
-    }
-
-    /** Problems with the add-masjid form; empty means it can be submitted. */
-    fun validateNewMosque(name: String, address: String): List<String> = buildList {
-        val trimmed = name.trim()
-        if (trimmed.length < CmTimingRules.MOSQUE_NAME_MIN) add("Enter the masjid name (at least ${CmTimingRules.MOSQUE_NAME_MIN} letters)")
-        if (trimmed.length > CmTimingRules.MOSQUE_NAME_MAX) add("Name is too long")
-        if (address.trim().length > CmTimingRules.MOSQUE_ADDRESS_MAX) add("Address is too long")
-    }
-
-    /** Adds a masjid at the user's current GPS position, which must be precise and not next to a listed masjid. */
-    fun addMosque(name: String, address: String, onDone: (Boolean) -> Unit) {
-        if (_state.value.isAddingMosque) return
-        _state.update { it.copy(isAddingMosque = true) }
-        viewModelScope.launch(guard) {
-            try {
-                validateNewMosque(name, address).firstOrNull()?.let { problem ->
-                    _state.update { it.copy(message = problem) }
-                    onDone(false); return@launch
-                }
-                repository.localRateLimitProblem(CmRepository.KIND_ADD_MOSQUE)?.let { problem ->
-                    _state.update { it.copy(message = problem) }
-                    onDone(false); return@launch
-                }
-                _state.update { it.copy(isLocating = true) }
-                val location = locationProvider.currentLocation()
-                _state.update { it.copy(isLocating = false, location = location ?: it.location) }
-                if (location == null) {
-                    _state.update { it.copy(message = "Could not get your location. Turn on GPS and try again.") }
-                    onDone(false); return@launch
-                }
-                val accuracy = location.accuracyMetres.roundToInt()
-                if (accuracy > CmTimingRules.ADD_MOSQUE_MAX_ACCURACY_METRES) {
-                    _state.update { it.copy(message = "Location is not precise enough (±$accuracy m, need ±${CmTimingRules.ADD_MOSQUE_MAX_ACCURACY_METRES} m). Move to open sky near the masjid and retry.") }
-                    onDone(false); return@launch
-                }
-                val nearest = _state.value.visibleMosques.minByOrNull {
-                    CmTimingRules.distanceMetres(location.latitude, location.longitude, it.latitude, it.longitude)
-                }
-                val nearestDistance = nearest?.let { CmTimingRules.distanceMetres(location.latitude, location.longitude, it.latitude, it.longitude) }
-                if (nearest != null && nearestDistance != null && nearestDistance <= CmTimingRules.DUPLICATE_MOSQUE_RADIUS_METRES) {
-                    _state.update { it.copy(message = "\"${nearest.name}\" is already listed ${nearestDistance.roundToInt()} m from here. Open it from the list instead.") }
-                    onDone(false); return@launch
-                }
-                val mosque = repository.addMosque(name.trim(), address.trim(), location, accuracy)
-                com.example.core.analytics.AppAnalytics.milestone("community_masjid", "masjid_added")
-                _state.update {
-                    it.copy(
-                        mosques = (it.mosques + mosque).sortedBy { m -> m.distanceMetres ?: Double.MAX_VALUE },
-                        message = "Masjid added. Everyone nearby can see it now."
-                    )
-                }
-                onDone(true)
-                openMosque(mosque)
-            } catch (error: Exception) {
-                _state.update { it.copy(message = friendly(error)) }
-                onDone(false)
-            } finally {
-                _state.update { it.copy(isAddingMosque = false, isLocating = false) }
-            }
-        }
-    }
-
     fun consumeMessage() = _state.update { it.copy(message = null) }
 
     /** Shown once before the first contribution (Play UGC policy: users accept the rules first). */
     fun acceptGuidelines() {
         prefs.edit().putBoolean(KEY_GUIDELINES, true).apply()
         _state.update { it.copy(guidelinesAccepted = true) }
-    }
-
-    /** Sends a moderation report; needs no presence at the masjid. */
-    fun report(target: String, reason: String) {
-        val mosque = _state.value.detail?.mosque ?: return
-        viewModelScope.launch(guard) {
-            val message = runCatching { repository.report(mosque.docId, target, reason) }
-                .fold({ "Thank you. The report was sent for review." }, { friendly(it) })
-            _state.update { it.copy(message = message) }
-        }
     }
 
     /**

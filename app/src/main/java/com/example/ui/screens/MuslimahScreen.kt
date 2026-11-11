@@ -32,6 +32,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.core.analytics.AppAnalytics
 import com.example.prayer.HijriCalendarHelper
 import com.example.ui.components.ProvenanceCard
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.LocalAppLocale
 import com.example.ui.localization.LocalizedText
@@ -60,6 +62,7 @@ private enum class PickTarget { START, END }
 @Composable
 internal fun MuslimahScreen(onBack: () -> Unit, modifier: Modifier) {
     com.example.core.analytics.AnalyticsScreen(SCREEN)
+    TourScreen("learn_muslimah")
 
     val prefs = rememberToolPrefs()
     val store = remember(prefs) { MuslimahStore(prefs) }
@@ -115,13 +118,13 @@ internal fun MuslimahScreen(onBack: () -> Unit, modifier: Modifier) {
                         AppAnalytics.interaction(SCREEN, "end_period_today", "tap")
                         store.endPeriod(today, today); changed()
                     },
-                    onPickStart = { picker = PickTarget.START },
-                    onPickEnd = { picker = PickTarget.END }
+                    onPickStart = { AppAnalytics.interaction(SCREEN, "open_start_date_picker", "tap"); picker = PickTarget.START },
+                    onPickEnd = { AppAnalytics.interaction(SCREEN, "open_end_date_picker", "tap"); picker = PickTarget.END }
                 )
             }
             if (recentlyEnded) {
                 item(key = "ghusl") {
-                    InfoNote("Your logged period has ended. A reminder about ghusl (the purifying bath) before returning to salah. Please confirm the details for your situation with a scholar.")
+                    Box(Modifier.tourTarget("learn_muslimah_ghusl")) { InfoNote("Your logged period has ended. A reminder about ghusl (the purifying bath) before returning to salah. Please confirm the details for your situation with a scholar.") }
                 }
             }
             item(key = "stats") { StatsCard(accent, stats, ongoing == null) }
@@ -133,7 +136,7 @@ internal fun MuslimahScreen(onBack: () -> Unit, modifier: Modifier) {
                     excused = excusedDays,
                     ongoing = ongoing,
                     estimate = stats.nextEstimate.takeIf { ongoing == null },
-                    onMonthChange = { visibleMonth = it },
+                    onMonthChange = { AppAnalytics.interaction(SCREEN, "calendar_month", "change"); visibleMonth = it },
                     onToggle = { date ->
                         AppAnalytics.interaction(SCREEN, "toggle_calendar_day", "tap")
                         if (store.toggleDay(date, today)) changed()
@@ -153,7 +156,7 @@ internal fun MuslimahScreen(onBack: () -> Unit, modifier: Modifier) {
                     onDecrement = { rozaStore.reduceBalance(1); changed() }
                 )
             }
-            item(key = "history_title") { SectionTitle("Logged periods") }
+            item(key = "history_title") { Box(Modifier.tourTarget("learn_muslimah_history")) { SectionTitle("Logged periods") } }
             if (periods.isEmpty()) {
                 item(key = "history_empty") {
                     InfoNote("No periods logged yet. Tap \"My period started today\" above, or tap days on the calendar.")
@@ -164,15 +167,15 @@ internal fun MuslimahScreen(onBack: () -> Unit, modifier: Modifier) {
                         PeriodRow(
                             accent = accent,
                             period = period,
-                            onEdit = { editing = period },
-                            onDelete = { deleting = period }
+                            onEdit = { AppAnalytics.interaction(SCREEN, "open_edit_period", "tap"); editing = period },
+                            onDelete = { AppAnalytics.interaction(SCREEN, "open_delete_period", "tap"); deleting = period }
                         )
                     }
                 }
             }
             item(key = "settings") {
                 ToolCard {
-                    SectionTitle("Privacy & data")
+                    Box(Modifier.tourTarget("learn_muslimah_data")) { SectionTitle("Privacy & data") }
                     LocalizedText(
                         "Turning the mode off hides it and stops excusing days in the prayer tracker. Your log is kept on this phone until you delete it.",
                         style = MaterialTheme.typography.bodySmall,
@@ -184,13 +187,13 @@ internal fun MuslimahScreen(onBack: () -> Unit, modifier: Modifier) {
                                 AppAnalytics.interaction(SCREEN, "disable_muslimah_mode", "tap")
                                 store.enabled = false; changed()
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).tourTarget("learn_muslimah_turn_off")
                         ) { LocalizedText("Turn off", textAlign = TextAlign.Center) }
                         OutlinedButton(
-                            onClick = { confirmDeleteAll = true },
+                            onClick = { AppAnalytics.interaction(SCREEN, "open_delete_all", "tap"); confirmDeleteAll = true },
                             enabled = excusedDays.isNotEmpty(),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).tourTarget("learn_muslimah_delete_all")
                         ) { LocalizedText("Delete all logs", textAlign = TextAlign.Center) }
                     }
                 }
@@ -200,11 +203,12 @@ internal fun MuslimahScreen(onBack: () -> Unit, modifier: Modifier) {
         item(key = "hadith") {
             ProvenanceCard(
                 sourceText = "We were commanded to make up the fasts, but not the prayers.",
-                collectionOrReference = "Sahih Muslim 335 · Aisha (RA)"
+                collectionOrReference = "Sahih Muslim 335 · Aisha (RA)",
+                modifier = Modifier.tourTarget("learn_muslimah_hadith")
             )
         }
         item(key = "scholar") {
-            InfoNote("Estimates here are for your own planning only. They are not medical advice or a religious ruling. For your own situation, ask a qualified scholar or a trusted mufti.")
+            Box(Modifier.tourTarget("learn_muslimah_disclaimer")) { InfoNote("Estimates here are for your own planning only. They are not medical advice or a religious ruling. For your own situation, ask a qualified scholar or a trusted mufti.") }
         }
     }
 
@@ -216,11 +220,12 @@ internal fun MuslimahScreen(onBack: () -> Unit, modifier: Modifier) {
             initial = today,
             earliest = earliest,
             today = today,
-            onDismiss = { picker = null },
+            onDismiss = { AppAnalytics.interaction(SCREEN, "dismiss_date_picker", "dismiss"); picker = null },
             onPick = { date ->
+                // Only which action happened is sent, never the date.
                 when (target) {
-                    PickTarget.START -> store.startPeriod(date, today)
-                    PickTarget.END -> store.endPeriod(date, today)
+                    PickTarget.START -> { AppAnalytics.interaction(SCREEN, "pick_period_start", "confirm"); store.startPeriod(date, today) }
+                    PickTarget.END -> { AppAnalytics.interaction(SCREEN, "pick_period_end", "confirm"); store.endPeriod(date, today) }
                 }
                 picker = null
                 visibleMonth = YearMonth.from(date)
@@ -234,7 +239,7 @@ internal fun MuslimahScreen(onBack: () -> Unit, modifier: Modifier) {
             period = period,
             canStayOpen = period == periods.firstOrNull(),
             today = today,
-            onDismiss = { editing = null },
+            onDismiss = { AppAnalytics.interaction(SCREEN, "dismiss_edit_period", "dismiss"); editing = null },
             onSave = { start, end ->
                 AppAnalytics.interaction(SCREEN, "edit_period", "tap")
                 store.editPeriod(period, start, end, today)
@@ -246,7 +251,7 @@ internal fun MuslimahScreen(onBack: () -> Unit, modifier: Modifier) {
 
     deleting?.let { period ->
         AlertDialog(
-            onDismissRequest = { deleting = null },
+            onDismissRequest = { AppAnalytics.interaction(SCREEN, "dismiss_delete_period", "dismiss"); deleting = null },
             icon = { Icon(Icons.Default.DeleteOutline, contentDescription = null) },
             title = { LocalizedText("Delete this period?") },
             text = { Text(periodRangeText(period)) },
@@ -256,13 +261,13 @@ internal fun MuslimahScreen(onBack: () -> Unit, modifier: Modifier) {
                     store.deletePeriod(period); deleting = null; changed()
                 }) { LocalizedText("Delete", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { deleting = null }) { LocalizedText("Cancel") } }
+            dismissButton = { TextButton(onClick = { AppAnalytics.interaction(SCREEN, "dismiss_delete_period", "dismiss"); deleting = null }) { LocalizedText("Cancel") } }
         )
     }
 
     if (confirmDeleteAll) {
         AlertDialog(
-            onDismissRequest = { confirmDeleteAll = false },
+            onDismissRequest = { AppAnalytics.interaction(SCREEN, "dismiss_delete_all", "dismiss"); confirmDeleteAll = false },
             icon = { Icon(Icons.Default.DeleteForever, contentDescription = null) },
             title = { LocalizedText("Delete all cycle logs?") },
             text = { LocalizedText("Every logged day is removed from this phone. This cannot be undone. Your fasts-to-make-up balance is not changed.") },
@@ -272,7 +277,7 @@ internal fun MuslimahScreen(onBack: () -> Unit, modifier: Modifier) {
                     store.deleteAll(); confirmDeleteAll = false; changed()
                 }) { LocalizedText("Delete all", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { confirmDeleteAll = false }) { LocalizedText("Cancel") } }
+            dismissButton = { TextButton(onClick = { AppAnalytics.interaction(SCREEN, "dismiss_delete_all", "dismiss"); confirmDeleteAll = false }) { LocalizedText("Cancel") } }
         )
     }
 }
@@ -282,7 +287,7 @@ internal fun MuslimahScreen(onBack: () -> Unit, modifier: Modifier) {
 @Composable
 private fun PrivacyHero(accent: Color) {
     HeroCard(accent) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.tourTarget("learn_muslimah_privacy")) {
             IconBadge(Icons.Default.Lock, accent, 44.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
@@ -300,12 +305,12 @@ private fun PrivacyHero(accent: Color) {
 @Composable
 private fun Onboarding(accent: Color, onEnable: () -> Unit) {
     ToolCard {
-        SectionTitle("A gentle, private companion")
+        Box(Modifier.tourTarget("learn_muslimah_onboarding")) { SectionTitle("A gentle, private companion") }
         OnboardingPoint(Icons.Default.TouchApp, accent, "Log your period's start and end with one tap.")
         OnboardingPoint(Icons.Default.TaskAlt, accent, "The prayer tracker shows those days as excused, so your streak isn't broken.")
         OnboardingPoint(Icons.Default.NightsStay, accent, "Ramadan days you missed can be added to your fasts to make up.")
         OnboardingPoint(Icons.Default.Lock, accent, "Everything is stored only on this phone. No account, no upload.")
-        Button(onClick = onEnable, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+        Button(onClick = onEnable, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).tourTarget("learn_muslimah_enable")) {
             LocalizedText("Enable Muslimah mode")
         }
     }
@@ -334,7 +339,7 @@ private fun StatusCard(
     ToolCard {
         if (ongoing != null) {
             val day = ChronoUnit.DAYS.between(ongoing.start, today) + 1
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.tourTarget("learn_muslimah_status")) {
                 ProgressRing(1f, accent, size = 64.dp, stroke = 6.dp) {
                     Text("$day", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = accent)
                 }
@@ -357,14 +362,14 @@ private fun StatusCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Button(onClick = onEndToday, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+            Button(onClick = onEndToday, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).tourTarget("learn_muslimah_end_today")) {
                 Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 LocalizedText("My period ended today")
             }
-            TextButton(onClick = onPickEnd, modifier = Modifier.fillMaxWidth()) { LocalizedText("It ended on an earlier day…") }
+            TextButton(onClick = onPickEnd, modifier = Modifier.fillMaxWidth().tourTarget("learn_muslimah_end_earlier")) { LocalizedText("It ended on an earlier day…") }
         } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.tourTarget("learn_muslimah_status")) {
                 IconBadge(Icons.Default.Spa, accent, 48.dp)
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
@@ -376,12 +381,12 @@ private fun StatusCard(
                     )
                 }
             }
-            Button(onClick = onStartToday, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+            Button(onClick = onStartToday, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).tourTarget("learn_muslimah_start_today")) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 LocalizedText("My period started today")
             }
-            TextButton(onClick = onPickStart, modifier = Modifier.fillMaxWidth()) { LocalizedText("It started on an earlier day…") }
+            TextButton(onClick = onPickStart, modifier = Modifier.fillMaxWidth().tourTarget("learn_muslimah_start_earlier")) { LocalizedText("It started on an earlier day…") }
         }
     }
 }
@@ -391,13 +396,13 @@ private fun StatsCard(accent: Color, stats: MuslimahStats, showEstimate: Boolean
     val language = LocalAppLanguage.current
     ToolCard {
         SectionTitle("Your patterns")
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().tourTarget("learn_muslimah_stats")) {
             StatTile("Average period", stats.averagePeriodLength, accent, Modifier.weight(1f))
             StatTile("Average cycle", stats.averageCycleLength, accent, Modifier.weight(1f))
         }
         val next = stats.nextEstimate
         if (showEstimate && next != null) {
-            Surface(shape = MaterialTheme.shapes.medium, color = accent.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth()) {
+            Surface(shape = MaterialTheme.shapes.medium, color = accent.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth().tourTarget("learn_muslimah_estimate")) {
                 Column(Modifier.padding(12.dp)) {
                     LocalizedText("Estimated next start", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(formatDay(next), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = accent)
@@ -453,11 +458,11 @@ private fun CycleCalendar(
     val todayLabel = localizedUiText("Today")
     ToolCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { onMonthChange(month.minusMonths(1)) }) {
+            IconButton(onClick = { onMonthChange(month.minusMonths(1)) }, modifier = Modifier.tourTarget("learn_muslimah_prev_month")) {
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = localizedUiText("Previous month"))
             }
             Text(monthTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-            IconButton(onClick = { onMonthChange(month.plusMonths(1)) }, enabled = month < YearMonth.from(today).plusMonths(2)) {
+            IconButton(onClick = { onMonthChange(month.plusMonths(1)) }, enabled = month < YearMonth.from(today).plusMonths(2), modifier = Modifier.tourTarget("learn_muslimah_next_month")) {
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = localizedUiText("Next month"))
             }
         }
@@ -475,7 +480,7 @@ private fun CycleCalendar(
         val leading = (month.atDay(1).dayOfWeek.value - firstDay.value + 7) % 7
         val cells = leading + month.lengthOfMonth()
         val rows = (cells + 6) / 7
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.tourTarget("learn_muslimah_calendar")) {
             for (r in 0 until rows) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     for (c in 0 until 7) {
@@ -530,7 +535,7 @@ private fun CycleCalendar(
                 }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.tourTarget("learn_muslimah_legend")) {
             LegendDot(Modifier.background(accent.copy(alpha = 0.85f), CircleShape), excusedLabel)
             LegendDot(Modifier.border(1.5.dp, accent.copy(alpha = 0.7f), CircleShape), estimateLabel)
         }
@@ -540,7 +545,7 @@ private fun CycleCalendar(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (YearMonth.from(today) != month) {
-            TextButton(onClick = { onMonthChange(YearMonth.from(today)) }) { LocalizedText("Back to this month") }
+            TextButton(onClick = { onMonthChange(YearMonth.from(today)) }, modifier = Modifier.tourTarget("learn_muslimah_this_month")) { LocalizedText("Back to this month") }
         }
     }
 }
@@ -574,7 +579,7 @@ private fun FastsCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Stepper(value = balance, onDecrement = onDecrement, onIncrement = onIncrement)
+            Box(Modifier.tourTarget("learn_muslimah_fasts")) { Stepper(value = balance, onDecrement = onDecrement, onIncrement = onIncrement) }
         }
         LocalizedText(
             "Shared with the Roza tracker.",
@@ -592,7 +597,7 @@ private fun FastsCard(
                         ),
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    FilledTonalButton(onClick = onLogPending, modifier = Modifier.fillMaxWidth()) {
+                    FilledTonalButton(onClick = onLogPending, modifier = Modifier.fillMaxWidth().tourTarget("learn_muslimah_add_ramadan")) {
                         Text(localizeUiTemplate("Add {count} to fasts to make up", language, mapOf("count" to "$pending")))
                     }
                 }
@@ -617,8 +622,8 @@ private fun PeriodRow(accent: Color, period: MuslimahPeriod, onEdit: () -> Unit,
                 }
                 Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = localizedUiText("Edit period")) }
-            IconButton(onClick = onDelete) { Icon(Icons.Default.DeleteOutline, contentDescription = localizedUiText("Delete period")) }
+            IconButton(onClick = onEdit, modifier = Modifier.tourTarget("learn_muslimah_edit")) { Icon(Icons.Default.Edit, contentDescription = localizedUiText("Edit period")) }
+            IconButton(onClick = onDelete, modifier = Modifier.tourTarget("learn_muslimah_delete")) { Icon(Icons.Default.DeleteOutline, contentDescription = localizedUiText("Delete period")) }
         }
     }
 }
@@ -642,12 +647,12 @@ private fun EditPeriodDialog(
         title = { LocalizedText("Edit period") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                DateField("Start", start) { pick = PickTarget.START }
-                if (!open) DateField("End", end) { pick = PickTarget.END }
+                DateField("Start", start) { AppAnalytics.interaction(SCREEN, "edit_start_date", "tap"); pick = PickTarget.START }
+                if (!open) DateField("End", end) { AppAnalytics.interaction(SCREEN, "edit_end_date", "tap"); pick = PickTarget.END }
                 if (canStayOpen) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable(role = Role.Checkbox) { open = !open }
+                        modifier = Modifier.fillMaxWidth().clickable(role = Role.Checkbox) { AppAnalytics.interaction(SCREEN, "edit_period_still_ongoing", "toggle"); open = !open }
                     ) {
                         Checkbox(checked = open, onCheckedChange = null)
                         Spacer(Modifier.width(8.dp))
@@ -670,7 +675,7 @@ private fun EditPeriodDialog(
             initial = if (target == PickTarget.START) start else end,
             earliest = if (target == PickTarget.END) start else null,
             today = today,
-            onDismiss = { pick = null },
+            onDismiss = { AppAnalytics.interaction(SCREEN, "dismiss_date_picker", "dismiss"); pick = null },
             onPick = { if (target == PickTarget.START) start = it else end = it; pick = null }
         )
     }

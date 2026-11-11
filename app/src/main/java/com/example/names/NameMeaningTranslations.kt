@@ -27,5 +27,6 @@ internal object NameMeaningTranslations {
     private val loaded = java.util.concurrent.ConcurrentHashMap<String, Map<String, String>>()
     fun of(code: String, english: String): String =
         loaders[code]?.let { load -> loaded.getOrPut(code) { load() } }?.get(english)
-            ?: com.example.ui.localization.WorldDraftPhrases.forLanguage(code)[english] ?: english
+            ?: com.example.ui.localization.WorldDraftPhrases.forLanguage(code)[english]
+            ?: com.example.ui.localization.localizePhrase(english, code)
 }

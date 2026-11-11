@@ -3,8 +3,6 @@
 package com.example.ui.screens
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -18,14 +16,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
@@ -35,8 +33,11 @@ import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.ui.tour.tourTarget
+import com.example.ui.tour.TourScreen
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
@@ -68,9 +69,10 @@ import com.example.ui.components.TonalPill
 import com.example.ui.components.accentTint
 import com.example.ui.components.groupedShape
 import com.example.ui.localization.LocalAppLanguage
+import com.example.ui.localization.LocalizedText
+import com.example.ui.localization.localizeUiText
 import com.example.ui.theme.GoldAccent
 
-private const val QAIDA_REFERENCE_URL = "https://download.understandquran.com/fileadmin/user_upload/extras/tajweed/Tajweed_Rules.pdf"
 private const val QAIDA_FONT_MIN = 24
 private const val QAIDA_FONT_MAX = 44
 
@@ -106,13 +108,31 @@ internal fun QaidaTajweedContent(onBack: () -> Unit, onOpenQuran: () -> Unit = {
     var query by rememberSaveable { mutableStateOf("") }
     var bookmarksOnly by rememberSaveable { mutableStateOf(false) }
     var confirmReset by remember { mutableStateOf(false) }
-    var referenceUnavailable by remember { mutableStateOf(false) }
-    val label: QaidaLabel = { en, ur -> if (roman) ur else en }
+    // Offline download progress: null when idle, otherwise saved / failed out of the total.
+    var download by remember { mutableStateOf<Triple<Int, Int, Int>?>(null) }
+    val scope = rememberCoroutineScope()
+    fun downloadAudio() {
+        if (download?.let { it.first + it.second < it.third } == true) return
+        AppAnalytics.interaction("qaida_tajweed_screen", "download_audio")
+        val urls = qaidaAllAudioUrls()
+        download = Triple(0, 0, urls.size)
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            var saved = 0
+            var failed = 0
+            urls.forEach { url ->
+                if (runCatching { com.example.core.net.StreamPlayer.prefetch(context, url) }.isSuccess) saved++ else failed++
+                download = Triple(saved, failed, urls.size)
+            }
+        }
+    }
+    val label: QaidaLabel = { en, ur -> if (roman) ur else localizeUiText(en, appLanguage) }
     val lesson = qaidaLessons.find { it.id == selectedId }
     AnalyticsScreen(if (lesson == null) "qaida_tajweed_screen" else "qaida_lesson_screen")
     AnalyticsSearch("qaida_tajweed_screen", query)
     val searching = query.isNotBlank()
-    val shown = (if (searching) qaidaSearch(query.trim(), roman) else qaidaLessons.filter { it.tajweed == tajweed })
+    // Built once per reading language; titles and rules are searched as the screen shows them.
+    val lessonSearch = remember(roman, appLanguage) { qaidaRanker(roman) { localizeUiText(it, appLanguage) } }
+    val shown = (if (searching) lessonSearch.search(query) else qaidaLessons.filter { it.tajweed == tajweed })
         .filter { !bookmarksOnly || it.id in progressState.bookmarks }
     // Lesson numbers and previous/next always follow the lesson's own track.
     fun track(of: QaidaLesson) = qaidaLessons.filter { it.tajweed == of.tajweed }
@@ -132,16 +152,17 @@ internal fun QaidaTajweedContent(onBack: () -> Unit, onOpenQuran: () -> Unit = {
     fun setRoman(value: Boolean) { AppAnalytics.setting("qaida_language", if (value) "roman" else "english"); roman = value; prefs.edit().putBoolean("roman", value).apply() }
     fun setSize(value: Int) { AppAnalytics.interaction("qaida_lesson_screen", "arabic_size", if (value > arabicSize) "increase" else "decrease"); arabicSize = value.coerceIn(QAIDA_FONT_MIN, QAIDA_FONT_MAX); prefs.edit().putInt("arabic_size", arabicSize).apply() }
 
+    if (lesson == null) TourScreen("qaida_tajweed") else TourScreen("qaida_tajweed_lesson")
     if (confirmReset) {
         AlertDialog(
-            onDismissRequest = { confirmReset = false },
+            onDismissRequest = { AppAnalytics.interaction("qaida_tajweed_screen", "dismiss_reset", "dismiss"); confirmReset = false },
             icon = { Icon(Icons.Default.RestartAlt, contentDescription = null) },
             title = { Text(label("Reset progress?", "Progress reset karein?")) },
             text = { Text(label("Completed lessons, scores, bookmarks and your streak will be cleared. This cannot be undone.",
                 "Mukammal sabaq, score, bookmark aur streak sab mit jayenge. Yeh wapas nahi hoga.")) },
-            confirmButton = { TextButton(onClick = { AppAnalytics.interaction("qaida_tajweed_screen", "reset_confirm"); progress.reset(); bookmarksOnly = false; confirmReset = false }, modifier = Modifier.testTag("qaida_reset_confirm")) {
+            confirmButton = { TextButton(onClick = { AppAnalytics.interaction("qaida_tajweed_screen", "reset_confirm"); progress.reset(); bookmarksOnly = false; confirmReset = false }, modifier = Modifier.testTag("qaida_reset_confirm").tourTarget("qaida_reset_confirm")) {
                 Text(label("Reset", "Reset karein"), color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text(label("Cancel", "Rehne dein")) } }
+            dismissButton = { TextButton(onClick = { AppAnalytics.interaction("qaida_tajweed_screen", "reset_cancel"); confirmReset = false }) { Text(label("Cancel", "Rehne dein")) } }
         )
     }
 
@@ -169,9 +190,9 @@ internal fun QaidaTajweedContent(onBack: () -> Unit, onOpenQuran: () -> Unit = {
             item("tabs") {
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                     SegmentedButton(selected = !tajweed, onClick = { setTrack(false) }, shape = SegmentedButtonDefaults.itemShape(0, 2),
-                        modifier = Modifier.testTag("qaida_tab")) { Text("Noorani Qaida", maxLines = 1) }
+                        modifier = Modifier.testTag("qaida_tab").tourTarget("qaida_track_qaida")) { LocalizedText("Noorani Qaida", maxLines = 1) }
                     SegmentedButton(selected = tajweed, onClick = { setTrack(true) }, shape = SegmentedButtonDefaults.itemShape(1, 2),
-                        modifier = Modifier.testTag("tajweed_tab")) { Text("Tajweed", maxLines = 1) }
+                        modifier = Modifier.testTag("tajweed_tab").tourTarget("qaida_track_tajweed")) { LocalizedText("Tajweed", maxLines = 1) }
                 }
             }
             item("search") {
@@ -179,7 +200,7 @@ internal fun QaidaTajweedContent(onBack: () -> Unit, onOpenQuran: () -> Unit = {
                     value = query, onValueChange = { query = it }, singleLine = true,
                     placeholder = { Text(label("Search lessons, rules or letters", "Sabaq, qaida ya harf talash karein"), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = { if (searching) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, contentDescription = label("Clear search", "Talash saaf karein")) } },
+                    trailingIcon = { if (searching) IconButton(onClick = { AppAnalytics.interaction("qaida_tajweed_screen", "clear_search"); query = "" }) { Icon(Icons.Default.Close, contentDescription = label("Clear search", "Talash saaf karein")) } },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     shape = CircleShape,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -187,7 +208,7 @@ internal fun QaidaTajweedContent(onBack: () -> Unit, onOpenQuran: () -> Unit = {
                         unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                     ),
-                    modifier = Modifier.fillMaxWidth().testTag("qaida_search")
+                    modifier = Modifier.fillMaxWidth().testTag("qaida_search").tourTarget("qaida_search")
                 )
             }
             item("filters") {
@@ -204,7 +225,7 @@ internal fun QaidaTajweedContent(onBack: () -> Unit, onOpenQuran: () -> Unit = {
                         label = { Text(label("Bookmarks (${progressState.bookmarks.size})", "Bookmarks (${progressState.bookmarks.size})")) },
                         leadingIcon = { Icon(if (bookmarksOnly) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, contentDescription = null, modifier = Modifier.size(18.dp)) },
                         shape = CircleShape,
-                        modifier = Modifier.testTag("qaida_bookmarks_filter")
+                        modifier = Modifier.testTag("qaida_bookmarks_filter").tourTarget("qaida_bookmarks_filter")
                     )
                 }
             }
@@ -224,7 +245,7 @@ internal fun QaidaTajweedContent(onBack: () -> Unit, onOpenQuran: () -> Unit = {
                     inProgress = entry.id == progressState.lastLessonId && entry.id !in progressState.completed,
                     bookmarked = entry.id in progressState.bookmarks, score = progressState.scores[entry.id],
                     first = index == 0, last = index == shown.lastIndex,
-                    accent = accent, label = label, onClick = { selectedId = entry.id }
+                    accent = accent, label = label, onClick = { AppAnalytics.content("qaida", entry.id); selectedId = entry.id }
                 )
             }
             item("tools") {
@@ -235,25 +256,28 @@ internal fun QaidaTajweedContent(onBack: () -> Unit, onOpenQuran: () -> Unit = {
                         title = label("Open Quran for recitation", "Tilawat ke liye Quran kholein"),
                         icon = Icons.AutoMirrored.Filled.MenuBook, accent = accent, localizeTitle = false,
                         shape = groupedShape(0, count),
+                        modifier = Modifier.tourTarget("qaida_open_quran"),
                         onClick = AppAnalytics.trackAction("qaida_tajweed_screen", "open_quran", onOpenQuran)
                     )
                     ListRowItem(
-                        title = label("Teaching reference · Understand Al-Qur'an", "Tajweed reference · Understand Al-Qur'an"),
-                        subtitle = if (referenceUnavailable) label("A browser or PDF reader is needed to open the reference.", "Reference kholne ke liye browser ya PDF reader chahiye.") else null,
-                        icon = Icons.AutoMirrored.Filled.OpenInNew, accent = accent, localizeTitle = false, localizeSubtitle = false,
+                        title = label("Download all audio for offline", "Saara audio offline ke liye download karein"),
+                        subtitle = download?.let { (saved, failed, total) ->
+                            when {
+                                saved + failed < total -> label("Downloading ${saved + failed} of $total…", "Download ho raha hai: ${saved + failed} / $total…")
+                                failed == 0 -> label("All $total recordings saved for offline use.", "Tamam $total recordings offline ke liye mehfooz.")
+                                else -> label("$failed of $total failed. Check your internet and tap to retry.", "$total mein se $failed nahi hue. Internet check karke dobara dabayein.")
+                            }
+                        },
+                        icon = Icons.Default.Download, accent = accent, localizeTitle = false, localizeSubtitle = false,
                         shape = groupedShape(1, count),
-                        onClick = {
-                            AppAnalytics.interaction("qaida_tajweed_screen", "teaching_reference")
-                            try {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(QAIDA_REFERENCE_URL)))
-                            } catch (_: android.content.ActivityNotFoundException) { referenceUnavailable = true }
-                        }
+                        modifier = Modifier.testTag("qaida_download_audio").tourTarget("qaida_download_audio"),
+                        onClick = ::downloadAudio
                     )
                     if (canReset) ListRowItem(
                         title = label("Reset progress?", "Progress reset karein?").removeSuffix("?"),
                         icon = Icons.Default.RestartAlt, accent = MaterialTheme.colorScheme.error, localizeTitle = false,
                         shape = groupedShape(2, count),
-                        modifier = Modifier.testTag("qaida_reset"),
+                        modifier = Modifier.testTag("qaida_reset").tourTarget("qaida_reset"),
                         onClick = { AppAnalytics.interaction("qaida_tajweed_screen", "reset_request"); confirmReset = true }
                     )
                 }
@@ -274,7 +298,6 @@ internal fun QaidaTajweedContent(onBack: () -> Unit, onOpenQuran: () -> Unit = {
             val rowClips = if (isLetters) emptyList() else clips.filterNot { qaidaIsLetterClip(it) }
             val drillClips = clips.filter { qaidaIsLetterClip(it) }.distinctBy { it.arabic }
             val ruleLetters = lesson.letters.split(" ").filter { it.isNotBlank() }
-            val source = if (clips.any { "quranfor.me" in it.url }) "Arabic pronunciation · QuranFor.me" else "Al-Husary · EveryAyah · Full ayah recording"
 
             item("lesson_bar") {
                 QaidaLessonHeader(
@@ -291,13 +314,14 @@ internal fun QaidaTajweedContent(onBack: () -> Unit, onOpenQuran: () -> Unit = {
                 QaidaRuleCard(
                     rule = label(lesson.rule, lesson.romanRule),
                     tip = if (lesson.tip.isNotBlank() || lesson.romanTip.isNotBlank()) label(lesson.tip, lesson.romanTip.ifBlank { lesson.tip }) else null,
-                    letters = ruleLetters, accent = accent, label = label
+                    letters = ruleLetters, accent = accent, label = label,
+                    madani = qaidaMadaniNumber(lesson.id)?.let { label("Madani Qaidah · lesson $it", "Madani Qaida · sabaq $it") }
                 ) { letter ->
                     val index = qaidaAlphabet.indexOfFirst { it.first == letter }
                     if (index >= 0) audio.play(qaidaLetterAudio(index))
                 }
             }
-            item("audio_controls") { QaidaAudioBar(audioState, clips, source, accent, label, audio) }
+            item("audio_controls") { QaidaAudioBar(audioState, clips, accent, label, audio) }
             if (isLetters || gridClips.isNotEmpty()) item("grid_title") {
                 QaidaSizeRow("", arabicSize, QAIDA_FONT_MIN, QAIDA_FONT_MAX, label, ::setSize, showTitle = false)
             }
@@ -344,14 +368,14 @@ internal fun QaidaTajweedContent(onBack: () -> Unit, onOpenQuran: () -> Unit = {
             item("lesson_nav") {
                 Row(Modifier.fillMaxWidth().padding(top = Spacing.xs), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     OutlinedButton(onClick = { AppAnalytics.interaction("qaida_lesson_screen", "previous_lesson"); selectedId = previous?.id }, enabled = previous != null,
-                        modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("qaida_nav_prev")) {
-                        Icon(Icons.Default.ChevronLeft, contentDescription = null, modifier = Modifier.size(18.dp))
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("qaida_nav_prev").tourTarget("qaida_nav_prev")) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null, modifier = Modifier.size(18.dp))
                         Text(label("Previous", "Pichhla"), maxLines = 1)
                     }
                     FilledTonalButton(onClick = { AppAnalytics.interaction("qaida_lesson_screen", "next_lesson"); selectedId = next?.id }, enabled = next != null,
-                        modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("qaida_nav_next")) {
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("qaida_nav_next").tourTarget("qaida_nav_next")) {
                         Text(label("Next", "Agla"), maxLines = 1)
-                        Icon(Icons.Default.ChevronRight, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -364,13 +388,13 @@ internal fun QaidaTajweedContent(onBack: () -> Unit, onOpenQuran: () -> Unit = {
 private fun QaidaLanguageMenu(roman: Boolean, onChange: (Boolean) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        IconButton(onClick = { open = true }, modifier = Modifier.testTag("qaida_language")) {
+        IconButton(onClick = { AppAnalytics.interaction("qaida_tajweed_screen", "open_language_menu"); open = true }, modifier = Modifier.testTag("qaida_language").tourTarget("qaida_language")) {
             Icon(Icons.Default.Translate, contentDescription = if (roman) "Roman Urdu / Hindi" else "English")
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(text = { Text("English") }, onClick = { onChange(false); open = false },
+        DropdownMenu(expanded = open, onDismissRequest = { AppAnalytics.interaction("qaida_tajweed_screen", "dismiss_language_menu", "dismiss"); open = false }) {
+            DropdownMenuItem(text = { LocalizedText("English") }, onClick = { onChange(false); open = false },
                 leadingIcon = { RadioButton(selected = !roman, onClick = null) })
-            DropdownMenuItem(text = { Text("Roman Urdu / Hindi") }, onClick = { onChange(true); open = false },
+            DropdownMenuItem(text = { LocalizedText("Roman Urdu / Hindi") }, onClick = { onChange(true); open = false },
                 leadingIcon = { RadioButton(selected = roman, onClick = null) })
         }
     }
@@ -385,7 +409,7 @@ private fun QaidaHero(state: QaidaProgressState, tajweed: Boolean, label: QaidaL
     val nextNumber = qaidaLessons.filter { it.tajweed == tajweed }.indexOf(next) + 1
     val fraction = if (total == 0) 0f else done.toFloat() / total
     val started = state.completed.isNotEmpty() || state.lastLessonId != null
-    HeroSurface(Modifier.fillMaxWidth()) {
+    HeroSurface(Modifier.fillMaxWidth().tourTarget("qaida_hero")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TonalPill(if (tajweed) "Tajweed" else "Noorani Qaida",
                 containerColor = Color.White.copy(alpha = 0.14f), contentColor = Color.White)
@@ -405,7 +429,7 @@ private fun QaidaHero(state: QaidaProgressState, tajweed: Boolean, label: QaidaL
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label("$done / $total lessons completed", "$done / $total sabaq mukammal"),
                 style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f),
-                modifier = Modifier.weight(1f).testTag("qaida_track_progress"))
+                modifier = Modifier.weight(1f).testTag("qaida_track_progress").tourTarget("qaida_track_progress"))
             Text("${(fraction * 100).toInt()}%", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = GoldAccent)
         }
         Spacer(Modifier.height(6.dp))
@@ -435,20 +459,20 @@ private fun QaidaHero(state: QaidaProgressState, tajweed: Boolean, label: QaidaL
         Spacer(Modifier.height(Spacing.md))
         Button(
             onClick = onContinue,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qaida_continue"),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qaida_continue").tourTarget("qaida_continue"),
             colors = ButtonDefaults.buttonColors(containerColor = GoldAccent, contentColor = Color(0xFF0B2D25))
         ) {
             Text(if (!started) label("Start learning", "Seekhna shuru karein") else label("Continue learning", "Seekhna jaari rakhein"),
                 fontWeight = FontWeight.Bold)
             Spacer(Modifier.width(6.dp))
-            Icon(Icons.Default.ChevronRight, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(18.dp))
         }
     }
 }
 
 @Composable
 private fun QaidaEmptyNote(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    AppCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(Spacing.xl)) {
+    AppCard(Modifier.fillMaxWidth().tourTarget("qaida_empty"), contentPadding = PaddingValues(Spacing.xl)) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
             IconBadge(icon, MaterialTheme.colorScheme.onSurfaceVariant, size = 52.dp, iconSize = 28.dp)
             Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
@@ -464,7 +488,7 @@ private fun QaidaLessonHeader(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack, modifier = Modifier.testTag("qaida_all_lessons")) {
+            IconButton(onClick = onBack, modifier = Modifier.testTag("qaida_all_lessons").tourTarget("qaida_all_lessons")) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = label("All lessons", "Saare sabaq"))
             }
             Column(Modifier.weight(1f)) {
@@ -474,7 +498,7 @@ private fun QaidaLessonHeader(
                 Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
                     modifier = Modifier.semantics { heading() })
             }
-            IconToggleButton(checked = bookmarked, onCheckedChange = { onBookmark() }, modifier = Modifier.testTag("qaida_bookmark")) {
+            IconToggleButton(checked = bookmarked, onCheckedChange = { onBookmark() }, modifier = Modifier.testTag("qaida_bookmark").tourTarget("qaida_bookmark")) {
                 Icon(if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, tint = if (bookmarked) accent else LocalContentColor.current,
                     contentDescription = if (bookmarked) label("Remove bookmark", "Bookmark hatayein") else label("Bookmark this lesson", "Sabaq bookmark karein"))
             }
@@ -489,8 +513,9 @@ private fun QaidaLessonHeader(
 
 /** The rule, its tip and its letters together in one calm card. */
 @Composable
-private fun QaidaRuleCard(rule: String, tip: String?, letters: List<String>, accent: Color, label: QaidaLabel, onLetter: (String) -> Unit) {
-    AppCard(Modifier.fillMaxWidth().animateContentSize(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+private fun QaidaRuleCard(rule: String, tip: String?, letters: List<String>, accent: Color, label: QaidaLabel, madani: String? = null, onLetter: (String) -> Unit) {
+    AppCard(Modifier.fillMaxWidth().animateContentSize().tourTarget("qaida_rule_card"), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        if (madani != null) Text(madani, style = MaterialTheme.typography.labelLarge, color = accent)
         Text(rule, style = MaterialTheme.typography.bodyLarge)
         if (tip != null) {
             Surface(shape = MaterialTheme.shapes.medium, color = accent.copy(alpha = 0.08f), modifier = Modifier.fillMaxWidth()) {
@@ -521,10 +546,10 @@ private fun QaidaSizeRow(
             modifier = Modifier.weight(1f).semantics { heading() })
         else Spacer(Modifier.weight(1f))
         if (showControls) {
-            IconButton(onClick = { onSize(size - 4) }, enabled = size > min, modifier = Modifier.testTag("qaida_font_smaller")) {
+            IconButton(onClick = { onSize(size - 4) }, enabled = size > min, modifier = Modifier.testTag("qaida_font_smaller").tourTarget("qaida_font_smaller")) {
                 Icon(Icons.Default.TextDecrease, contentDescription = label("Smaller Arabic text", "Arabic chhoti karein"))
             }
-            IconButton(onClick = { onSize(size + 4) }, enabled = size < max, modifier = Modifier.testTag("qaida_font_larger")) {
+            IconButton(onClick = { onSize(size + 4) }, enabled = size < max, modifier = Modifier.testTag("qaida_font_larger").tourTarget("qaida_font_larger")) {
                 Icon(Icons.Default.TextIncrease, contentDescription = label("Larger Arabic text", "Arabic bari karein"))
             }
         }

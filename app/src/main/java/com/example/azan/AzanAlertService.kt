@@ -43,6 +43,7 @@ class AzanAlertService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        com.example.core.analytics.AppAnalytics.wake(this, "azan_service", intent?.action ?: "start")
         val path = intent?.getStringExtra(EXTRA_FILE)
         if (intent == null || intent.action == ACTION_STOP || path == null) {
             // The Stop action and swiping the alert away both arrive here.

@@ -5,7 +5,6 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -132,6 +131,7 @@ internal fun RozaActionsMenu(store: RozaTrackerStore, today: LocalDate, onChange
                     (context.contentResolver.openOutputStream(uri, "wt") ?: error("no stream")).use { it.write(json.toByteArray()) }
                 }.isSuccess
             }
+            com.example.core.analytics.AppAnalytics.milestone("roza_tracker", "backup_saved", if (ok) "success" else "failed")
             onMessage(if (ok) backupSaved else backupFailed)
         }
     }
@@ -156,43 +156,50 @@ internal fun RozaActionsMenu(store: RozaTrackerStore, today: LocalDate, onChange
     }
 
     Box(modifier) {
-        IconButton(onClick = { expanded = true }, modifier = Modifier.testTag("roza_menu")) {
+        IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "open_menu"); expanded = true }, modifier = Modifier.testTag("roza_menu")) {
             Icon(Icons.Default.MoreVert, localizedUiText("More options"))
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(expanded = expanded, onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "dismiss_menu", "dismiss"); expanded = false }) {
             DropdownMenuItem(text = { LocalizedText("Share summary") }, onClick = {
+                com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "share_summary")
                 expanded = false
                 val text = rozaSummary(store.balance, RozaLogic.stats(store.logs(), today), today.format(dateFormat),
                     { labels[it] ?: it }, { numbers.format(it) })
                 runCatching {
-                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), shareTitle))
+                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, com.example.core.share.AppShareLink.withLink(context, text)), shareTitle))
                 }
             })
             DropdownMenuItem(text = { LocalizedText("Save backup") }, onClick = {
+                com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "save_backup")
                 expanded = false
                 runCatching { saveLauncher.launch("roza-backup-$today.json") }.onFailure { onMessage(backupFailed) }
             })
             DropdownMenuItem(text = { LocalizedText("Restore backup") }, onClick = {
+                com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "restore_backup")
                 expanded = false
                 runCatching { openLauncher.launch(arrayOf("application/json", "text/*", "application/octet-stream")) }.onFailure { onMessage(readFailed) }
             })
             DropdownMenuItem(text = { LocalizedText("Mark a date range") }, onClick = {
+                com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "open_date_range")
                 expanded = false; rangeFrom = today.toEpochDay(); rangeTo = today.toEpochDay(); showRange = true
             })
             DropdownMenuItem(text = { LocalizedText("Correct Qaza balance") }, enabled = store.balance > 0, onClick = {
+                com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "open_correct_balance")
                 expanded = false; count = ""; showCorrect = true
             })
         }
     }
 
     pendingRestore?.let { json ->
-        AlertDialog(onDismissRequest = { pendingRestore = null }, title = { LocalizedText("Restore backup") },
+        AlertDialog(onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "dismiss_restore_backup", "dismiss"); pendingRestore = null }, title = { LocalizedText("Restore backup") },
             text = { LocalizedText("This replaces your current fast log, notes and Qaza balance with the backup.") },
             confirmButton = { TextButton(onClick = {
                 pendingRestore = null
-                if (RozaBackup.import(store, json, today)) { onChanged(); onMessage(restored) } else onMessage(invalidBackup)
+                val ok = RozaBackup.import(store, json, today)
+                com.example.core.analytics.AppAnalytics.milestone("roza_tracker", "backup_restored", if (ok) "success" else "invalid")
+                if (ok) { onChanged(); onMessage(restored) } else onMessage(invalidBackup)
             }) { LocalizedText("Restore") } },
-            dismissButton = { TextButton(onClick = { pendingRestore = null }) { LocalizedText("Cancel") } })
+            dismissButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "dismiss_restore_backup", "dismiss"); pendingRestore = null }) { LocalizedText("Cancel") } })
     }
 
     if (showRange) {
@@ -204,16 +211,16 @@ internal fun RozaActionsMenu(store: RozaTrackerStore, today: LocalDate, onChange
             DatePickerDialog(context, { _, year, monthIndex, day -> onPicked(LocalDate.of(year, monthIndex + 1, day)) },
                 current.year, current.monthValue - 1, current.dayOfMonth).apply { datePicker.maxDate = System.currentTimeMillis() }.show()
         }
-        AlertDialog(onDismissRequest = { showRange = false }, title = { LocalizedText("Mark a date range") },
-            text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        AlertDialog(onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "dismiss_date_range", "dismiss"); showRange = false }, title = { LocalizedText("Mark a date range") },
+            text = { Column(Modifier.verticalScroll(com.example.core.analytics.rememberAnalyticsScrollState("roza_tracker_screen")), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(Modifier.weight(1f)) {
                         LocalizedText("From", style = MaterialTheme.typography.labelMedium)
-                        OutlinedButton(onClick = { pick(from) { rangeFrom = it.toEpochDay() } }, modifier = Modifier.fillMaxWidth().testTag("roza_range_from")) { Text(from.format(dateFormat)) }
+                        OutlinedButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "range_pick_from"); pick(from) { rangeFrom = it.toEpochDay() } }, modifier = Modifier.fillMaxWidth().testTag("roza_range_from")) { Text(from.format(dateFormat)) }
                     }
                     Column(Modifier.weight(1f)) {
                         LocalizedText("To", style = MaterialTheme.typography.labelMedium)
-                        OutlinedButton(onClick = { pick(to) { rangeTo = it.toEpochDay() } }, modifier = Modifier.fillMaxWidth().testTag("roza_range_to")) { Text(to.format(dateFormat)) }
+                        OutlinedButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "range_pick_to"); pick(to) { rangeTo = it.toEpochDay() } }, modifier = Modifier.fillMaxWidth().testTag("roza_range_to")) { Text(to.format(dateFormat)) }
                     }
                 }
                 when {
@@ -223,7 +230,7 @@ internal fun RozaActionsMenu(store: RozaTrackerStore, today: LocalDate, onChange
                 }
                 RozaMark.entries.forEach { option ->
                     val active = rangeMark == option.name
-                    FilterChip(selected = active, onClick = { rangeMark = option.name }, label = { LocalizedText(option.label, modifier = Modifier.padding(vertical = 8.dp)) },
+                    FilterChip(selected = active, onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "range_mark", "select", item = option.name); rangeMark = option.name }, label = { LocalizedText(option.label, modifier = Modifier.padding(vertical = 8.dp)) },
                         leadingIcon = if (active) { { Icon(Icons.Default.CheckCircle, null) } } else null,
                         modifier = Modifier.fillMaxWidth().testTag("roza_range_${option.name.lowercase()}"), shape = RoundedCornerShape(16.dp))
                 }
@@ -231,17 +238,18 @@ internal fun RozaActionsMenu(store: RozaTrackerStore, today: LocalDate, onChange
             } },
             confirmButton = { TextButton(enabled = valid, onClick = {
                 showRange = false
+                com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "apply_date_range")
                 val mark = RozaMark.entries.firstOrNull { it.name == rangeMark } ?: RozaMark.RAMADAN
                 val dates = (0 until days).map { from.plusDays(it) }
                 if (store.setMarks(dates, mark, today)) { onChanged(); onMessage(rangeSaved) } else onMessage(rangeFailed)
             }) { LocalizedText("Apply") } },
-            dismissButton = { TextButton(onClick = { showRange = false }) { LocalizedText("Cancel") } })
+            dismissButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "dismiss_date_range", "dismiss"); showRange = false }) { LocalizedText("Cancel") } })
     }
 
     if (showCorrect) {
         val balance = store.balance
         val value = count.toIntOrNull() ?: 0
-        AlertDialog(onDismissRequest = { showCorrect = false }, title = { LocalizedText("Correct Qaza balance") },
+        AlertDialog(onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "dismiss_correct_balance", "dismiss"); showCorrect = false }, title = { LocalizedText("Correct Qaza balance") },
             text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 LocalizedText("Use this only to fix a count you entered by mistake. To record a Qaza fast you kept, log it on its day instead.", style = MaterialTheme.typography.bodyMedium)
                 Text("${localizedUiText("Qaza roza balance")}: ${numbers.format(balance)}", style = MaterialTheme.typography.bodySmall)
@@ -252,8 +260,9 @@ internal fun RozaActionsMenu(store: RozaTrackerStore, today: LocalDate, onChange
             } },
             confirmButton = { TextButton(enabled = value in 1..balance, onClick = {
                 showCorrect = false
+                com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "apply_correct_balance")
                 if (store.reduceBalance(value)) { onChanged(); onMessage(balanceUpdated) }
             }) { LocalizedText("Remove") } },
-            dismissButton = { TextButton(onClick = { showCorrect = false }) { LocalizedText("Cancel") } })
+            dismissButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "dismiss_correct_balance", "dismiss"); showCorrect = false }) { LocalizedText("Cancel") } })
     }
 }

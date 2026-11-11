@@ -107,7 +107,12 @@ private class AppLocaleContextWrapper(
 @Composable
 fun localizedUiText(text: String): String = localizeUiText(text, LocalAppLanguage.current)
 
-private val hindiPhrases = linkedMapOf(
+/** Translates a whole sentence with {name} slots in the current language, then fills the slots. */
+@Composable
+fun localizedUiTemplate(template: String, vararg values: Pair<String, Any>): String =
+    localizeUiTemplate(template, LocalAppLanguage.current, values.associate { (k, v) -> k to v.toString() })
+
+private val hindiPhrases by lazy { linkedMapOf(
     "Settings & Privacy" to "सेटिंग्स और गोपनीयता",
     "App Language" to "ऐप की भाषा", "Choose language" to "भाषा चुनें",
     "Choose app language" to "ऐप की भाषा चुनें", "Close" to "बंद करें",
@@ -358,9 +363,9 @@ private val hindiPhrases = linkedMapOf(
     "9th Dhu al-Hijjah. Fasting expiates sins of two years (Sahih Muslim)." to "9 ज़िलहज। रोज़ा दो साल के गुनाहों का कफ़्फ़ारा है (सही मुस्लिम)।",
     "Eid-ul-Adha (Bakra Eid)" to "ईद-उल-अज़हा (बक़रा ईद)",
     "10th Dhu al-Hijjah. Qurbani from the 10th to the 12th." to "10 ज़िलहज। क़ुर्बानी 10 से 12 तारीख़ तक होती है।"
-)
+) }
 
-private val urduPhrases = linkedMapOf(
+private val urduPhrases by lazy { linkedMapOf(
     "Settings & Privacy" to "ترتیبات اور رازداری",
     "App Language" to "ایپ کی زبان", "Choose language" to "زبان منتخب کریں",
     "Choose app language" to "ایپ کی زبان منتخب کریں", "Close" to "بند کریں",
@@ -614,7 +619,7 @@ private val urduPhrases = linkedMapOf(
     "9th Dhu al-Hijjah. Fasting expiates sins of two years (Sahih Muslim)." to "9 ذوالحجہ۔ اس کا روزہ دو سال کے گناہوں کا کفارہ ہے (صحیح مسلم)۔",
     "Eid-ul-Adha (Bakra Eid)" to "عید الاضحیٰ (بقرعید)",
     "10th Dhu al-Hijjah. Qurbani from the 10th to the 12th." to "10 ذوالحجہ۔ قربانی 10 سے 12 تاریخ تک ہوتی ہے۔"
-)
+) }
 
 private val hindiWords = mapOf(
     "Prayer" to "नमाज़", "Schedule" to "समय-सारणी", "Location" to "स्थान", "Language" to "भाषा",
@@ -768,8 +773,12 @@ internal class UiLanguagePack(
 
     fun localize(text: String): String {
         phrases[text]?.let { return it }
+        // {placeholders} are runtime slots, never words: "{prayed}" must not become "{अदा की}".
         return fragmentPattern.replace(text) { match ->
-            phrases[match.value] ?: wordsByLowercase[match.value.lowercase()] ?: match.value
+            val start = match.range.first
+            val end = match.range.last + 1
+            if (start > 0 && text[start - 1] == '{' && end < text.length && text[end] == '}') match.value
+            else phrases[match.value] ?: wordsByLowercase[match.value.lowercase()] ?: match.value
         }
     }
 
@@ -809,72 +818,85 @@ private fun regionalPack(code: String, pack: UiLanguagePack): UiLanguagePack = p
         )
     )
 
-private val languagePacks: Map<String, UiLanguagePack> = mapOf(
-    "hinglish" to UiLanguagePack(
+/**
+ * Each language's pack, built on its first use only. The saved language is read on every
+ * process start, including background prayer alarms, widget refreshes and app updates, so
+ * building every pack then (with all regional drafts) stalled the main thread of those wakes.
+ * A fresh registry is returned on each call; the app keeps one in [languagePacks].
+ */
+internal fun newLanguagePackRegistry(): Map<String, Lazy<UiLanguagePack>> = mapOf(
+    "hinglish" to lazy { UiLanguagePack(
         dailyToolPhrases.getValue("hinglish") + quizPhrases.getValue("hinglish") + quizGeneratorPhrases.getValue("hinglish") + hajjUmrahPhrases.getValue("hinglish") + prayerTrackerPhrases.getValue("hinglish") + hinglishPhrases + duaFeaturePhrases.getValue("hinglish") + duaScreenPhrases.getValue("hinglish") +
             extendedUiPhrases.getValue("hinglish") + analyticsPhrases.getValue("hinglish"),
         hinglishWords + controlWordsByLanguage.getValue("hinglish")
-    ),
-    "hi" to UiLanguagePack(
+    ) },
+    "hi" to lazy { UiLanguagePack(
         dailyToolPhrases.getValue("hi") + quizPhrases.getValue("hi") + quizGeneratorPhrases.getValue("hi") + hajjUmrahPhrases.getValue("hi") + prayerTrackerPhrases.getValue("hi") + hindiPhrases + duaFeaturePhrases.getValue("hi") + duaScreenPhrases.getValue("hi") +
             extendedUiPhrases.getValue("hi") + analyticsPhrases.getValue("hi"),
         hindiWords + controlWordsByLanguage.getValue("hi")
-    ),
-    "ur" to UiLanguagePack(
+    ) },
+    "ur" to lazy { UiLanguagePack(
         dailyToolPhrases.getValue("ur") + quizPhrases.getValue("ur") + quizGeneratorPhrases.getValue("ur") + hajjUmrahPhrases.getValue("ur") + prayerTrackerPhrases.getValue("ur") + urduPhrases + duaFeaturePhrases.getValue("ur") + duaScreenPhrases.getValue("ur") +
             extendedUiPhrases.getValue("ur") + analyticsPhrases.getValue("ur"),
         urduWords + controlWordsByLanguage.getValue("ur")
-    ),
-    "as" to regionalPack("as", assamesePack),
-    "bn" to regionalPack("bn", bengaliPack),
-    "brx" to regionalPack("brx", bodoPack),
-    "doi" to regionalPack("doi", dogriPack),
-    "gu" to regionalPack("gu", gujaratiPack),
-    "kn" to regionalPack("kn", kannadaPack),
-    "ks" to regionalPack("ks", kashmiriPack),
-    "kok" to regionalPack("kok", konkaniPack),
-    "mai" to regionalPack("mai", maithiliPack),
-    "ml" to regionalPack("ml", malayalamPack),
-    "mni" to regionalPack("mni", manipuriPack),
-    "mr" to regionalPack("mr", marathiPack),
-    "ne" to regionalPack("ne", nepaliPack),
-    "or" to regionalPack("or", odiaPack),
-    "pa" to regionalPack("pa", punjabiPack),
-    "sa" to regionalPack("sa", sanskritPack),
-    "sat" to regionalPack("sat", santaliPack),
-    "sd" to regionalPack("sd", sindhiPack),
-    "ta" to regionalPack("ta", tamilPack),
-    "te" to regionalPack("te", teluguPack),
-    "ar" to regionalPack("ar", arabicPack),
-    "fa" to regionalPack("fa", persianPack),
-    "tr" to regionalPack("tr", turkishPack),
-    "id" to regionalPack("id", indonesianPack),
-    "fr" to regionalPack("fr", frenchPack),
-    "es" to regionalPack("es", spanishPack),
-    "ru" to regionalPack("ru", russianPack),
-    "de" to regionalPack("de", germanPack),
-    "pt" to regionalPack("pt", portuguesePack),
-    "zh" to regionalPack("zh", chinesePack),
-    "sw" to regionalPack("sw", swahiliPack),
-    "ha" to regionalPack("ha", hausaPack),
-    "ms" to regionalPack("ms", malayPack),
-    "it" to regionalPack("it", italianPack),
-    "nl" to regionalPack("nl", dutchPack),
-    "vi" to regionalPack("vi", vietnamesePack),
-    "th" to regionalPack("th", thaiPack),
-    "tl" to regionalPack("tl", filipinoPack),
-    "ps" to regionalPack("ps", pashtoPack),
-    "ja" to regionalPack("ja", japanesePack),
-    "ko" to regionalPack("ko", koreanPack),
-    "el" to regionalPack("el", greekPack),
-    "pl" to regionalPack("pl", polishPack),
-    "uk" to regionalPack("uk", ukrainianPack),
-    "so" to regionalPack("so", somaliPack),
-    "am" to regionalPack("am", amharicPack),
-    "uz" to regionalPack("uz", uzbekPack),
-    "he" to regionalPack("he", hebrewPack),
-    "si" to regionalPack("si", sinhalaPack)
+    ) },
+    "as" to lazy { regionalPack("as", assamesePack) },
+    "bn" to lazy { regionalPack("bn", bengaliPack) },
+    "brx" to lazy { regionalPack("brx", bodoPack) },
+    "doi" to lazy { regionalPack("doi", dogriPack) },
+    "gu" to lazy { regionalPack("gu", gujaratiPack) },
+    "kn" to lazy { regionalPack("kn", kannadaPack) },
+    "ks" to lazy { regionalPack("ks", kashmiriPack) },
+    "kok" to lazy { regionalPack("kok", konkaniPack) },
+    "mai" to lazy { regionalPack("mai", maithiliPack) },
+    "ml" to lazy { regionalPack("ml", malayalamPack) },
+    "mni" to lazy { regionalPack("mni", manipuriPack) },
+    "mr" to lazy { regionalPack("mr", marathiPack) },
+    "ne" to lazy { regionalPack("ne", nepaliPack) },
+    "or" to lazy { regionalPack("or", odiaPack) },
+    "pa" to lazy { regionalPack("pa", punjabiPack) },
+    "sa" to lazy { regionalPack("sa", sanskritPack) },
+    "sat" to lazy { regionalPack("sat", santaliPack) },
+    "sd" to lazy { regionalPack("sd", sindhiPack) },
+    "ta" to lazy { regionalPack("ta", tamilPack) },
+    "te" to lazy { regionalPack("te", teluguPack) },
+    "ar" to lazy { regionalPack("ar", arabicPack) },
+    "fa" to lazy { regionalPack("fa", persianPack) },
+    "tr" to lazy { regionalPack("tr", turkishPack) },
+    "id" to lazy { regionalPack("id", indonesianPack) },
+    "fr" to lazy { regionalPack("fr", frenchPack) },
+    "es" to lazy { regionalPack("es", spanishPack) },
+    "ru" to lazy { regionalPack("ru", russianPack) },
+    "de" to lazy { regionalPack("de", germanPack) },
+    "pt" to lazy { regionalPack("pt", portuguesePack) },
+    "zh" to lazy { regionalPack("zh", chinesePack) },
+    "sw" to lazy { regionalPack("sw", swahiliPack) },
+    "ha" to lazy { regionalPack("ha", hausaPack) },
+    "ms" to lazy { regionalPack("ms", malayPack) },
+    "it" to lazy { regionalPack("it", italianPack) },
+    "nl" to lazy { regionalPack("nl", dutchPack) },
+    "vi" to lazy { regionalPack("vi", vietnamesePack) },
+    "th" to lazy { regionalPack("th", thaiPack) },
+    "tl" to lazy { regionalPack("tl", filipinoPack) },
+    "ps" to lazy { regionalPack("ps", pashtoPack) },
+    "ja" to lazy { regionalPack("ja", japanesePack) },
+    "ko" to lazy { regionalPack("ko", koreanPack) },
+    "el" to lazy { regionalPack("el", greekPack) },
+    "pl" to lazy { regionalPack("pl", polishPack) },
+    "uk" to lazy { regionalPack("uk", ukrainianPack) },
+    "so" to lazy { regionalPack("so", somaliPack) },
+    "am" to lazy { regionalPack("am", amharicPack) },
+    "uz" to lazy { regionalPack("uz", uzbekPack) },
+    "he" to lazy { regionalPack("he", hebrewPack) },
+    "si" to lazy { regionalPack("si", sinhalaPack) }
 )
+
+private val languagePacks: Map<String, Lazy<UiLanguagePack>> = newLanguagePackRegistry()
+
+private fun languagePack(language: String): UiLanguagePack? = languagePacks[language]?.value
+
+/** Languages whose pack has been built in this process; for startup-cost tests. */
+internal fun builtLanguagePacks(): Set<String> = languagePacks.filterValues { it.isInitialized() }.keys
 
 /**
  * The frozen set of core UI copy keys every supported language must translate. This is a fixed
@@ -914,23 +936,27 @@ private val coreUiReferenceKeys: Set<String> = setOf(
 )
 
 /** The Hindi pack is the reference: every other language must translate the same core UI copy. */
-internal val referenceUiPhraseKeys: Set<String> =
+internal val referenceUiPhraseKeys: Set<String> by lazy {
     coreUiReferenceKeys + duaFeaturePhrases.getValue("hi").keys + duaScreenPhrases.getValue("hi").keys
+}
 
-internal fun uiLanguagePack(language: String): UiLanguagePack? = languagePacks[language]
+internal fun uiLanguagePack(language: String): UiLanguagePack? = languagePack(language)
 
 /** Language lookup shared by background receivers/services where no Compose state exists. */
-fun persistedAppLanguage(context: Context): String {
-    val saved = context.getSharedPreferences("deen_app_preferences", Context.MODE_PRIVATE)
+fun persistedAppLanguage(context: Context): String = supportedAppLanguageOrEnglish(
+    context.getSharedPreferences("deen_app_preferences", Context.MODE_PRIVATE)
         .getString("language_code", "en")
-    return saved?.takeIf { it == "en" || languagePacks.containsKey(it) } ?: "en"
-}
+)
+
+/** The saved code when it has a pack, else English. Checks the codes only, never builds a pack. */
+internal fun supportedAppLanguageOrEnglish(saved: String?): String =
+    saved?.takeIf { it == "en" || languagePacks.containsKey(it) } ?: "en"
 
 fun localizeUiText(text: String, language: String): String {
     recitationCollectionLabel(text, language)?.let { return it }
     babyNamesUiPhrases[language]?.get(text)?.let { return it }
     if (language == "en" || text.isBlank()) return text
-    if (text == "More") return moreNavigationLabels[language] ?: text
+    if (text == "More") moreNavigationLabels[language]?.let { return it }
     homeExtraTimesLabels[language]?.get(text)?.let { return it }
     homeRefreshLabels[language]?.get(text)?.let { return it }
     homeDashboardLabels[language]?.get(text)?.let { return it }
@@ -939,10 +965,10 @@ fun localizeUiText(text: String, language: String): String {
     auditUiLabels[language]?.get(text)?.let { return it }
     prayerAlertPromptLabels[language]?.get(text)?.let { return it }
     featureTourLabels[language]?.get(text)?.let { return it }
-    languagePacks[language]?.phrases?.get(text)?.let { return it }
+    languagePack(language)?.phrases?.get(text)?.let { return it }
     AutoTranslationPhrases.lookup(text, language)?.let { return it }
     WorldDraftPhrases.forLanguage(language)[text]?.let { return it }
-    return languagePacks[language]?.localize(text) ?: text
+    return languagePack(language)?.localize(text) ?: text
 }
 
 /**
@@ -986,6 +1012,11 @@ private val homeRefreshLabels = mapOf(
     "hinglish" to mapOf(
         "Next prayer" to "Agli namaz",
         "Starts in" to "Shuru hone mein",
+        "Current prayer" to "Abhi ki namaz",
+        "Now" to "Abhi",
+        "Time left" to "Waqt baqi",
+        "Up next" to "Is ke baad",
+        "Ends at {time}" to "{time} par khatam",
         "Calculating prayer times…" to "Namaz ke auqaat nikale ja rahe hain…",
         "Today's progress" to "Aaj ki progress",
         "Salah" to "Namaz",
@@ -1013,6 +1044,11 @@ private val homeRefreshLabels = mapOf(
     "hi" to mapOf(
         "Next prayer" to "अगली नमाज़",
         "Starts in" to "शुरू होने में",
+        "Current prayer" to "मौजूदा नमाज़",
+        "Now" to "अभी",
+        "Time left" to "बाक़ी वक़्त",
+        "Up next" to "इसके बाद",
+        "Ends at {time}" to "{time} पर ख़त्म",
         "Calculating prayer times…" to "नमाज़ के समय निकाले जा रहे हैं…",
         "Today's progress" to "आज की प्रगति",
         "Salah" to "नमाज़",
@@ -1040,6 +1076,11 @@ private val homeRefreshLabels = mapOf(
     "ur" to mapOf(
         "Next prayer" to "اگلی نماز",
         "Starts in" to "شروع ہونے میں",
+        "Current prayer" to "موجودہ نماز",
+        "Now" to "ابھی",
+        "Time left" to "باقی وقت",
+        "Up next" to "اس کے بعد",
+        "Ends at {time}" to "{time} پر ختم",
         "Calculating prayer times…" to "نماز کے اوقات نکالے جا رہے ہیں…",
         "Today's progress" to "آج کی پیش رفت",
         "Salah" to "نماز",
@@ -1277,7 +1318,7 @@ private val homeShortcutLabels = mapOf(
  */
 fun localizePhrase(text: String, language: String): String {
     if (language == "en" || text.isBlank()) return text
-    return languagePacks[language]?.phrases?.get(text)
+    return languagePack(language)?.phrases?.get(text)
         ?: AutoTranslationPhrases.lookup(text, language)
         ?: WorldDraftPhrases.forLanguage(language)[text] ?: text
 }

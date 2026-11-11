@@ -57,7 +57,7 @@ internal object IndicTeDraft1 {
         "Witr" to "విటర్",
         "Today" to "ఈ రోజు",
         "All five prayers prayed. Alhamdulillah!" to "ఐదు ప్రార్థనలు ప్రార్థించబడ్డాయి. అల్హమ్దులిల్లాహ్!",
-        "Tap ✓ or ✗ to log each prayer." to "ప్రతి ప్రార్థనను నమోదు చేయడానికి Â లేదా Â నొక్కండి.",
+        "Tap ✓ or ✗ to log each prayer." to "ప్రతి ప్రార్థనను నమోదు చేయడానికి ✓ లేదా ✗ నొక్కండి.",
         "Muslimah mode: today is marked as excused from salah." to "ముసల్మానా విధానంః ఈ రోజు సలాహ్ నుండి క్షమించబడినట్లుగా గుర్తించబడింది.",
         "Today's salah" to "నేటి సలాం",
         "This week" to "ఈ వారం",

@@ -15,12 +15,12 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.PlaylistPlay
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Repeat
@@ -32,6 +32,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.ui.tour.tourTarget
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -117,7 +118,7 @@ internal fun QaidaPathStep(
         }
         Spacer(Modifier.width(Spacing.sm))
         AppCard(
-            modifier = Modifier.weight(1f).padding(vertical = 2.dp).testTag("qaida_lesson_${lesson.id}"),
+            modifier = Modifier.weight(1f).padding(vertical = 2.dp).testTag("qaida_lesson_${lesson.id}").tourTarget("qaida_lesson_row"),
             onClick = onClick,
             containerColor = if (upNext) accent.copy(alpha = 0.07f) else MaterialTheme.colorScheme.surface,
             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)
@@ -133,7 +134,7 @@ internal fun QaidaPathStep(
                     )
                 }
                 if (bookmarked) Icon(Icons.Default.Bookmark, contentDescription = label("Bookmarked", "Bookmark kiya hua"), tint = accent, modifier = Modifier.size(20.dp))
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -148,7 +149,7 @@ internal fun QaidaSoundCard(
     val interaction = remember { MutableInteractionSource() }
     Surface(
         onClick = onClick,
-        modifier = modifier.pressScale(interaction).testTag(tag).semantics { contentDescription = caption },
+        modifier = modifier.pressScale(interaction).testTag(tag).tourTarget("qaida_sound_card").semantics { contentDescription = caption },
         shape = MaterialTheme.shapes.medium,
         color = if (active) accent.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surface,
         border = if (active) BorderStroke(2.dp, accent) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
@@ -172,13 +173,13 @@ internal fun QaidaSoundCard(
 /** Compact player: status, one big play button between previous/next, then repeat, stop and speed. */
 @Composable
 internal fun QaidaAudioBar(
-    state: QaidaAudioState, clips: List<QaidaAudioClip>, source: String, accent: Color,
+    state: QaidaAudioState, clips: List<QaidaAudioClip>, accent: Color,
     label: QaidaLabel, audio: QaidaAudioController
 ) {
     val current = clips.firstOrNull { it.id == state.clipId }
     // A clip that failed to stream while offline plays again by itself once the connection is back.
     OnReconnect(enabled = state.failed && current != null) { current?.let(audio::play) }
-    AppCard(Modifier.fillMaxWidth().animateContentSize(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+    AppCard(Modifier.fillMaxWidth().animateContentSize().tourTarget("qaida_audio_bar"), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconBadge(Icons.Default.Headphones, accent, size = 40.dp, iconSize = 22.dp, filled = state.playing)
             Spacer(Modifier.width(12.dp))
@@ -196,7 +197,7 @@ internal fun QaidaAudioBar(
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = if (state.failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testTag("qaida_audio_status")
+                    modifier = Modifier.testTag("qaida_audio_status").tourTarget("qaida_audio_status")
                 )
             }
         }
@@ -204,11 +205,11 @@ internal fun QaidaAudioBar(
         if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth().clip(RoundedCornerShape(50)), color = accent)
         val resume = { if (current != null) audio.play(current) else audio.playAll(clips) }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { audio.previous() }, enabled = state.queue.size > 1 && state.queueIndex > 0, modifier = Modifier.testTag("qaida_audio_prev")) {
+            IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("qaida_lesson_screen", "audio_prev"); audio.previous() }, enabled = state.queue.size > 1 && state.queueIndex > 0, modifier = Modifier.testTag("qaida_audio_prev").tourTarget("qaida_audio_prev")) {
                 Icon(Icons.Default.SkipPrevious, contentDescription = label("Previous recording", "Pichhli recording"))
             }
             Spacer(Modifier.width(Spacing.lg))
-            FilledIconButton(onClick = resume, modifier = Modifier.size(60.dp).testTag("qaida_audio_toggle"),
+            FilledIconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("qaida_lesson_screen", "audio_toggle", resume), modifier = Modifier.size(60.dp).testTag("qaida_audio_toggle").tourTarget("qaida_audio_toggle"),
                 colors = IconButtonDefaults.filledIconButtonColors(containerColor = accent, contentColor = MaterialTheme.colorScheme.surface)) {
                 when {
                     state.failed -> Icon(Icons.Default.Refresh, contentDescription = label("Retry", "Dobara koshish"), modifier = Modifier.size(30.dp))
@@ -217,13 +218,13 @@ internal fun QaidaAudioBar(
                 }
             }
             Spacer(Modifier.width(Spacing.lg))
-            IconButton(onClick = { audio.next() }, enabled = state.queue.size > 1 && state.queueIndex < state.queue.lastIndex, modifier = Modifier.testTag("qaida_audio_next")) {
+            IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("qaida_lesson_screen", "audio_next"); audio.next() }, enabled = state.queue.size > 1 && state.queueIndex < state.queue.lastIndex, modifier = Modifier.testTag("qaida_audio_next").tourTarget("qaida_audio_next")) {
                 Icon(Icons.Default.SkipNext, contentDescription = label("Next recording", "Agli recording"))
             }
         }
         if (clips.size > 1) {
-            FilledTonalButton(onClick = { audio.playAll(clips) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qaida_audio_play_all")) {
-                Icon(Icons.Default.PlaylistPlay, contentDescription = null, modifier = Modifier.size(18.dp))
+            FilledTonalButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("qaida_lesson_screen", "audio_play_all"); audio.playAll(clips) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qaida_audio_play_all").tourTarget("qaida_audio_play_all")) {
+                Icon(Icons.AutoMirrored.Filled.PlaylistPlay, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(label("Play all (${clips.size})", "Sab sunein (${clips.size})"))
             }
@@ -234,18 +235,17 @@ internal fun QaidaAudioBar(
             Text(label("Speed", "Raftaar"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.CenterVertically))
             qaidaAudioSpeeds.forEach { speed ->
-                FilterChip(selected = state.speed == speed, onClick = { audio.speed(speed) }, shape = CircleShape,
-                    label = { Text(qaidaSpeedText(speed)) }, modifier = Modifier.testTag(qaidaSpeedTag(speed)))
+                FilterChip(selected = state.speed == speed, onClick = { com.example.core.analytics.AppAnalytics.interaction("qaida_lesson_screen", "audio_speed", item = qaidaSpeedTag(speed)); audio.speed(speed) }, shape = CircleShape,
+                    label = { Text(qaidaSpeedText(speed)) }, modifier = Modifier.testTag(qaidaSpeedTag(speed)).tourTarget("qaida_audio_speed"))
             }
             Spacer(Modifier.weight(1f))
-            FilledTonalIconToggleButton(checked = state.repeat, onCheckedChange = { audio.repeat(it) }, modifier = Modifier.testTag("qaida_audio_repeat")) {
+            FilledTonalIconToggleButton(checked = state.repeat, onCheckedChange = { com.example.core.analytics.AppAnalytics.interaction("qaida_lesson_screen", "audio_repeat"); audio.repeat(it) }, modifier = Modifier.testTag("qaida_audio_repeat").tourTarget("qaida_audio_repeat")) {
                 Icon(Icons.Default.Repeat, contentDescription = label("Repeat", "Dobara chalayein"))
             }
-            IconButton(onClick = { audio.stop() }, enabled = state.clipId != null, modifier = Modifier.testTag("qaida_audio_stop")) {
+            IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("qaida_lesson_screen", "audio_stop"); audio.stop() }, enabled = state.clipId != null, modifier = Modifier.testTag("qaida_audio_stop").tourTarget("qaida_audio_stop")) {
                 Icon(Icons.Default.Stop, contentDescription = label("Stop", "Band karein"))
             }
         }
-        Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -254,7 +254,7 @@ internal fun QaidaAudioBar(
 internal fun QaidaClipRow(clip: QaidaAudioClip, state: QaidaAudioState, accent: Color, label: QaidaLabel, onClick: () -> Unit) {
     val active = state.clipId == clip.id
     AppCard(
-        modifier = Modifier.fillMaxWidth().testTag("qaida_audio_${clip.id}"),
+        modifier = Modifier.fillMaxWidth().testTag("qaida_audio_${clip.id}").tourTarget("qaida_clip_row"),
         onClick = onClick,
         containerColor = if (active) accent.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface,
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
@@ -279,7 +279,7 @@ internal fun QaidaClipRow(clip: QaidaAudioClip, state: QaidaAudioState, accent: 
 @Composable
 internal fun QaidaArabicExamples(examples: List<String>, fontSize: Int) {
     if (examples.isEmpty()) return
-    AppCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm)) {
+    AppCard(Modifier.fillMaxWidth().tourTarget("qaida_examples"), contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm)) {
         examples.forEachIndexed { i, text ->
             if (i > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
             Text(text, fontFamily = ArabicFontFamily, fontSize = fontSize.sp, lineHeight = (fontSize * 1.75f).sp,
@@ -296,7 +296,7 @@ internal fun QaidaLetterChips(letters: List<String>, accent: Color, onTap: (Stri
         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             letters.forEach { letter ->
                 Surface(onClick = { onTap(letter) }, shape = RoundedCornerShape(12.dp), color = accent.copy(alpha = 0.12f),
-                    border = BorderStroke(1.dp, accent.copy(alpha = 0.35f)), modifier = Modifier.heightIn(min = 48.dp)) {
+                    border = BorderStroke(1.dp, accent.copy(alpha = 0.35f)), modifier = Modifier.heightIn(min = 48.dp).tourTarget("qaida_rule_letter")) {
                     Text(letter, fontFamily = ArabicFontFamily, fontSize = 26.sp, lineHeight = 44.sp, color = accent,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
                 }
@@ -364,7 +364,7 @@ internal fun QaidaQuizCard(
     // Short options (letters, numbers) sit side by side as big tiles; longer ones stack.
     val compact = quiz.options.all { it.length <= 4 }
     val arabicOptions = quiz.options.any { option -> option.any { it in '\u0600'..'\u06FF' } }
-    AppCard(Modifier.fillMaxWidth().animateContentSize(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+    AppCard(Modifier.fillMaxWidth().animateContentSize().tourTarget("qaida_quiz"), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconBadge(Icons.Default.Quiz, accent, size = 40.dp, iconSize = 22.dp)
             Spacer(Modifier.width(12.dp))
@@ -381,8 +381,9 @@ internal fun QaidaQuizCard(
                 }
             }
         }
-        Text(if (roman) quiz.romanQuestion else quiz.question, style = MaterialTheme.typography.titleMedium)
+        Text(label(quiz.question, quiz.romanQuestion), style = MaterialTheme.typography.titleMedium)
         val answer: (Int) -> Unit = { i ->
+            com.example.core.analytics.AppAnalytics.interaction("qaida_lesson_screen", "quiz_answer", "tap", item = if (i == quiz.answer) "correct" else "wrong")
             picked = i
             if (i == quiz.answer) correct += 1 else haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             if (last) onFinished(correct, quizzes.size)
@@ -390,14 +391,14 @@ internal fun QaidaQuizCard(
         if (compact) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 quiz.options.forEachIndexed { i, option ->
-                    QaidaAnswerTile(option, right = picked != null && i == quiz.answer, wrong = picked == i && i != quiz.answer,
-                        answered = picked != null, accent = accent, tag = "qaida_answer_$i", arabic = arabicOptions, modifier = Modifier.weight(1f)) { answer(i) }
+                    QaidaAnswerTile(label(option, option), right = picked != null && i == quiz.answer, wrong = picked == i && i != quiz.answer,
+                        answered = picked != null, accent = accent, tag = "qaida_answer_$i", arabic = arabicOptions, modifier = Modifier.weight(1f).tourTarget("qaida_quiz_answer")) { answer(i) }
                 }
             }
         } else {
             quiz.options.forEachIndexed { i, option ->
-                QaidaAnswerTile(option, right = picked != null && i == quiz.answer, wrong = picked == i && i != quiz.answer,
-                    answered = picked != null, accent = accent, tag = "qaida_answer_$i", arabic = arabicOptions && quiz.options.all { it.length <= 12 }, modifier = Modifier.fillMaxWidth()) { answer(i) }
+                QaidaAnswerTile(label(option, option), right = picked != null && i == quiz.answer, wrong = picked == i && i != quiz.answer,
+                    answered = picked != null, accent = accent, tag = "qaida_answer_$i", arabic = arabicOptions && quiz.options.all { it.length <= 12 }, modifier = Modifier.fillMaxWidth().tourTarget("qaida_quiz_answer")) { answer(i) }
             }
         }
         if (picked != null) {
@@ -414,18 +415,18 @@ internal fun QaidaQuizCard(
         }
         if (finished) {
             if (quizzes.size > 1) Text(label("Score: $correct / ${quizzes.size}", "Score: $correct / ${quizzes.size}"),
-                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.testTag("qaida_score"))
+                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.testTag("qaida_score").tourTarget("qaida_quiz_score"))
             val retry = { index = 0; picked = null; correct = 0 }
             if (perfect) {
-                Button(onClick = onNext, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qaida_next")) {
+                Button(onClick = com.example.core.analytics.AppAnalytics.trackAction("qaida_lesson_screen", "quiz_next_lesson", onNext), modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qaida_next").tourTarget("qaida_quiz_next_lesson")) {
                     Text(if (hasNext) label("Next lesson", "Agla sabaq") else label("Back to lessons", "Sabaq ki list"))
                 }
-                TextButton(onClick = retry, modifier = Modifier.align(Alignment.CenterHorizontally).testTag("qaida_retry")) { Text(label("Practise again", "Dobara mashq karein")) }
+                TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("qaida_lesson_screen", "quiz_practise_again", retry), modifier = Modifier.align(Alignment.CenterHorizontally).testTag("qaida_retry").tourTarget("qaida_quiz_retry")) { Text(label("Practise again", "Dobara mashq karein")) }
             } else {
-                Button(onClick = retry, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qaida_retry")) { Text(label("Try again", "Dobara koshish karein")) }
+                Button(onClick = com.example.core.analytics.AppAnalytics.trackAction("qaida_lesson_screen", "quiz_try_again", retry), modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qaida_retry").tourTarget("qaida_quiz_retry")) { Text(label("Try again", "Dobara koshish karein")) }
             }
         } else if (picked != null) {
-            Button(onClick = { index += 1; picked = null }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qaida_quiz_next")) {
+            Button(onClick = { com.example.core.analytics.AppAnalytics.interaction("qaida_lesson_screen", "quiz_next_question"); index += 1; picked = null }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qaida_quiz_next").tourTarget("qaida_quiz_next")) {
                 Text(label("Next question", "Agla sawal"))
             }
         }

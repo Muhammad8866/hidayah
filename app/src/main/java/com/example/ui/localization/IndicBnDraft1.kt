@@ -57,7 +57,7 @@ internal object IndicBnDraft1 {
         "Witr" to "উইটার",
         "Today" to "আজ",
         "All five prayers prayed. Alhamdulillah!" to "পাঁচ নামাযের সবাই নামায পড়ে। আলহামদুলিল্লাহ!",
-        "Tap ✓ or ✗ to log each prayer." to "প্রতিটি প্রার্থনা নথিভুক্ত করতে Â বা Â-এ টিপুন।",
+        "Tap ✓ or ✗ to log each prayer." to "প্রতিটি প্রার্থনা নথিভুক্ত করতে ✓ বা ✗-এ টিপুন।",
         "Muslimah mode: today is marked as excused from salah." to "মুসলিমা মোডঃ আজ সালাত থেকে ক্ষমা হিসাবে চিহ্নিত করা হয়।",
         "Today's salah" to "আজকের সালাহ",
         "This week" to "এই সপ্তাহে",

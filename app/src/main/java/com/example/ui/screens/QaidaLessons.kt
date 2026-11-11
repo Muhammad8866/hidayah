@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import com.example.core.search.AppSearch
+
 internal data class QaidaQuiz(val question: String, val romanQuestion: String, val options: List<String>, val answer: Int)
 
 /** Original beginner exercises; Arabic examples are reading drills, not quoted verses. */
@@ -47,10 +49,12 @@ internal val qaidaLessons = listOf(
         extraQuizzes = listOf(
             q("Which letter is Jeem?", "Jeem kaunsa harf hai?", listOf("ح", "خ", "ج"), 2),
             q("Which letter is Sheen?", "Sheen kaunsa harf hai?", listOf("ش", "س", "ص"), 0),
-            q("Which letter is Qaaf?", "Qaaf kaunsa harf hai?", listOf("ف", "ق", "ك"), 1)
+            q("Which letter is Qaaf?", "Qaaf kaunsa harf hai?", listOf("ف", "ق", "ك"), 1),
+            q("Which letters carry a whistling sound (safeer)?", "Kin huroof mein seeti ki awaaz (safeer) hai?", listOf("ص س ز", "ب م و", "ق ط ب"), 0),
+            q("Which four letters come from the lips?", "Honton se kaunse chaar huroof nikalte hain?", listOf("ب م و ف", "ت د ط ن", "ع ح غ خ"), 0)
         ),
-        tip = "Many letters share a shape and differ only by dots (ب ت ث, ج ح خ). Count the dots and see whether they are above or below.",
-        romanTip = "Kai huroof ki shakl ek jaisi hai, farq sirf nuqton ka hai (ب ت ث, ج ح خ). Nuqte ginein aur dekhein upar hain ya neeche."),
+        tip = "Many letters share a shape and differ only by dots (ب ت ث, ج ح خ). Count the dots and see whether they are above or below. Only ب م و ف move the lips; keep the lips still for every other letter. ص س ز carry a light whistle (safeer).",
+        romanTip = "Kai huroof ki shakl ek jaisi hai, farq sirf nuqton ka hai (ب ت ث, ج ح خ). Nuqte ginein aur dekhein upar hain ya neeche. Sirf ب م و ف mein hont hilte hain; baqi huroof mein hont na hilayein. ص س ز mein halki seeti (safeer) hoti hai."),
     QaidaLesson("shapes", false, "Joining letters", "Huroof jorna",
         "Letters change shape when joined. Alif, daal, dhaal, raa, zaay and waaw do not join to the following letter.",
         "Jurne par shakl badalti hai. ا د ذ ر ز و agle harf se nahi jurte.",
@@ -94,6 +98,19 @@ internal val qaidaLessons = listOf(
         ),
         tip = "Round the lips for damma, and do not stretch it into a waaw: say بُ, not بُو.",
         romanTip = "Pesh par hont gol karein aur kheench kar waaw na banayein: بُ parhein, بُو nahi."),
+    QaidaLesson("harakat_practice", false, "Reading harakat fluently", "Harakaat rawan parhna",
+        "Now read words made of letters with fatha, kasra and damma without spelling them out (rawan). Give every harakah its own short sound and keep similar letters apart.",
+        "Ab zabar, zer aur pesh wale alfaaz hijje kiye baghair (rawan) parhein. Har harkat ki chhoti awaaz alag rakhein aur milte-julte huroof ka farq saaf karein.",
+        listOf("كَتَبَ  جَلَسَ  فَتَحَ", "سَمِعَ  عَلِمَ  شَرِبَ", "كُتُبٌ  رُسُلٌ  عُنُقٌ", "حَسَدَ  هَدَمَ  |  عَمِلَ  أَمِنَ"),
+        "Which word is read ka-ta-ba?", "'Ka-ta-ba' kaunsa lafz hai?", listOf("كَتَبَ", "كُتِبَ", "كَتَبَا"), 0,
+        extraQuizzes = listOf(
+            q("Reading rawan means…", "Rawan parhne ka matlab?", listOf("Without spelling / Hijje ke baghair", "Letter by letter / Harf ba harf", "Silently / Khamoshi se"), 0),
+            q("Which pair must be kept clearly apart?", "Kis jore ka farq saaf rakhna zaroori hai?", listOf("ح / ه", "ب / م", "ن / ل"), 0),
+            q("How is سَمِعَ read?", "سَمِعَ kaise parha jayega?", listOf("sa-mi-'a", "sa-ma-'a", "su-mi-'a"), 0)
+        ),
+        tip = "Open the mouth for fatha, lower the voice for kasra and round the lips for damma. Do not stretch any of them or stop suddenly.",
+        romanTip = "Zabar par munh kholein, zer par awaaz neeche le jayein, pesh par hont gol karein. Kisi harkat ko na kheenchein, na achanak rokein.",
+        letters = "ح ه ع ء س ص ت ط"),
     QaidaLesson("tanween", false, "Tanween", "Do zabar, zer aur pesh",
         "Double vowel marks add an n sound when continuing: an, in, un. Two fathas are usually written with an alif.",
         "Milakar parhne mein do harkat se 'an, in, un' hota hai. Do zabar ke saath aksar alif likha hota hai.",
@@ -105,6 +122,68 @@ internal val qaidaLessons = listOf(
         ),
         tip = "Tanween comes only at the end of a word. When stopping, two fathas become an alif; two kasras or dammas become sukoon.",
         romanTip = "Tanween sirf lafz ke aakhir mein aati hai. Rukte waqt do zabar alif ban jata hai; do zer ya do pesh sukoon ho jate hain."),
+    QaidaLesson("hijjay", false, "Spelling aloud (Hijje)", "Hijje karna",
+        "Hijje means spelling a word aloud: name each letter with its mark, then say the sound, then join the sounds. For كَتَبَ: Kaaf zabar ka, Taa zabar ta, Baa zabar ba → ka-ta-ba. For tanween say: Baa do zabar ban.",
+        "Hijje ka matlab hai lafz ko harf ba harf bolna: harf ka naam, uski harkat, phir awaaz, phir sab milana. كَتَبَ: Kaaf zabar ka, Taa zabar ta, Baa zabar ba → kataba. Tanween mein kahein: Baa do zabar ban.",
+        listOf("كَ تَ بَ ← كَتَبَ", "بًا  بٍ  بٌ", "قَمَرٌ  وَلَدٌ  كِتَابٌ", "أَحَدٌ  رَجُلٌ  جَبَلٌ"),
+        "In hijje, what do you say first?", "Hijje mein pehle kya bolte hain?", listOf("Letter name / Harf ka naam", "Whole word / Poora lafz", "Meaning / Maani"), 0,
+        extraQuizzes = listOf(
+            q("How is بٌ spelt?", "بٌ ka hijja kaise hoga?", listOf("Baa do pesh bun", "Baa pesh bu", "Baa do zer bin"), 0),
+            q("After spelling every letter you…", "Har harf ka hijja karne ke baad?", listOf("Join them rawan / Mila kar parhein", "Stop / Ruk jayein", "Skip the last letter / Aakhri harf chhor dein"), 0),
+            q("Which syllable is 'Jeem zer ji'?", "'Jeem zer ji' kaunsa hai?", listOf("جِ", "جَ", "جُ"), 0)
+        ),
+        tip = "Practise every lesson both ways: first with hijje to be sure of each letter, then rawan for fluency.",
+        romanTip = "Har sabaq dono tarah parhein: pehle hijje se har harf pakka karein, phir rawan parh kar raftaar banayein."),
+    QaidaLesson("madd_letters", false, "Letters of madd", "Huroof-e-madda",
+        "There are three madd letters: alif with fatha before it, waaw sakinah with damma before it, and yaa sakinah with kasra before it. Stretch each for two counts (one alif length).",
+        "Madd ke teen huroof hain: alif jis se pehle zabar ho, waaw sakin jis se pehle pesh ho, aur yaa sakin jis se pehle zer ho. Har ek ko do count (ek alif ki miqdaar) kheenchein.",
+        listOf("بَا  بُو  بِي", "تَا  تُو  تِي", "نَارٌ  نُورٌ  دِينٌ", "قَالَ  يَقُولُ  قِيلَ"),
+        "Waaw is a madd letter when the letter before it has…", "Waaw madd ka harf tab hai jab us se pehle ho…", listOf("Damma / Pesh", "Fatha / Zabar", "Kasra / Zer"), 0,
+        extraQuizzes = listOf(
+            q("How long is a madd letter stretched?", "Madd ka harf kitna kheencha jata hai?", listOf("1 alif (2 counts)", "Not at all / Bilkul nahi", "3 alif (6 counts)"), 0),
+            q("Which one has a madd letter?", "Kis mein madd ka harf hai?", listOf("نُورٌ", "نَرٌ", "نِرٌ"), 0),
+            q("Alif is always preceded by…", "Alif se pehle hamesha hota hai…", listOf("Fatha / Zabar", "Kasra / Zer", "Sukoon"), 0)
+        ),
+        tip = "A madd letter has no mark of its own; it lengthens the vowel before it. Do not add a vowel on the madd letter itself.",
+        romanTip = "Madd ke harf par apni harkat nahi hoti; yeh pichhli harkat ko lamba karta hai. Madd ke harf par alag harkat na lagayein.",
+        letters = "ا و ي"),
+    QaidaLesson("khari", false, "Standing harakat", "Khari harakaat",
+        "The standing fatha (khara zabar), standing kasra (khari zer) and inverted damma (ulta pesh) are read like madd letters: stretch them for one alif (two counts).",
+        "Khara zabar, khari zer aur ulta pesh madd ke huroof ki tarah parhe jate hain: inhein ek alif (do count) kheenchein.",
+        listOf("بٰ  بٖ  بٗ", "هٰذَا  ذٰلِكَ", "بِهٖ  لَهٗ", "الرَّحْمٰنِ  اِلٰهٌ"),
+        "How is a standing fatha read?", "Khara zabar kaise parha jata hai?", listOf("Like alif, 2 counts / Alif ki tarah", "Short / Chhota", "Silent / Khamosh"), 0,
+        extraQuizzes = listOf(
+            q("Which mark is the inverted damma?", "Ulta pesh kaunsa hai?", listOf("بٗ", "بُ", "بٌ"), 0),
+            q("لَهٗ is read as…", "لَهٗ kaise parha jayega?", listOf("lahoo", "lahu", "lah"), 0),
+            q("Which word has a standing fatha?", "Kis lafz mein khara zabar hai?", listOf("هٰذَا", "هَدَمَ", "هُوَ"), 0)
+        ),
+        tip = "In many mushafs the standing fatha replaces a written alif, as in هٰذَا and الرَّحْمٰنِ. Stretch it exactly like an alif.",
+        romanTip = "Kai mushafon mein khara zabar likhe hue alif ki jagah aata hai, jaise هٰذَا aur الرَّحْمٰنِ. Ise bilkul alif ki tarah kheenchein."),
+    QaidaLesson("leen", false, "Letters of leen", "Huroof-e-leen",
+        "Waaw sakinah or yaa sakinah with a fatha before it are leen letters. Read them softly and gently, without stretching, unless a stop follows.",
+        "Waaw sakin ya yaa sakin jin se pehle zabar ho, leen ke huroof hain. Inhein naram aur halke andaaz se bina kheenche parhein, siwaye jab un ke baad waqf ho.",
+        listOf("بَوْ  بَيْ", "خَوْفٌ  بَيْتٌ", "يَوْمٌ  قَوْمٌ  عَيْنٌ", "لَوْ  أَيْنَ  كَيْفَ"),
+        "Which one is a leen letter?", "Leen ka harf kis mein hai?", listOf("بَيْ", "بِي", "بُو"), 0,
+        extraQuizzes = listOf(
+            q("How many leen letters are there?", "Leen ke huroof kitne hain?", listOf("2", "3", "6"), 0),
+            q("A leen letter is preceded by…", "Leen ke harf se pehle hota hai…", listOf("Fatha / Zabar", "Kasra / Zer", "Damma / Pesh"), 0),
+            q("Leen letters are read…", "Leen ke huroof kaise parhe jate hain?", listOf("Softly, no stretch / Naram, bina kheenche", "With 6 counts / 6 count", "With qalqalah / Qalqalah ke saath"), 0)
+        ),
+        tip = "Compare بُو (madd, stretched) with بَوْ (leen, soft and short). The vowel before the waaw decides.",
+        romanTip = "بُو (madd, lamba) ko بَوْ (leen, naram aur chhota) se milayein. Waaw se pehle ki harkat faisla karti hai.",
+        letters = "و ي"),
+    QaidaLesson("review_madd", false, "Review: harakat to leen", "Dohrai: harakaat se leen tak",
+        "This review joins everything so far: harakat, tanween, madd letters, standing harakat and leen. Read each line with hijje first, then rawan.",
+        "Is dohrai mein ab tak ka sab kuch hai: harakaat, tanween, madd ke huroof, khari harakaat aur leen. Har line pehle hijje se, phir rawan parhein.",
+        listOf("قَالُوْا  نُوْحِيْهَا  يَوْمَئِذٍ", "كِتٰبٌ  عَذَابٌ  قَوْلًا", "بَيْنَهُمَا  وَالصَّيْفِ  نُوْرٌ"),
+        "Which word has both a madd letter and tanween?", "Kis lafz mein madd ka harf aur tanween dono hain?", listOf("عَذَابٌ", "يَوْمَ", "كَتَبَ"), 0,
+        extraQuizzes = listOf(
+            q("In قَوْلًا the waaw is…", "قَوْلًا mein waaw?", listOf("Leen", "Madd", "With harakah / Mutaharrik"), 0),
+            q("In نُوْرٌ the waaw is…", "نُوْرٌ mein waaw?", listOf("Madd", "Leen", "Silent / Khamosh"), 0),
+            q("كِتٰبٌ has a…", "كِتٰبٌ mein hai…", listOf("Standing fatha / Khara zabar", "Leen", "Shadda"), 0)
+        ),
+        tip = "If a line feels hard, go back to hijje for that word only, then read the whole line again.",
+        romanTip = "Agar koi line mushkil lage to sirf us lafz ka hijja karein, phir poori line dobara parhein."),
     QaidaLesson("sukoon", false, "Sukoon", "Sakin harf",
         "Sukoon removes the vowel. Join the consonant to the preceding sound.",
         "Sukoon wale harf ko pichhli awaaz se jorein; extra harkat na lagayein.",
@@ -116,6 +195,19 @@ internal val qaidaLessons = listOf(
         ),
         tip = "Do not bounce or add a vowel on a sakin letter (except the qalqalah letters): قُلْ, not قُلَ.",
         romanTip = "Sakin harf par harkat ya jhatka na dein (siwaye qalqalah ke huroof ke): قُلْ parhein, قُلَ nahi."),
+    QaidaLesson("sukoon_practice", false, "Sukoon practice", "Sukoon ki mashq",
+        "Join every sakin letter to the voweled letter before it. A sakin hamzah is read with a sudden catch. Qalqalah letters (ق ط ب ج د) bounce slightly when sakin. Before waaw sakinah there is no kasra, and before yaa sakinah there is no damma.",
+        "Har sakin harf ko pichhle mutaharrik harf se milayein. Hamzah sakin jhatke se parha jata hai. Qalqalah ke huroof (ق ط ب ج د) sakin hon to halki jumbish dein. Waaw sakin se pehle zer nahi aata, aur yaa sakin se pehle pesh nahi aata.",
+        listOf("مِنْ  عَنْ  لَمْ  قُلْ", "يَأْ  بَأْ  مُؤْ  بِئْ", "أَقْ  أَطْ  أَبْ  أَجْ  أَدْ", "يَعْلَمُ  أَنْعَمْتَ  مَغْضُوْبِ"),
+        "How is a sakin hamzah read?", "Hamzah sakin kaise parha jata hai?", listOf("With a sudden catch / Jhatke se", "Stretched / Kheench kar", "Silent / Khamosh"), 0,
+        extraQuizzes = listOf(
+            q("Which letter bounces (qalqalah) when sakin?", "Sakin hone par kis harf mein qalqalah hai?", listOf("د", "س", "م"), 0),
+            q("Before waaw sakinah there is never a…", "Waaw sakin se pehle kabhi nahi hota…", listOf("Kasra / Zer", "Fatha / Zabar", "Damma / Pesh"), 0),
+            q("A sakin letter is read with…", "Sakin harf kis ke saath parha jata hai?", listOf("The letter before it / Pichhle harf", "The letter after it / Agle harf", "On its own / Akela"), 0)
+        ),
+        tip = "Keep sakin letters steady: no extra vowel, no stretch. Only the five qalqalah letters get a light echo.",
+        romanTip = "Sakin harf ko thehra hua rakhein: na extra harkat, na kheenchna. Sirf qalqalah ke paanch huroof mein halki goonj hoti hai.",
+        letters = "ء ق ط ب ج د"),
     QaidaLesson("shadda", false, "Shadda", "Tashdeed",
         "Shadda doubles a consonant: first still, then with its vowel.",
         "Tashdeed mein harf do baar: pehle sakin, phir harkat ke saath.",
@@ -154,6 +246,18 @@ internal val qaidaLessons = listOf(
         romanTip = "Mote huroof mein zabaan ki jar upar uthayein; hont gol na karein. Bareek huroof ko patla rakhein, khaas kar mote harf ke paas.",
         letters = "خ ص ض غ ط ق ظ"),
 
+    QaidaLesson("salah", false, "Reading the prayer", "Namaz ke azkaar parhna",
+        "Apply every rule learnt so far to the words of the prayer: Surah Al-Fatihah, Surah Al-Ikhlas, the tasbih of ruku and sajdah, tasmee' and tahmeed. Read them rawan and with hijje, and have a teacher check them.",
+        "Ab tak ke tamam qawaid namaz ke kalimaat par lagayein: Surah Fatiha, Surah Ikhlas, ruku aur sajde ki tasbeeh, tasmee aur tahmeed. Inhein rawan aur hijje dono tarah parhein aur ustad se check karayein.",
+        listOf("سُبْحَانَ رَبِّيَ الْعَظِيْمِ", "سَمِعَ اللّٰهُ لِمَنْ حَمِدَهٗ", "رَبَّنَا لَكَ الْحَمْدُ", "سُبْحَانَ رَبِّيَ الْاَعْلٰى"),
+        "Which is said in ruku?", "Ruku mein kya parhte hain?", listOf("سُبْحَانَ رَبِّيَ الْعَظِيْمِ", "سُبْحَانَ رَبِّيَ الْاَعْلٰى", "رَبَّنَا لَكَ الْحَمْدُ"), 0,
+        extraQuizzes = listOf(
+            q("Which is said in sajdah?", "Sajde mein kya parhte hain?", listOf("سُبْحَانَ رَبِّيَ الْاَعْلٰى", "سَمِعَ اللّٰهُ لِمَنْ حَمِدَهٗ", "سُبْحَانَ رَبِّيَ الْعَظِيْمِ"), 0),
+            q("In رَبِّيَ the baa has…", "رَبِّيَ mein baa par?", listOf("Shadda / Tashdeed", "Sukoon", "Tanween"), 0),
+            q("In حَمِدَهٗ the last haa is read…", "حَمِدَهٗ mein aakhri haa?", listOf("Stretched, 2 counts / Kheench kar", "Short / Chhota", "Silent / Khamosh"), 0)
+        ),
+        tip = "Mistakes in Al-Fatihah can affect the prayer, so learn it from a qualified teacher letter by letter.",
+        romanTip = "Surah Fatiha ki ghalti namaz par asar daal sakti hai, is liye ise kisi qabil ustad se harf ba harf seekhein."),
     // ---------- Tajweed track ----------
     QaidaLesson("madd", true, "Natural madd", "Madd tabee'i",
         "Alif after fatha, yaa sakinah after kasra and waaw sakinah after damma are stretched for two counts; keep a steady pace.",
@@ -168,14 +272,15 @@ internal val qaidaLessons = listOf(
         romanTip = "Madd ko na ek count par kaatein, na do se zyada kheenchein.",
         letters = "ا و ي"),
     QaidaLesson("madd_types", true, "Longer madds", "Madd ki qismein",
-        "When hamzah or sukoon follows a madd letter, the stretch is longer. Muttasil (hamzah in the same word): 4–5 counts. Munfasil (hamzah at the start of the next word): 4–5 counts. Laazim (a permanent sukoon or shadda follows): always 6. 'Aarid (sukoon only because you stop): 2, 4 or 6.",
-        "Madd ke harf ke baad hamzah ya sukoon aaye to madd lamba hota hai. Muttasil (hamzah usi lafz mein): 4–5 count. Munfasil (hamzah agle lafz ke shuru mein): 4–5 count. Laazim (asli sukoon ya tashdeed): hamesha 6. 'Aarid (rukne ki wajah se sukoon): 2, 4 ya 6.",
-        listOf("جَاءَ  سُوءَ  جِيءَ", "يَا أَيُّهَا  |  فِي أَنْفُسِكُمْ", "الضَّالِّينَ  |  حَاجَّ", "نَسْتَعِينُ ← نَسْتَعِينْ"),
+        "When hamzah or sukoon follows a madd letter, the stretch is longer. Muttasil (hamzah in the same word): 4–5 counts. Munfasil (hamzah at the start of the next word): 4–5 counts. Laazim (a permanent sukoon or shadda follows): always 6. 'Aarid (sukoon only because you stop): 2, 4 or 6. Leen-laazim (a permanent sukoon after a leen letter, as in عَيْنٓ of كٓهٰيٰعٓصٓ): 4 or 6. Leen-'aarid (stopping after a leen letter, as in الْبَيْتِ ← الْبَيْتْ): 2, 4 or 6.",
+        "Madd ke harf ke baad hamzah ya sukoon aaye to madd lamba hota hai. Muttasil (hamzah usi lafz mein): 4–5 count. Munfasil (hamzah agle lafz ke shuru mein): 4–5 count. Laazim (asli sukoon ya tashdeed): hamesha 6. 'Aarid (rukne ki wajah se sukoon): 2, 4 ya 6. Leen-laazim (leen ke baad asli sukoon, jaise كٓهٰيٰعٓصٓ ka عَيْنٓ): 4 ya 6. Leen-'aarid (leen ke baad waqf, jaise الْبَيْتِ ← الْبَيْتْ): 2, 4 ya 6.",
+        listOf("جَاءَ  سُوءَ  جِيءَ", "يَا أَيُّهَا  |  فِي أَنْفُسِكُمْ", "الضَّالِّينَ  |  حَاجَّ", "نَسْتَعِينُ ← نَسْتَعِينْ", "الْبَيْتِ ← الْبَيْتْ  |  خَوْفٍ ← خَوْفْ"),
         "How many counts is madd laazim?", "Madd laazim kitne count ka hai?", listOf("2", "4", "6"), 2,
         extraQuizzes = listOf(
             q("In جَاءَ the hamzah is in the same word. Which madd is it?", "جَاءَ mein hamzah usi lafz mein hai. Yeh kaunsa madd hai?", listOf("Muttasil", "Munfasil", "'Aarid"), 0),
             q("The madd caused by stopping at the end of an ayah is…", "Aayat ke aakhir mein rukne se banne wala madd?", listOf("Laazim", "'Aarid", "Muttasil"), 1),
-            q("In يَا أَيُّهَا the hamzah begins the next word. Which madd is it?", "يَا أَيُّهَا mein hamzah agle lafz ke shuru mein hai. Kaunsa madd?", listOf("Muttasil", "Munfasil", "Laazim"), 1)
+            q("In يَا أَيُّهَا the hamzah begins the next word. Which madd is it?", "يَا أَيُّهَا mein hamzah agle lafz ke shuru mein hai. Kaunsa madd?", listOf("Muttasil", "Munfasil", "Laazim"), 1),
+            q("Stopping on الْبَيْتِ makes which madd?", "الْبَيْتِ par rukne se kaunsa madd banta hai?", listOf("Leen-'aarid", "Muttasil", "Leen-laazim"), 0)
         ),
         tip = "Choose one length with your teacher and keep it the same throughout the recitation.",
         romanTip = "Ustad ke saath ek miqdaar tay karein aur poori tilawat mein wahi rakhein.",
@@ -290,9 +395,47 @@ internal val qaidaLessons = listOf(
         tip = "A few words are exceptions, e.g. raa sakinah after kasra but before a heavy letter (قِرْطَاسٍ, مِرْصَادًا) is heavy. Learn these with a teacher.",
         romanTip = "Kuch alfaaz mustasna hain, jaise zer ke baad raa sakin jiske baad mota harf ho (قِرْطَاسٍ, مِرْصَادًا) mota parha jata hai. Yeh ustad se seekhein.",
         letters = "ر"),
+    QaidaLesson("muqattaat", true, "Disjointed letters (Muqatta'at)", "Huroof-e-muqatta'at",
+        "Some surahs begin with letters read one by one by their names, e.g. الٓمٓ is read Alif Laaam Meeem. Stretch each name's madd fully (6 counts where marked) and apply ghunnah, ikhfa and idgham between the names.",
+        "Kuch suraton ke shuru mein huroof alag alag naam se parhe jate hain, jaise الٓمٓ ko Alif Laaam Meeem. Har naam ka madd poora kheenchein (jahan nishaan ho 6 count) aur naamon ke darmiyan ghunna, ikhfa aur idgham karein.",
+        listOf("الٓمٓ  الٓرٰ  طٰهٰ", "يٰسٓ  حٰمٓ  قٓ  نٓ", "كٓهٰيٰعٓصٓ  طٰسٓمٓ"),
+        "How is الٓمٓ read?", "الٓمٓ kaise parha jata hai?", listOf("Alif Laaam Meeem", "Alam", "Alima"), 0,
+        extraQuizzes = listOf(
+            q("Where are muqatta'at letters found?", "Huroof-e-muqatta'at kahan aate hain?", listOf("Start of some surahs / Kuch suraton ke shuru", "End of every ayah / Har aayat ke aakhir", "Only in duas / Sirf duaon mein"), 0),
+            q("Which letter's name has no madd at all?", "Kis harf ke naam mein bilkul madd nahi?", listOf("Alif", "Meem", "Noon"), 0),
+            q("طٰهٰ is read…", "طٰهٰ kaise parha jata hai?", listOf("Taa Haa", "Tah", "Taha (short) / Chhota"), 0)
+        ),
+        tip = "The maddah sign (ٓ) over a name means a long 6-count stretch; a standing fatha alone means 2 counts.",
+        romanTip = "Naam par madd ka nishaan (ٓ) 6 count lamba madd hai; sirf khara zabar ho to 2 count."),
+    QaidaLesson("zaid_alif", true, "Extra alif (Za'id)", "Alif-e-za'id",
+        "In some words an alif is written with a small round circle (۟) over it. It is not read when continuing. A few words, such as أَنَا, keep their alif when you stop on them but drop it when continuing.",
+        "Kuch alfaaz mein alif par chhota gol daira (۟) hota hai. Milakar parhte waqt yeh nahi parha jata. Kuch alfaaz, jaise أَنَا, par rukein to alif parha jata hai, milakar parhein to nahi.",
+        listOf("قَالُوا۟  اٰمَنُوا۟", "مِا۟ئَةَ  لَا۟اَذْبَحَنَّهٗ", "أَنَا  ←  ana / an", "سَلٰسِلَا۟  قَوَارِيْرَا۟"),
+        "An alif with a small circle over it is…", "Jis alif par chhota daira ho?", listOf("Not read / Nahi parha jata", "Stretched / Kheencha jata hai", "Read with hamzah / Hamzah se"), 0,
+        extraQuizzes = listOf(
+            q("In قَالُوا۟ the last alif is…", "قَالُوا۟ mein aakhri alif?", listOf("Silent / Khamosh", "Stretched / Lamba", "Heavy / Mota"), 0),
+            q("When continuing past أَنَا, the alif is…", "أَنَا ko milakar parhein to alif?", listOf("Dropped / Nahi parha", "Stretched 4 / 4 count", "Read with ghunnah / Ghunna"), 0),
+            q("When stopping on أَنَا, the alif is…", "أَنَا par rukein to alif?", listOf("Read / Parha jata hai", "Dropped / Chhor diya", "Read as noon / Noon"), 0)
+        ),
+        tip = "Follow the marks of your mushaf; a circle means the letter is written but not pronounced.",
+        romanTip = "Apne mushaf ki alamaat par chalein; daira ka matlab hai harf likha hai magar parha nahi jata.",
+        letters = "ا"),
+    QaidaLesson("misc_rules", true, "Special rules", "Mutafarriq qawaid",
+        "A few special cases: Izhar mutlaq — in دُنْيَا، بُنْيَانٌ، صِنْوَانٌ، قِنْوَانٌ the noon sakinah is read clearly though waaw or yaa follows in the same word. Saktah — a short silent pause without breath, as in عِوَجًا ۜ قَيِّمًا and مَنْ ۜ رَاقٍ. Imalah — مَجْر۪ىٰهَا is read with a sound between a and e. Ishmam — round the lips on the noon of تَأْمَ۫نَّا. Tasheel — the second hamzah of ءَا۬عْجَمِيٌّ is softened. Noon qutni — a tanween joined to a following hamzat-ul-wasl gets a small kasra noon: نُوْحٌ ابْنَهٗ → nuhunibnahu. Some words with ص are read with س where a small seen is written above.",
+        "Kuch khaas soorten: Izhar-e-mutlaq — دُنْيَا، بُنْيَانٌ، صِنْوَانٌ، قِنْوَانٌ mein noon sakin saaf parhein halanke usi lafz mein waaw ya yaa aata hai. Saktah — saans liye baghair chhota sa thehrao, jaise عِوَجًا ۜ قَيِّمًا aur مَنْ ۜ رَاقٍ. Imalah — مَجْر۪ىٰهَا ko zabar aur zer ke darmiyan ki awaaz se parhein. Ishmam — تَأْمَ۫نَّا ke noon par hont gol karein. Tasheel — ءَا۬عْجَمِيٌّ ka doosra hamzah naram parhein. Noon qutni — tanween ke baad hamzat-ul-wasl ho to chhota zer wala noon parhein: نُوْحٌ ابْنَهٗ → nuhunibnahu. Jahan ص par chhota س likha ho wahan س parhein.",
+        listOf("دُنْيَا  بُنْيَانٌ  صِنْوَانٌ  قِنْوَانٌ", "عِوَجًا ۜ قَيِّمًا  |  مَنْ ۜ رَاقٍ", "مَجْر۪ىٰهَا  |  تَأْمَ۫نَّا  |  ءَا۬عْجَمِيٌّ", "نُوْحٌ ابْنَهٗ  ←  نُوْحُنِ ابْنَهٗ"),
+        "What is saktah?", "Saktah kya hai?", listOf("Pause without breath / Saans ke baghair thehrao", "Full stop / Poora waqf", "Long madd / Lamba madd"), 0,
+        extraQuizzes = listOf(
+            q("In دُنْيَا the noon sakinah is…", "دُنْيَا mein noon sakin?", listOf("Read clearly / Izhar", "Merged / Idgham", "Hidden / Ikhfa"), 0),
+            q("Imalah is found in…", "Imalah kis lafz mein hai?", listOf("مَجْر۪ىٰهَا", "تَأْمَ۫نَّا", "دُنْيَا"), 0),
+            q("Noon qutni comes when tanween is followed by…", "Noon qutni kab aata hai?", listOf("Hamzat-ul-wasl", "A throat letter / Halqi harf", "Baa"), 0)
+        ),
+        tip = "These cases are few and fixed. Learn each word with a teacher rather than applying the rule to other words.",
+        romanTip = "Yeh soorten kam aur muqarrar hain. Har lafz ustad se seekhein, qaide ko doosre alfaaz par na lagayein.",
+        letters = "ن ء ص س"),
     QaidaLesson("waqf", true, "Stopping (Waqf)", "Waqf: rukne ke qaide",
-        "When stopping, drop the last short vowel and read sukoon; two fathas become alif; ة becomes ه. Signs: م must stop; ط good to stop; ج stop or continue; ز and ص continuing is better; قلى stopping is better; صلى continuing is better; لا do not stop; ∴ ∴ stop at one of the two places, not both.",
-        "Rukte waqt aakhri harkat chhor kar sukoon parhein; do zabar alif ban jata hai; ة ko ه parhein. Alamaat: م rukna zaroori; ط rukna behtar; ج rukna ya milana dono theek; ز aur ص milana behtar; قلى rukna behtar; صلى milana behtar; لا na rukein; ∴ ∴ do mein se ek jagah rukein, dono par nahi.",
+        "The circle ۝ marks the end of an ayah; stopping there is best. When stopping, drop the last short vowel and read sukoon; two fathas become alif; ة becomes ه. Signs: م must stop; ط good to stop; ج stop or continue; ز and ص continuing is better; قلى stopping is better; صلى continuing is better; لا do not stop; ∴ ∴ stop at one of the two places, not both.",
+        "Gol daira ۝ aayat ke khatm ki alamat hai; wahan rukna behtar hai. Rukte waqt aakhri harkat chhor kar sukoon parhein; do zabar alif ban jata hai; ة ko ه parhein. Alamaat: م rukna zaroori; ط rukna behtar; ج rukna ya milana dono theek; ز aur ص milana behtar; قلى rukna behtar; صلى milana behtar; لا na rukein; ∴ ∴ do mein se ek jagah rukein, dono par nahi.",
         listOf("م  ط  ج  ز  ص", "قلى  صلى  لا  ∴", "نَسْتَعِينُ ← نَسْتَعِينْ", "عَلِيمًا ← عَلِيمَا  |  رَحْمَةٌ ← رَحْمَهْ"),
         "Which sign means you must stop?", "Kis alamat par rukna zaroori hai?", listOf("م", "لا", "ز"), 0,
         extraQuizzes = listOf(
@@ -302,16 +445,64 @@ internal val qaidaLessons = listOf(
         ),
         tip = "If your breath ends where there is no sign, stop on a complete word, then go back a word or two and continue. Never stop in the middle of a word.",
         romanTip = "Agar saans wahan toot jaye jahan alamat nahi, to poore lafz par rukein, phir ek do lafz peeche se dobara shuru karein. Lafz ke beech mein kabhi na rukein.",
-        letters = "م ط ج ز ص قلى صلى لا ∴")
+        letters = "م ط ج ز ص قلى صلى لا ∴"),
+    QaidaLesson("qa_review", true, "Questions and answers", "Sawal o jawab",
+        "Test yourself on the whole course. Q: How many single letters are there? A: 29. Q: How many heavy letters? A: 7 (خ ص ض غ ط ق ظ). Q: How many madd letters? A: 3 (ا و ي). Q: How many leen letters? A: 2 (و ي). Q: Cases of noon sakinah and tanween? A: 4 — izhar, ikhfa, idgham, iqlab. Q: Cases of meem sakinah? A: 3 — idgham shafawi, ikhfa shafawi, izhar shafawi. Q: Causes of madd? A: hamzah and sukoon. Q: Length of ghunnah? A: about one alif.",
+        "Poore course ka khud imtihan lein. S: Mufrad huroof kitne hain? J: 29. S: Mote (musta'liya) huroof? J: 7 (خ ص ض غ ط ق ظ). S: Madd ke huroof? J: 3 (ا و ي). S: Leen ke huroof? J: 2 (و ي). S: Noon sakin aur tanween ki soorten? J: 4 — izhar, ikhfa, idgham, iqlab. S: Meem sakin ki soorten? J: 3 — idgham shafawi, ikhfa shafawi, izhar shafawi. S: Madd ke asbaab? J: hamzah aur sukoon. S: Ghunna ki miqdaar? J: taqreeban ek alif.",
+        listOf("خ ص ض غ ط ق ظ", "ا و ي  |  و ي", "ي ر م ل و ن", "ق ط ب ج د"),
+        "How many single letters are there?", "Mufrad huroof kitne hain?", listOf("28", "29", "30"), 1,
+        extraQuizzes = listOf(
+            q("How many cases does meem sakinah have?", "Meem sakin ki kitni soorten hain?", listOf("2", "3", "4"), 1),
+            q("What are the two causes of madd?", "Madd ke do asbaab?", listOf("Hamzah & sukoon", "Shadda & tanween", "Noon & meem"), 0),
+            q("Idgham letters are gathered in the word…", "Idgham ke huroof kis lafz mein jama hain?", listOf("يَرْمَلُوْنَ", "قُطْبُ جَدٍّ", "أَخِي هَاكَ"), 0),
+            q("Qalqalah letters are gathered in…", "Qalqalah ke huroof kis mein jama hain?", listOf("قُطْبُ جَدٍّ", "يَرْمَلُوْنَ", "خُصَّ ضَغْطٍ قِظْ"), 0),
+            q("How many types of madd are taught here?", "Yahan madd ki kitni qismein hain?", listOf("4", "6", "8"), 1),
+            q("The Laam of Allah's name after kasra is…", "Zer ke baad lafz Allah ka laam?", listOf("Light / Bareek", "Heavy / Mota", "Silent / Khamosh"), 0)
+        ),
+        tip = "Answer each question aloud first, then check the quiz. Return to the lesson named in any question you miss.",
+        romanTip = "Har sawal ka jawab pehle awaaz se dein, phir quiz check karein. Jo sawal ghalat ho us ka sabaq dobara parhein.")
 )
 
-/** Blank query returns every lesson; otherwise matches id, both titles, and the rule/tip in the chosen language. */
-internal fun qaidaSearch(query: String, roman: Boolean): List<QaidaLesson> {
-    val needle = query.trim().lowercase(java.util.Locale.ROOT)
-    if (needle.isEmpty()) return qaidaLessons
-    return qaidaLessons.filter { lesson ->
-        listOf(lesson.id.replace('_', ' '), lesson.title, lesson.romanTitle, lesson.letters,
-            if (roman) lesson.romanRule else lesson.rule, if (roman) lesson.romanTip else lesson.tip)
-            .any { it.lowercase(java.util.Locale.ROOT).contains(needle) }
+/** Madani Qaidah sabaq number → the lessons here that teach it; every one of its 22 lessons is covered. */
+internal val qaidaMadaniSabaq: Map<Int, List<String>> = mapOf(
+    1 to listOf("letters", "heavy_light", "makharij"), 2 to listOf("shapes"), 3 to listOf("fatha", "kasra", "damma"),
+    4 to listOf("harakat_practice"), 5 to listOf("tanween"), 6 to listOf("hijjay"), 7 to listOf("madd_letters", "madd"),
+    8 to listOf("khari"), 9 to listOf("leen"), 10 to listOf("review_madd"), 11 to listOf("sukoon", "sukoon_practice", "qalqalah"),
+    12 to listOf("izhar", "ikhfa"), 13 to listOf("shadda", "ghunnah"), 14 to listOf("idgham", "iqlab"), 15 to listOf("meem"),
+    16 to listOf("laam", "raa", "heavy_light"), 17 to listOf("madd_types"), 18 to listOf("muqattaat"), 19 to listOf("zaid_alif"),
+    20 to listOf("misc_rules"), 21 to listOf("waqf"), 22 to listOf("salah")
+)
+
+/** First Madani Qaidah sabaq a lesson belongs to, or null for extra lessons such as the Q&A review. */
+internal fun qaidaMadaniNumber(id: String): Int? = qaidaMadaniSabaq.entries.firstOrNull { id in it.value }?.key
+
+/**
+ * The lessons made searchable for one reading language. The title as shown leads ([localize] turns
+ * the English title into the app's language; Roman Urdu is shown as written), then the other title,
+ * the rule letters, the lesson id, its Madani Qaidah sabaq ("madani 18"), and the rule and tip in
+ * the chosen language. A typed number finds the lessons with that number in their track first.
+ * Build it once per reading language; searching it then costs one pass per keystroke.
+ */
+internal fun qaidaRanker(roman: Boolean, localize: (String) -> String = { it }): AppSearch.Ranker<QaidaLesson> {
+    val numbers = qaidaLessons.groupBy { it.tajweed }.values
+        .flatMap { track -> track.mapIndexed { index, lesson -> lesson.id to index + 1 } }.toMap()
+    return AppSearch.Ranker(qaidaLessons) { lesson ->
+        // English is searched as written too, so an English word still works in a translated app.
+        val texts = if (roman) listOf(lesson.romanRule, lesson.romanTip)
+            else listOf(lesson.title, lesson.rule, lesson.tip).flatMap { listOf(it, localize(it)) }
+        AppSearch.Fields(
+            title = if (roman) lesson.romanTitle else localize(lesson.title),
+            nativeTitle = if (roman) lesson.title else lesson.romanTitle,
+            other = (texts + lesson.letters + lesson.id.replace('_', ' ')).distinct() +
+                qaidaMadaniSabaq.filterValues { lesson.id in it }.keys.sorted().map { "madani $it" },
+            number = numbers[lesson.id]
+        )
     }
 }
+
+private val qaidaEnglishSearch by lazy { qaidaRanker(roman = false) }
+private val qaidaRomanSearch by lazy { qaidaRanker(roman = true) }
+
+/** Lessons matching [query] in English or Roman Urdu, best first; a blank query returns every lesson. */
+internal fun qaidaSearch(query: String, roman: Boolean): List<QaidaLesson> =
+    (if (roman) qaidaRomanSearch else qaidaEnglishSearch).search(query)

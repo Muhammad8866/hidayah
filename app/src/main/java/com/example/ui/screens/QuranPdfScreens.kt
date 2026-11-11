@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
+import com.example.ui.tour.tourTarget
+import com.example.ui.tour.TourScreen
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -81,6 +83,7 @@ import com.example.quran.FullQuranCatalog
 import com.example.quran.PdfQuran
 import com.example.quran.QuranPdf
 import com.example.quran.QuranPdfCatalog
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.localizeUiText
@@ -110,6 +113,9 @@ private const val PAGE_TURN_MILLIS = 800
 /** Library route for [QuranTranslationScreen]; never a [QuranPdf] id. */
 internal const val TRANSLATION_READER_ID = "translation_reader"
 
+/** Library route for [SiratUlJinanPdfLibrary]; "<route>/<book id>" has one volume open. Never a [QuranPdf] id. */
+internal const val TAFSEER_PDFS_ID = "sirat_ul_jinan_pdfs"
+
 /** Read tab: every Quran as a list; tapping one opens it. */
 @Composable
 internal fun QuranPdfLibrary(
@@ -127,9 +133,21 @@ internal fun QuranPdfLibrary(
         QuranTranslationScreen(modifier) { onImmersiveChange(false); onOpenIdChange(null) }
         return
     }
+    val tafseerRoute = openId?.takeIf { it == TAFSEER_PDFS_ID || it.startsWith("$TAFSEER_PDFS_ID/") }
+    if (tafseerRoute != null) {
+        SiratUlJinanPdfLibrary(
+            openBookId = tafseerRoute.removePrefix(TAFSEER_PDFS_ID).removePrefix("/").takeIf { it.isNotEmpty() },
+            onOpenBook = { id -> onOpenIdChange(if (id == null) TAFSEER_PDFS_ID else "$TAFSEER_PDFS_ID/$id") },
+            onClose = { onImmersiveChange(false); onOpenIdChange(null) },
+            isImmersive = isImmersive,
+            onImmersiveChange = onImmersiveChange,
+            modifier = modifier
+        )
+        return
+    }
     val book = openId?.let(QuranPdfCatalog::byId)
     if (book != null) {
-        BackHandler { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "reader_system_back", "tap"); onImmersiveChange(false); onOpenIdChange(null) }
+        BackHandler { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "reader_system_back", "tap"); onImmersiveChange(false); onOpenIdChange(null) }
         QuranPdfBook(book, modifier, isImmersive, onImmersiveChange) { onImmersiveChange(false); onOpenIdChange(null) }
         return
     }
@@ -140,6 +158,7 @@ internal fun QuranPdfLibrary(
     val snackbar = remember { SnackbarHostState() }
     var confirmDelete by remember { mutableStateOf<QuranPdf?>(null) }
     val failedText = localizedUiText("Download failed. Check your internet connection.")
+    val language = LocalAppLanguage.current
     val isOnline by rememberIsOnline()
     // Re-read whenever the library is shown again, so it reflects the page just read.
     val lastBook = remember { PdfQuran.lastBook() }
@@ -154,10 +173,11 @@ internal fun QuranPdfLibrary(
                 ContinueReadingCard(lastBook, PdfQuran.lastPage(lastBook) + 1) { onOpenIdChange(lastBook.id) }
             }
             item(key = "translation") { TranslationReaderCard { onOpenIdChange(TRANSLATION_READER_ID) } }
+            item(key = "tafseer") { SiratUlJinanPdfCard { onOpenIdChange(TAFSEER_PDFS_ID) } }
             item(key = "title") {
                 Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.Bottom) {
-                    LocalizedText("Choose a Mushaf", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = MushafInk, modifier = Modifier.weight(1f))
-                    LocalizedText("${QuranPdfCatalog.all.size} books", fontSize = 12.sp, color = QuranMuted)
+                    LocalizedText("Choose a Mushaf", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = MushafInk, modifier = Modifier.weight(1f).tourTarget("quran_mushaf_title"))
+                    LocalizedText(localizedUiTemplate("{count} books", "count" to QuranPdfCatalog.all.size), fontSize = 12.sp, color = QuranMuted)
                 }
             }
             items(QuranPdfCatalog.all, key = { it.id }) { item ->
@@ -178,7 +198,11 @@ internal fun QuranPdfLibrary(
                                     return@launch
                                 }
                                 PdfQuran.download(item).onFailure { error ->
-                                    snackbar.showSnackbar(if (item.id == "kanzul_iman") error.message ?: failedText else failedText)
+                                    // Asset-pack reasons are English; show one only when this language has a translation.
+                                    val reason = error.message?.takeIf { item.id == "kanzul_iman" }
+                                        ?.let { localizeUiText(it, language) }
+                                        ?.takeIf { language == "en" || it != error.message }
+                                    snackbar.showSnackbar(reason ?: failedText)
                                 }
                             }
                         },
@@ -187,7 +211,7 @@ internal fun QuranPdfLibrary(
                 }
             }
             item(key = "hint") {
-                Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().padding(top = 4.dp).tourTarget("quran_offline_hint"), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.CloudDownload, null, tint = QuranMuted, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     LocalizedText("Download a Mushaf once to read it without internet.", Modifier.weight(1f), fontSize = 12.sp, color = QuranMuted)
@@ -198,11 +222,11 @@ internal fun QuranPdfLibrary(
     }
     confirmDelete?.let { item ->
         AlertDialog(
-            onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "dismiss_remove_download", "dismiss"); confirmDelete = null },
+            onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "dismiss_remove_download", "dismiss"); confirmDelete = null },
             title = { LocalizedText("Remove download?") },
-            text = { LocalizedText("${item.title} will still open online.") },
-            confirmButton = { TextButton({ com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "confirm_remove_download", "tap"); PdfQuran.delete(item); confirmDelete = null }) { LocalizedText("Remove") } },
-            dismissButton = { TextButton({ com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "cancel_remove_download", "tap"); confirmDelete = null }) { LocalizedText("Cancel") } }
+            text = { LocalizedText(localizedUiTemplate("{title} will still open online.", "title" to localizedUiText(item.title))) },
+            confirmButton = { TextButton({ com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "confirm_remove_download", "tap"); PdfQuran.delete(item); confirmDelete = null }) { LocalizedText("Remove") } },
+            dismissButton = { TextButton({ com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "cancel_remove_download", "tap"); confirmDelete = null }) { LocalizedText("Cancel") } }
         )
     }
 }
@@ -218,8 +242,8 @@ private fun ContinueReadingCard(book: QuranPdf, page: Int, open: () -> Unit) {
     LaunchedEffect(Unit) { started = true }
     val fraction by animateFloatAsState(if (started) target else 0f, tween(700), label = "continueReading")
     HeroSurface(
-        modifier = Modifier.fillMaxWidth().testTag("quran_continue_reading"),
-        onClick = com.example.core.analytics.AppAnalytics.trackItemAction("quran_pdf_screens", "continue_reading", book.id, open),
+        modifier = Modifier.fillMaxWidth().testTag("quran_continue_reading").tourTarget("quran_continue_reading"),
+        onClick = com.example.core.analytics.AppAnalytics.trackItemAction("quran_pdf_library", "continue_reading", book.id, open),
         shape = RoundedCornerShape(22.dp),
         contentPadding = PaddingValues(18.dp)
     ) {
@@ -232,7 +256,7 @@ private fun ContinueReadingCard(book: QuranPdf, page: Int, open: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 LocalizedText(
-                    if (surah > 0) "Surah ${FullQuranCatalog.surahs[surah - 1].englishName}" else book.title,
+                    if (surah > 0) localizedUiTemplate("Surah {name}", "name" to FullQuranCatalog.surahs[surah - 1].englishName) else book.title,
                     color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
                 LocalizedText(book.title, color = Color.White.copy(alpha = .75f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -252,7 +276,7 @@ private fun ContinueReadingCard(book: QuranPdf, page: Int, open: () -> Unit) {
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             LocalizedText(
-                (if (para > 0) "Para $para • " else "") + "Page $page / ${book.pageCount}",
+                if (para > 0) localizedUiTemplate("Para {para} • Page {page} / {total}", "para" to para, "page" to page, "total" to book.pageCount) else localizedUiTemplate("Page {page} / {total}", "page" to page, "total" to book.pageCount),
                 color = Color.White.copy(alpha = .85f), fontSize = 12.sp, modifier = Modifier.weight(1f)
             )
             Surface(color = ReaderGoldLight, shape = RoundedCornerShape(50)) {
@@ -273,8 +297,8 @@ private fun QuranPdfRow(
 ) {
     val interaction = remember { MutableInteractionSource() }
     Surface(
-        onClick = com.example.core.analytics.AppAnalytics.trackItemAction("quran_pdf_screens", "open_quran_pdf", book.id, open),
-        modifier = Modifier.fillMaxWidth().pressScale(interaction).testTag("quran_pdf_${book.id}"),
+        onClick = com.example.core.analytics.AppAnalytics.trackItemAction("quran_pdf_library", "open_quran_pdf", book.id, open),
+        modifier = Modifier.fillMaxWidth().pressScale(interaction).testTag("quran_pdf_${book.id}").tourTarget("quran_mushaf_row"),
         shape = RoundedCornerShape(18.dp),
         color = QuranCard,
         border = BorderStroke(1.dp, MushafGold.copy(alpha = .22f)),
@@ -288,17 +312,17 @@ private fun QuranPdfRow(
                 LocalizedText(book.subtitle, fontSize = 12.sp, color = QuranMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatusPill(
+                    Box(Modifier.tourTarget("quran_mushaf_status")) { StatusPill(
                         if (offline) "Offline" else "Online",
                         if (offline) Icons.Default.CheckCircle else Icons.Default.Cloud,
                         if (offline) OfflineGreen else QuranMuted
-                    )
+                    ) }
                     Spacer(Modifier.width(6.dp))
-                    LocalizedText("${book.pageCount} pages • ${megabytes(book.sizeBytes)}", fontSize = 11.sp, color = QuranMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    LocalizedText(localizedUiTemplate("{count} pages • {size}", "count" to book.pageCount, "size" to megabytes(book.sizeBytes)), fontSize = 11.sp, color = QuranMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (lastPage > 0 && progress == null) {
                     Spacer(Modifier.height(4.dp))
-                    LocalizedText("Last read: page ${lastPage + 1}", fontSize = 11.sp, color = MushafGold, fontWeight = FontWeight.SemiBold)
+                    LocalizedText(localizedUiTemplate("Last read: page {page}", "page" to lastPage + 1), fontSize = 11.sp, color = MushafGold, fontWeight = FontWeight.SemiBold)
                 }
                 if (progress != null) {
                     Spacer(Modifier.height(6.dp))
@@ -314,12 +338,12 @@ private fun QuranPdfRow(
             }
             when {
                 book.bundled -> Unit
-                downloaded -> IconButton(delete, Modifier.testTag("quran_pdf_delete_${book.id}")) {
+                downloaded -> IconButton(delete, Modifier.testTag("quran_pdf_delete_${book.id}").tourTarget("quran_remove_download")) {
                     Icon(Icons.Default.Delete, localizedUiText("Remove download"), tint = QuranMuted)
                 }
                 progress != null -> Unit
                 else -> FilledTonalIconButton(
-                    download, Modifier.testTag("quran_pdf_download_${book.id}"),
+                    download, Modifier.testTag("quran_pdf_download_${book.id}").tourTarget("quran_download"),
                     colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = ReaderGreen.copy(alpha = .1f), contentColor = ReaderGreen)
                 ) {
                     Icon(Icons.Default.Download, localizedUiText("Download"))
@@ -391,7 +415,7 @@ private fun QuranPdfBook(
             when {
                 // Offline the shared state explains itself and retries by itself once the connection is back.
                 failed -> ErrorState(
-                    onRetry = { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "retry_open_book", "tap"); attempt++ },
+                    onRetry = { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "retry_open_book", "tap"); attempt++ },
                     title = if (PdfQuran.isOffline(book)) "Quran page could not be verified and was not displayed."
                         else "Could not load this Quran. Check your internet connection, or download it to read offline.",
                     modifier = Modifier.testTag("quran_pdf_open_failed")
@@ -399,7 +423,7 @@ private fun QuranPdfBook(
                 fetched != null -> {
                     LocalizedText(book.title, fontWeight = FontWeight.Bold, color = MushafInk, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(6.dp))
-                    LocalizedText("Loading online… ${(fetched * 100).toInt()}%", color = MushafInk)
+                    LocalizedText(localizedUiTemplate("Loading online… {percent}%", "percent" to (fetched * 100).toInt()), color = MushafInk)
                     Spacer(Modifier.height(12.dp))
                     LinearProgressIndicator(progress = { fetched }, Modifier.fillMaxWidth(), color = ReaderGreen, trackColor = ReaderGoldLight.copy(alpha = .35f), strokeCap = StrokeCap.Round)
                     Spacer(Modifier.height(8.dp))
@@ -422,7 +446,7 @@ private fun ReaderTopBar(title: String, back: () -> Unit, content: @Composable R
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(back, Modifier.testTag("quran_pdf_back")) { Icon(Icons.Default.Close, localizedUiText("Close"), tint = Color.White) }
+        IconButton(back, Modifier.testTag("quran_pdf_back").tourTarget("quran_pdf_close")) { Icon(Icons.Default.Close, localizedUiText("Close"), tint = Color.White) }
         if (title.isNotEmpty()) LocalizedText(title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         content()
     }
@@ -437,6 +461,7 @@ private fun PdfBookPager(
     val count = document.pageCount
     val pagerState = rememberPagerState(initialPage = PdfQuran.lastPage(book).coerceIn(0, count - 1)) { count }
     com.example.core.analytics.AnalyticsReaderSession("quran_pdf", pagerState.currentPage)
+    TourScreen("quran_pdf_reader")
     val scope = rememberCoroutineScope()
     var zoomed by remember { mutableStateOf(false) }
     var showNavigator by rememberSaveable { mutableStateOf(false) }
@@ -482,7 +507,7 @@ private fun PdfBookPager(
     var sharing by remember { mutableStateOf(false) }
     val shareFailed = localizedUiText("Could not share this Quran. Check your internet connection and try again.")
     fun sharePdf() {
-        com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "share_pdf", "tap")
+        com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "share_pdf", "tap")
         if (!sharing) scope.launch {
             sharing = true
             PdfQuran.shareFile(book).onSuccess { file ->
@@ -491,6 +516,7 @@ private fun PdfBookPager(
                     type = "application/pdf"
                     putExtra(Intent.EXTRA_STREAM, uri)
                     putExtra(Intent.EXTRA_SUBJECT, book.title)
+                    putExtra(Intent.EXTRA_TEXT, com.example.core.share.AppShareLink.withLink(context, book.title))
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
                 context.startActivity(Intent.createChooser(send, context.getString(com.example.R.string.app_name)))
@@ -500,18 +526,19 @@ private fun PdfBookPager(
     }
     val shareAppText = localizedUiText("Read the Quran, duas and prayer times in one app:")
     fun shareApp() {
-        com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "share_app", "tap")
+        com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "share_app", "tap")
         val appName = context.getString(com.example.R.string.app_name)
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_SUBJECT, appName)
-            putExtra(Intent.EXTRA_TEXT, "$shareAppText\nhttps://play.google.com/store/apps/details?id=${context.packageName}")
+            putExtra(Intent.EXTRA_TEXT, com.example.core.share.AppShareLink.withLink(context, shareAppText))
         }
         context.startActivity(Intent.createChooser(send, appName))
     }
     val bookmarkAdded = localizedUiText("Bookmark added")
     val bookmarkRemoved = localizedUiText("Bookmark removed")
     fun toggleBookmark() {
+        com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "bookmark", "toggle")
         bookmarks = choices.toggleBookmark(page)
         val message = if (page in bookmarks) bookmarkAdded else bookmarkRemoved
         scope.launch {
@@ -543,8 +570,8 @@ private fun PdfBookPager(
         if (!isImmersive) {
             ReaderTopBar("", back) {
                 Surface(
-                    onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "open_navigator", "tap"); navigatorTab = 0; showNavigator = true }, color = Color.White.copy(alpha = .1f), shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f).padding(vertical = 6.dp).testTag("pdf_navigator")
+                    onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "open_navigator", "tap"); navigatorTab = 0; showNavigator = true }, color = Color.White.copy(alpha = .1f), shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f).padding(vertical = 6.dp).testTag("pdf_navigator").tourTarget("quran_pdf_navigator")
                 ) {
                     Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
@@ -553,7 +580,7 @@ private fun PdfBookPager(
                                 color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
                             )
                             LocalizedText(
-                                if (para > 0) "Para $para • Page $label" else "Page $label",
+                                if (para > 0) localizedUiTemplate("Para {para} • Page {page}", "para" to para, "page" to label) else localizedUiTemplate("Page {page}", "page" to label),
                                 color = ReaderGoldLight, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
                             )
                         }
@@ -562,20 +589,20 @@ private fun PdfBookPager(
                 }
                 IconButton(
                     onClick = { toggleBookmark() },
-                    modifier = Modifier.testTag("pdf_bookmark_page")
+                    modifier = Modifier.testTag("pdf_bookmark_page").tourTarget("quran_pdf_bookmark")
                 ) {
                     Icon(Icons.Default.Bookmark,
                         localizedUiText(if (page in bookmarks) "Remove bookmark" else "Bookmark page"),
                         tint = if (page in bookmarks) ReaderGoldLight else Color.White)
                 }
                 IconButton(
-                    onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "open_reader_menu", "tap"); showMenu = true },
-                    modifier = Modifier.testTag("pdf_reader_menu")
+                    onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "open_reader_menu", "tap"); showMenu = true },
+                    modifier = Modifier.testTag("pdf_reader_menu").tourTarget("quran_pdf_menu")
                 ) {
                     if (sharing) CircularProgressIndicator(Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                     else Icon(Icons.Default.MoreVert, localizedUiText("Reader menu"), tint = Color.White)
                 }
-                IconButton({ com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "enter_full_screen", "tap"); onImmersiveChange(true) }) {
+                IconButton({ com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "enter_full_screen", "tap"); onImmersiveChange(true) }, Modifier.tourTarget("quran_pdf_full_screen")) {
                     Icon(Icons.Default.Fullscreen, localizedUiText("Full screen"), tint = Color.White)
                 }
             }
@@ -601,7 +628,7 @@ private fun PdfBookPager(
                         index = index,
                         active = index == pagerState.currentPage,
                         onZoomChange = { zoomed = it },
-                        onTap = { onImmersiveChange(!isImmersive) }
+                        onTap = { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "page_tap_immersive", "toggle"); onImmersiveChange(!isImmersive) }
                     )
                 }
             }
@@ -653,7 +680,7 @@ private fun PdfBookPager(
         bookmarked = page in bookmarks,
         volumeKeys = volumeKeysMenu,
         onVolumeKeysChange = { choices.saveVolumeKeysMenu(it); volumeKeysMenu = it },
-        dismiss = { showMenu = false }
+        dismiss = { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "dismiss_reader_menu", "dismiss"); showMenu = false }
     ) { action ->
         showMenu = false
         when (action) {
@@ -666,9 +693,9 @@ private fun PdfBookPager(
             "guide" -> showGuide = true
         }
     }
-    if (showGuide) ReaderGuideDialog { choices.markGuideSeen(); showGuide = false }
+    if (showGuide) ReaderGuideDialog { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "dismiss_reader_guide", "dismiss"); choices.markGuideSeen(); showGuide = false }
     if (showNavigator) PdfNavigatorDialog(book, count, page, surah, para, navigatorTab, readingMode,
-        { mode -> scope.launch {
+        { mode -> com.example.core.analytics.AppAnalytics.setting("quran_pdf_reading_mode", mode); scope.launch {
             if (mode == "scroll") scrollState.scrollToItem(pagerState.currentPage)
             choices.saveReadingMode(mode)
             readingMode = mode
@@ -758,16 +785,16 @@ private fun ReaderBottomBar(
                     .padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(previous, enabled = hasPrevious, modifier = Modifier.testTag("pdf_previous_page")) {
+                IconButton(previous, enabled = hasPrevious, modifier = Modifier.testTag("pdf_previous_page").tourTarget("quran_pdf_previous")) {
                     Icon(Icons.Default.ChevronRight, localizedUiText("Previous page"), tint = if (hasPrevious) Color.White else Color.White.copy(alpha = .3f))
                 }
                 if (count > 1) Slider(
                     value = dragging ?: page.toFloat(),
                     onValueChange = { dragging = it },
-                    onValueChangeFinished = { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "page_slider", "change_complete"); dragging?.let { jump(it.roundToInt()) }; dragging = null },
+                    onValueChangeFinished = { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "page_slider", "change_complete"); dragging?.let { jump(it.roundToInt()) }; dragging = null },
                     valueRange = 1f..count.toFloat(),
                     colors = SliderDefaults.colors(thumbColor = ReaderGoldLight, activeTrackColor = ReaderGoldLight, inactiveTrackColor = Color.White.copy(alpha = .25f)),
-                    modifier = Modifier.weight(1f).testTag("pdf_page_slider")
+                    modifier = Modifier.weight(1f).testTag("pdf_page_slider").tourTarget("quran_pdf_slider")
                 ) else Spacer(Modifier.weight(1f))
                 // The page number sits in a pill so it reads as the scrubber's live value.
                 Surface(color = Color.White.copy(alpha = .12f), shape = RoundedCornerShape(50)) {
@@ -777,7 +804,7 @@ private fun ReaderBottomBar(
                         textAlign = TextAlign.Center, modifier = Modifier.widthIn(min = 44.dp).padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
-                IconButton(next, enabled = hasNext, modifier = Modifier.testTag("pdf_next_page")) {
+                IconButton(next, enabled = hasNext, modifier = Modifier.testTag("pdf_next_page").tourTarget("quran_pdf_next")) {
                     Icon(Icons.Default.ChevronLeft, localizedUiText("Next page"), tint = if (hasNext) Color.White else Color.White.copy(alpha = .3f))
                 }
             }
@@ -835,7 +862,7 @@ private fun ZoomablePdfPage(
         val image = bitmap
         if (image == null) {
             if (renderFailed && active) ErrorState(
-                onRetry = { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "retry_render_page", "tap"); renderAttempt++ },
+                onRetry = { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "retry_render_page", "tap"); renderAttempt++ },
                 title = "Could not load this Quran. Check your internet connection, or download it to read offline.",
                 modifier = Modifier.testTag("pdf_page_failed")
             ) else CircularProgressIndicator(color = MushafGold)
@@ -843,7 +870,7 @@ private fun ZoomablePdfPage(
             val imageBitmap = remember(image) { image.asImageBitmap() }
             Image(
                 imageBitmap,
-                contentDescription = localizedUiText("Page ${index + 1}"),
+                contentDescription = localizedUiTemplate("Page {page}", "page" to "${index + 1}"),
                 contentScale = ContentScale.Fit,
                 filterQuality = FilterQuality.High,
                 modifier = Modifier.fillMaxSize()
@@ -851,6 +878,7 @@ private fun ZoomablePdfPage(
                         detectTapGestures(
                             onTap = { onTap() },
                             onDoubleTap = { tap ->
+                                com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "double_tap_zoom", if (scale > 1f) "zoom_out" else "zoom_in")
                                 if (scale > 1f) {
                                     scale = 1f
                                     offset = Offset.Zero
@@ -974,7 +1002,7 @@ private fun PdfNavigatorDialog(
     var tab by rememberSaveable { mutableIntStateOf(initialTab) }
     val highlight = MaterialTheme.colorScheme.primary.copy(alpha = .1f)
     AlertDialog(
-        onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("quran_pdf_screens", "dismiss_navigator", dismiss),
+        onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("quran_pdf_library", "dismiss_navigator", dismiss),
         title = { LocalizedText(book.title) },
         text = {
             Column {
@@ -989,16 +1017,9 @@ private fun PdfNavigatorDialog(
                 when (tab) {
                     0 -> {
                         var query by rememberSaveable { mutableStateOf("") }
-                        com.example.core.analytics.AnalyticsSearch("quran_pdf_screens", query)
+                        com.example.core.analytics.AnalyticsSearch("quran_pdf_library", query)
                         val language = LocalAppLanguage.current
-                        val surahs = remember(query, language) {
-                            val q = query.trim()
-                            if (q.isEmpty()) FullQuranCatalog.surahs
-                            else FullQuranCatalog.surahs.filter {
-                                it.number.toString() == q || it.englishName.contains(q, true) || it.arabicName.contains(q) ||
-                                    localizeUiText(it.englishName, language).contains(q, true)
-                            }
-                        }
+                        val surahs = remember(query, language) { com.example.quran.QuranSearch.surahs(query, language) }
                         OutlinedTextField(
                             value = query,
                             onValueChange = { query = it },
@@ -1009,14 +1030,14 @@ private fun PdfNavigatorDialog(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).testTag("pdf_surah_search")
                         )
                         val listState = rememberLazyListState((currentSurah - 3).coerceAtLeast(0))
-                        com.example.core.analytics.AnalyticsScroll("quran_pdf_screens", listState)
+                        com.example.core.analytics.AnalyticsScroll("quran_pdf_library", listState)
                         LazyColumn(Modifier.heightIn(max = 380.dp).testTag("pdf_surah_list"), listState) {
                             items(surahs, key = { it.number }) { item ->
                                 val page = book.surahPages[item.number - 1]
                                 Row(
                                     Modifier.fillMaxWidth()
                                         .background(if (item.number == currentSurah) highlight else Color.Transparent)
-                                        .clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "navigator_open_surah", "tap", item = "surah_${item.number}"); open(page) }
+                                        .clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "navigator_open_surah", "tap", item = "surah_${item.number}"); open(page) }
                                         .padding(vertical = 8.dp)
                                         .testTag("pdf_surah_${item.number}"),
                                     verticalAlignment = Alignment.CenterVertically
@@ -1026,7 +1047,7 @@ private fun PdfNavigatorDialog(
                                     Column(Modifier.weight(1f)) {
                                         LocalizedText(item.englishName, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         LocalizedText(
-                                            "Para ${book.paraPages.indexOfLast { it <= page } + 1} • Page $page",
+                                            localizedUiTemplate("Para {para} • Page {page}", "para" to book.paraPages.indexOfLast { it <= page } + 1, "page" to page),
                                             color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp
                                         )
                                     }
@@ -1044,20 +1065,20 @@ private fun PdfNavigatorDialog(
                     }
                     1 -> {
                         val listState = rememberLazyListState((currentPara - 3).coerceAtLeast(0))
-                        com.example.core.analytics.AnalyticsScroll("quran_pdf_screens", listState)
+                        com.example.core.analytics.AnalyticsScroll("quran_pdf_library", listState)
                         LazyColumn(Modifier.heightIn(max = 420.dp).testTag("pdf_para_list"), listState) {
                             items((1..30).toList(), key = { it }) { para ->
                                 val page = book.paraPages[para - 1]
                                 Row(
                                     Modifier.fillMaxWidth()
                                         .background(if (para == currentPara) highlight else Color.Transparent)
-                                        .clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "navigator_open_para", "tap", item = "para_$para"); open(page) }
+                                        .clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "navigator_open_para", "tap", item = "para_$para"); open(page) }
                                         .padding(vertical = 12.dp)
                                         .testTag("pdf_para_$para"),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    LocalizedText("Para $para", fontWeight = FontWeight.SemiBold)
-                                    LocalizedText("Page $page", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    LocalizedText(localizedUiTemplate("Para {para}", "para" to para), fontWeight = FontWeight.SemiBold)
+                                    LocalizedText(localizedUiTemplate("Page {page}", "page" to page), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .15f))
                             }
@@ -1083,7 +1104,7 @@ private fun PdfNavigatorDialog(
                         LazyColumn(Modifier.heightIn(max = 380.dp)) {
                             items(bookmarks.sorted(), key = { it }) { savedPage ->
                                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    TextButton({ open(savedPage) }, Modifier.weight(1f)) { LocalizedText("Page $savedPage") }
+                                    TextButton({ open(savedPage) }, Modifier.weight(1f)) { LocalizedText(localizedUiTemplate("Page {page}", "page" to savedPage)) }
                                     IconButton({ bookmarks = choices.toggleBookmark(savedPage) }) {
                                         Icon(Icons.Default.Delete, localizedUiText("Remove bookmark"))
                                     }
@@ -1101,7 +1122,7 @@ private fun PdfNavigatorDialog(
                             items(FullQuranCatalog.surahs.filter { it.number in favorites }, key = { it.number }) { item ->
                                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                     TextButton({ open(book.surahPages[item.number - 1]) }, Modifier.weight(1f)) {
-                                        LocalizedText("${item.number}. ${item.englishName}")
+                                        Text("${item.number}. ${localizedUiText(item.englishName)}")
                                     }
                                     IconButton({ favorites = choices.toggleFavorite(item.number) }) {
                                         Icon(Icons.Default.Star, localizedUiText("Remove favorite"), tint = MushafGold)
@@ -1117,7 +1138,7 @@ private fun PdfNavigatorDialog(
                             OutlinedTextField(
                                 value = text,
                                 onValueChange = { value -> text = value.filter(Char::isDigit).take(4) },
-                                label = { LocalizedText("Page (1 - $count)") },
+                                label = { LocalizedText(localizedUiTemplate("Page (1 - {count})", "count" to count)) },
                                 singleLine = true,
                                 isError = text.isNotEmpty() && target == null,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Go),
@@ -1126,7 +1147,7 @@ private fun PdfNavigatorDialog(
                             )
                             Spacer(Modifier.height(8.dp))
                             Button(
-                                { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_screens", "navigator_go_to_page", "tap"); target?.let(open) }, enabled = target != null,
+                                { com.example.core.analytics.AppAnalytics.interaction("quran_pdf_library", "navigator_go_to_page", "tap"); target?.let(open) }, enabled = target != null,
                                 colors = ButtonDefaults.buttonColors(containerColor = ReaderGreen, contentColor = Color.White)
                             ) { LocalizedText("Open") }
                         }

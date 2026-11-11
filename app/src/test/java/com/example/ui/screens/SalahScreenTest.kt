@@ -135,13 +135,16 @@ class SalahScreenTest {
         rule.onRoot().captureRoboImage("build/outputs/roborazzi/salah_janazah_ur_dark.png")
     }
 
-    @Test fun otherLanguagesKeepLocalizedControlsAndWholeEnglishContent() {
+    @Test fun otherLanguagesKeepLocalizedControlsAndWholeSentenceContent() {
         SalahSettingsStore.save(prefs, Madhhab.HANAFI)
         show("gu")
         rule.onNodeWithTag("salah_madhhab").assertTextEquals(localizeUiText("Change", "gu"))
         assertNotEquals("Change", localizeUiText("Change", "gu"))
-        // Religious copy is never translated word by word.
-        rule.onNodeWithText(SalahContent.Notes.DAILY.en).assertExists()
+        // Religious copy is never translated word by word: it shows its whole-sentence translation
+        // (Gujarati has one), never an English fallback.
+        val daily = SalahContent.Notes.DAILY.inLanguage("gu")
+        assertNotEquals(SalahContent.Notes.DAILY.en, daily)
+        rule.onNodeWithText(daily).assertExists()
         openTab("guide")
         rule.onNodeWithTag("salah_form_witr_3").assertExists()
         rule.onRoot().captureRoboImage("build/outputs/roborazzi/salah_guide_controls_gu.png")

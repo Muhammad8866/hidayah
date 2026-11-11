@@ -58,6 +58,7 @@ internal class RecitationAudio(context: Context) {
     private var queueIndex = 0
     private var playsDone = 0
     private var first = 1
+    private var audioLoad: com.example.core.analytics.AppAnalytics.AudioLoad? = null
     private val engine = lazy { StreamPlayer.build(context.applicationContext).apply {
         setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH).build(), true)
@@ -74,8 +75,14 @@ internal class RecitationAudio(context: Context) {
                     playing = player.playWhenReady && player.playbackState != Player.STATE_ENDED,
                     loading = player.playbackState == Player.STATE_BUFFERING)
             }
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) audioLoad?.ready()
+                com.example.core.analytics.AppAnalytics.playbackState("recitation_audio", playbackState)
+            }
             override fun onPlayerError(error: PlaybackException) {
+                audioLoad?.failed()
                 if (state.value.id == null) return
+                com.example.core.analytics.AppAnalytics.mediaState("recitation_audio", "failed", "playback_error")
                 state.value = state.value.copy(ayah = first + currentMediaItemIndex,
                     playing = false, loading = false, failed = true)
             }
@@ -101,6 +108,8 @@ internal class RecitationAudio(context: Context) {
 
     fun play(passage: RecitationPassage) {
         if (state.value.id == passage.id) { if (state.value.failed) retry() else toggle(); return }
+        com.example.core.analytics.AppAnalytics.media("recitation_audio", "play")
+        com.example.core.analytics.AppAnalytics.content("recitation_audio", passage.id, "play")
         start(listOf(passage), 0, passage.first)
     }
 
@@ -108,10 +117,12 @@ internal class RecitationAudio(context: Context) {
     fun playAll(passages: List<RecitationPassage>, startIndex: Int = 0) {
         if (passages.isEmpty()) return
         val index = startIndex.coerceIn(0, passages.lastIndex)
+        com.example.core.analytics.AppAnalytics.media("recitation_audio", "play_all")
         start(passages, index, passages[index].first)
     }
 
     fun playFrom(passage: RecitationPassage, ayah: Int) {
+        com.example.core.analytics.AppAnalytics.media("recitation_audio", "play_from_ayah")
         val index = queue.indexOf(passage)
         if (state.value.id != null && index >= 0) {
             if (index != queueIndex) playsDone = 0
@@ -122,34 +133,39 @@ internal class RecitationAudio(context: Context) {
     fun toggle() {
         if (state.value.id == null) return
         if (state.value.failed) { retry(); return }
+        com.example.core.analytics.AppAnalytics.media("recitation_audio", if (player.playWhenReady) "pause" else "resume")
         if (player.playWhenReady) player.pause() else player.play()
     }
 
     /** Starts again at the ayah that failed, not at the top of the passage. */
     fun retry() {
         if (state.value.id == null || !state.value.failed || queue.isEmpty()) return
+        com.example.core.analytics.AppAnalytics.media("recitation_audio", "retry")
         load(queueIndex, state.value.ayah ?: queue[queueIndex].first)
     }
 
-    fun nextAyah() = step(true)
-    fun previousAyah() = step(false)
+    fun nextAyah() { com.example.core.analytics.AppAnalytics.media("recitation_audio", "next"); step(true) }
+    fun previousAyah() { com.example.core.analytics.AppAnalytics.media("recitation_audio", "previous"); step(false) }
 
     fun setSpeed(speed: Float) {
         val value = speed.coerceIn(.5f, 2f)
+        com.example.core.analytics.AppAnalytics.media("recitation_audio", "speed_change")
         state.value = state.value.copy(speed = value)
         if (engine.isInitialized()) player.setPlaybackSpeed(value)
     }
     fun slow(enabled: Boolean) = setSpeed(if (enabled) .75f else 1f)
-    fun setRepeat(times: Int) { state.value = state.value.copy(repeat = times.coerceAtLeast(0)) }
+    fun setRepeat(times: Int) { com.example.core.analytics.AppAnalytics.setting("recitation_repeat", "times_${times.coerceIn(0, 10)}"); state.value = state.value.copy(repeat = times.coerceAtLeast(0)) }
 
     fun setSleepTimer(minutes: Int?) {
         main.removeCallbacks(sleepTick)
         val left = minutes?.takeIf { it > 0 }
+        com.example.core.analytics.AppAnalytics.setting("recitation_sleep_timer", left?.let { "min_$it" } ?: "off")
         state.value = state.value.copy(sleepMinutesLeft = left)
         if (left != null) main.postDelayed(sleepTick, 60_000)
     }
 
     fun stop() {
+        if (state.value.id != null) com.example.core.analytics.AppAnalytics.media("recitation_audio", "stop")
         main.removeCallbacks(sleepTick)
         queue = emptyList()
         queueIndex = 0
@@ -182,6 +198,7 @@ internal class RecitationAudio(context: Context) {
         state.value = state.value.copy(id = passage.id, ayah = target, playing = true, loading = true,
             failed = false, queueIndex = index, queueSize = queue.size)
         player.setMediaItems(recitationPlaybackUris(passage).map(MediaItem::fromUri), target - first, 0L)
+        audioLoad = com.example.core.analytics.AppAnalytics.audioLoad("recitation_audio")
         player.prepare()
         player.play()
     }
@@ -207,9 +224,15 @@ internal class RecitationAudio(context: Context) {
     }
 
     private fun ended() {
+        com.example.core.analytics.AppAnalytics.mediaState("recitation_audio", "completed")
         queue.getOrNull(queueIndex)?.let { onPassageFinished?.invoke(it.id) }
         playsDone++
-        if (recitationShouldReplay(state.value.repeat, playsDone)) load(queueIndex, queue[queueIndex].first)
+        if (recitationShouldReplay(state.value.repeat, playsDone)) {
+            // Same playlist, already buffered: rewind instead of reloading, so the repeat has no gap.
+            state.value = state.value.copy(ayah = first, playing = true)
+            player.seekTo(0, 0L)
+            player.play()
+        }
         else if (queueIndex < queue.lastIndex) {
             playsDone = 0
             load(queueIndex + 1, queue[queueIndex + 1].first)

@@ -1,6 +1,7 @@
 package com.example.names
 
-import com.example.domain.model.DuaDatasetRepository
+import com.example.core.search.AppSearch
+import java.util.concurrent.ConcurrentHashMap
 
 enum class BabyGender { BOY, GIRL }
 
@@ -21,7 +22,7 @@ data class BabyName(
     fun meaning(language: String) = when (language) {
         "hinglish" -> hinglish
         "ur" -> sourceMeaningUrdu
-        else -> english
+        else -> com.example.ui.localization.localizePhrase(english, language)
     }
 }
 
@@ -32,21 +33,37 @@ data class BabyName(
 object BabyNames {
     val names: List<BabyName> = BabyNameCatalog.names.sortedBy { it.name }
 
-    private fun normalize(text: String): String = DuaDatasetRepository.normalizeForSearch(
-        text.replace('ک', 'ك').replace('ی', 'ي').replace('ہ', 'ه').replace('ھ', 'ه')
-            .replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ة', 'ه')
-    )
+    /** Languages whose meaning is already one of the fields every search reads. */
+    private val builtInMeanings = setOf("en", "ur", "hinglish")
 
-    // Build this once: typing only filters the cached search text.
-    private val searchIndex = names.map { name ->
-        name to normalize("${name.name} ${name.arabic} ${name.sourceSpelling} ${name.english} " +
-            "${name.hinglish} ${name.aliases} ${name.sourceMeaningUrdu} ${name.arabic.replace(" ", "")}")
+    /** Built once per reader language, so typing only searches (see [AppSearch]). */
+    private val searches = ConcurrentHashMap<String, AppSearch.Ranker<BabyName>>()
+
+    /**
+     * What search reads of a name. The name counts most, then its other spellings ("Ayesha" for
+     * Aisha), then the Arabic (also written without spaces, as "عبدالرحمن"), then the source's
+     * spelling and every meaning, including the reader's language.
+     */
+    private fun fields(name: BabyName, language: String): AppSearch.Fields {
+        val joinedArabic = name.arabic.replace(" ", "")
+        return AppSearch.Fields(
+            title = name.name,
+            nativeTitle = name.aliases,
+            author = if (joinedArabic == name.arabic) name.arabic else "${name.arabic} $joinedArabic",
+            other = listOfNotNull(
+                name.sourceSpelling, name.english, name.hinglish, name.sourceMeaningUrdu,
+                name.meaning(language).takeIf { language !in builtInMeanings }
+            )
+        )
     }
 
-    fun search(query: String, gender: BabyGender? = null): List<BabyName> {
-        val words = normalize(query).split(' ').filter(String::isNotBlank)
-        return searchIndex.filter { (name, text) ->
-            (gender == null || name.gender == gender) && words.all(text::contains)
-        }.map { it.first }
+    /**
+     * Names that match [query], best match first, of [gender] when one is given. A query with no
+     * searchable word lists every name of that gender in alphabetical order.
+     */
+    fun search(query: String, gender: BabyGender? = null, language: String = "en"): List<BabyName> {
+        val key = if (language in builtInMeanings) "en" else language
+        val search = searches.getOrPut(key) { AppSearch.Ranker(names) { fields(it, key) } }
+        return search.search(query).filter { gender == null || it.gender == gender }
     }
 }

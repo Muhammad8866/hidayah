@@ -1,7 +1,9 @@
 package com.example.ui.screens
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalizedText
+import com.example.ui.tour.tourTarget
+import com.example.ui.tour.TourScreen
 import com.example.ui.localization.LocalAppLanguage
-import com.example.ui.localization.localizeUiText
 import com.example.ui.localization.localizedUiText
 
 import androidx.compose.animation.AnimatedContent
@@ -196,7 +198,7 @@ private fun QuranHeader(section: Int, select: (Int) -> Unit) {
             color = Color.Black.copy(alpha = .18f), shape = RoundedCornerShape(50),
             border = BorderStroke(1.dp, Color.White.copy(alpha = .08f))
         ) {
-            Row(Modifier.padding(4.dp)) {
+            Row(Modifier.padding(4.dp).tourTarget("quran_segments")) {
                 QuranSegment("Read", Icons.AutoMirrored.Filled.MenuBook, section == 0, Modifier.weight(1f).testTag("quran_tab_read")) { select(0) }
                 QuranSegment("Listen", Icons.Default.Headphones, section == 1, Modifier.weight(1f).testTag("quran_tab_audio")) { select(1) }
                 QuranSegment("Coach", Icons.Default.Mic, section == 2, Modifier.weight(1f).testTag("quran_tab_coach")) { select(2) }
@@ -381,6 +383,7 @@ internal val juzSurahRanges = listOf(
 @Composable
 internal fun QuranAudioLibrary(modifier: Modifier = Modifier) {
     com.example.core.analytics.AnalyticsScreen("quran_audio_library")
+    TourScreen("quran_audio_library")
 
     val context = LocalContext.current
     // Shared engine: playback keeps running in the background service after leaving this screen.
@@ -390,16 +393,7 @@ internal fun QuranAudioLibrary(modifier: Modifier = Modifier) {
     var query by rememberSaveable { mutableStateOf("") }
     com.example.core.analytics.AnalyticsSearch("quran_screen", query)
     val language = LocalAppLanguage.current
-    val surahs = remember(query, language) {
-        val q = query.trim()
-        if (q.isEmpty()) FullQuranCatalog.surahs
-        else FullQuranCatalog.surahs.filter {
-            it.number.toString() == q || it.englishName.contains(q, true) ||
-                it.englishMeaning.contains(q, true) || it.arabicName.contains(q) ||
-                localizeUiText(it.englishName, language).contains(q, true) ||
-                localizeUiText(it.englishMeaning, language).contains(q, true)
-        }
-    }
+    val surahs = remember(query, language) { com.example.quran.QuranSearch.surahs(query, language) }
     Column(modifier.background(MushafPaper)) {
         state.error?.let { message ->
             Snackbar(Modifier.padding(8.dp), action = { TextButton(QuranAudioManager::clearError) { LocalizedText("OK") } }) { LocalizedText(message) }
@@ -412,13 +406,15 @@ internal fun QuranAudioLibrary(modifier: Modifier = Modifier) {
                     Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    FilterChip(mode == 0, { mode = 0 }, label = { LocalizedText("Surah wise") }, colors = quranChipColors())
+                    FilterChip(mode == 0, { mode = 0 }, label = { LocalizedText("Surah wise") }, colors = quranChipColors(), modifier = Modifier.tourTarget("quran_audio_surah_wise"))
                     Spacer(Modifier.width(8.dp))
-                    FilterChip(mode == 1, { mode = 1 }, label = { LocalizedText("Para wise") }, colors = quranChipColors())
+                    FilterChip(mode == 1, { mode = 1 }, label = { LocalizedText("Para wise") }, colors = quranChipColors(), modifier = Modifier.tourTarget("quran_audio_para_wise"))
                     Spacer(Modifier.weight(1f))
-                    Icon(Icons.Default.DownloadDone, null, tint = QuranMuted, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    LocalizedText("${state.downloaded.size}/114", color = QuranMuted, fontSize = 12.sp)
+                    Row(Modifier.tourTarget("quran_audio_offline_count"), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.DownloadDone, null, tint = QuranMuted, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        LocalizedText("${state.downloaded.size}/114", color = QuranMuted, fontSize = 12.sp)
+                    }
                 }
             }
             if (mode == 0) {
@@ -427,7 +423,7 @@ internal fun QuranAudioLibrary(modifier: Modifier = Modifier) {
                         query = query,
                         onQueryChange = { query = it },
                         onClear = { com.example.core.analytics.AppAnalytics.interaction("quran_screen", "clear_audio_search", "tap"); query = "" },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp).testTag("quran_audio_search")
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp).testTag("quran_audio_search").tourTarget("quran_audio_search")
                     ) { LocalizedText("Search surah by name or number") }
                 }
                 if (surahs.isEmpty()) item {
@@ -456,7 +452,7 @@ internal fun quranChipColors() = FilterChipDefaults.filterChipColors(
 @Composable
 private fun ResumeCard(surah: Int, positionMs: Int) {
     HeroSurface(
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp).tourTarget("quran_audio_resume"),
         shape = RoundedCornerShape(20.dp),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
     ) {
@@ -468,8 +464,8 @@ private fun ResumeCard(surah: Int, positionMs: Int) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 LocalizedText("Continue listening", fontSize = 12.sp, color = QuranGoldLight, fontWeight = FontWeight.SemiBold)
-                LocalizedText("$surah. ${QuranAudioManager.surahName(surah)}", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                LocalizedText("From ${formatTime(positionMs)}", fontSize = 12.sp, color = Color.White.copy(alpha = .78f))
+                Text("$surah. ${localizedUiText(QuranAudioManager.surahName(surah))}", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                LocalizedText(localizedUiTemplate("From {time}", "time" to formatTime(positionMs)), fontSize = 12.sp, color = Color.White.copy(alpha = .78f))
             }
             Spacer(Modifier.width(8.dp))
             Text(
@@ -491,7 +487,7 @@ private fun ResumeCard(surah: Int, positionMs: Int) {
 private fun NowPlayingBar(state: QuranAudioState) {
     val surah = state.playingSurah ?: return
     Surface(
-        color = QuranGreen, modifier = Modifier.fillMaxWidth(),
+        color = QuranGreen, modifier = Modifier.fillMaxWidth().tourTarget("quran_audio_now_playing"),
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), shadowElevation = 10.dp
     ) {
         Column(
@@ -503,9 +499,9 @@ private fun NowPlayingBar(state: QuranAudioState) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     LocalizedText("Now playing", color = QuranGoldLight, fontSize = 11.sp)
-                    LocalizedText("$surah. ${QuranAudioManager.surahName(surah)}", color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("$surah. ${localizedUiText(QuranAudioManager.surahName(surah))}", color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                PlaybackSpeedButton(state.speed, QuranAudioManager::setSpeed, color = QuranGoldLight)
+                Box(Modifier.tourTarget("quran_audio_speed")) { PlaybackSpeedButton(state.speed, QuranAudioManager::setSpeed, color = QuranGoldLight) }
                 Spacer(Modifier.width(10.dp))
                 Text(
                     FullQuranCatalog.surahs.getOrNull(surah - 1)?.arabicName.orEmpty(),
@@ -515,25 +511,26 @@ private fun NowPlayingBar(state: QuranAudioState) {
             Slider(
                 value = state.positionMs.toFloat().coerceIn(0f, state.durationMs.coerceAtLeast(1).toFloat()),
                 onValueChange = { QuranAudioManager.seekTo(it.toInt()) },
+                onValueChangeFinished = { com.example.core.analytics.AppAnalytics.media("quran_audio", "seek") },
                 valueRange = 0f..state.durationMs.coerceAtLeast(1).toFloat(),
                 colors = SliderDefaults.colors(thumbColor = QuranGoldLight, activeTrackColor = QuranGoldLight, inactiveTrackColor = Color.White.copy(alpha = .25f)),
-                modifier = Modifier.fillMaxWidth().height(28.dp)
+                modifier = Modifier.fillMaxWidth().height(28.dp).tourTarget("quran_audio_seek")
             )
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 LocalizedText(formatTime(state.positionMs), color = QuranGoldLight, fontSize = 11.sp)
                 Spacer(Modifier.weight(1f))
-                IconButton(QuranAudioManager::stop) { Icon(Icons.Default.Stop, localizedUiText("Stop"), tint = Color.White) }
-                IconButton(QuranAudioManager::previous) { Icon(Icons.Default.SkipPrevious, localizedUiText("Previous surah"), tint = Color.White) }
+                IconButton(QuranAudioManager::stop, Modifier.tourTarget("quran_audio_stop")) { Icon(Icons.Default.Stop, localizedUiText("Stop"), tint = Color.White) }
+                IconButton(QuranAudioManager::previous, Modifier.tourTarget("quran_audio_previous")) { Icon(Icons.Default.SkipPrevious, localizedUiText("Previous surah"), tint = Color.White) }
                 FilledIconButton(
                     { QuranAudioManager.playOrPause(surah) },
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = QuranGoldLight, contentColor = QuranGreen),
-                    modifier = Modifier.size(48.dp).testTag("quran_now_playing_toggle")
+                    modifier = Modifier.size(48.dp).testTag("quran_now_playing_toggle").tourTarget("quran_audio_play_pause")
                 ) {
                     // The stream is still being fetched: a spinner tells the listener the tap registered.
                     if (state.isBuffering && !state.isPlaying) CircularProgressIndicator(Modifier.size(22.dp), color = QuranGreen, strokeWidth = 2.dp)
                     else Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, localizedUiText(if (state.isPlaying) "Pause" else "Play"))
                 }
-                IconButton(QuranAudioManager::next) { Icon(Icons.Default.SkipNext, localizedUiText("Next surah"), tint = Color.White) }
+                IconButton(QuranAudioManager::next, Modifier.tourTarget("quran_audio_next")) { Icon(Icons.Default.SkipNext, localizedUiText("Next surah"), tint = Color.White) }
                 Spacer(Modifier.width(48.dp))
                 Spacer(Modifier.weight(1f))
                 LocalizedText(formatTime(state.durationMs), color = QuranGoldLight, fontSize = 11.sp)
@@ -630,7 +627,8 @@ private fun AudioSurahRow(surah: com.example.domain.model.Surah, state: QuranAud
             .background(rowColor)
             .clickable(role = Role.Button, onClick = com.example.core.analytics.AppAnalytics.trackItemAction("quran_screen", "play_surah", "surah_$number", play))
             .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp)
-            .testTag("quran_audio_surah_$number"),
+            .testTag("quran_audio_surah_$number")
+            .tourTarget("quran_audio_surah_row"),
         verticalAlignment = Alignment.CenterVertically
     ) {
         NumberBadge(number, active)
@@ -639,9 +637,9 @@ private fun AudioSurahRow(surah: com.example.domain.model.Surah, state: QuranAud
             LocalizedText(surah.englishName, fontWeight = FontWeight.SemiBold, color = MushafInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
             LocalizedText(
                 when {
-                    downloading -> "Downloading ${state.progress[number] ?: 0}%"
-                    resumable -> "Resume from ${formatTime(state.resumePositionMs)}"
-                    else -> "${surah.englishMeaning} • ${surah.totalAyat} ayat"
+                    downloading -> localizedUiTemplate("Downloading {percent}%", "percent" to (state.progress[number] ?: 0))
+                    resumable -> localizedUiTemplate("Resume from {time}", "time" to formatTime(state.resumePositionMs))
+                    else -> localizedUiTemplate("{meaning} • {count} ayat", "meaning" to localizedUiText(surah.englishMeaning), "count" to surah.totalAyat)
                 },
                 fontSize = 12.sp, color = if (downloading || resumable) MushafGold else QuranMuted, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
@@ -669,28 +667,30 @@ private fun AudioParaRow(para: Int, chapters: List<Int>, state: QuranAudioState)
     Row(
         Modifier.fillMaxWidth()
             .clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("quran_screen", "play_para", "tap", item = "para_$para"); QuranAudioManager.playQueue(chapters) }
-            .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+            .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp)
+            .tourTarget("quran_audio_para_row"),
         verticalAlignment = Alignment.CenterVertically
     ) {
         NumberBadge(para, active)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            LocalizedText("Para $para", fontWeight = FontWeight.SemiBold, color = MushafInk)
+            LocalizedText(localizedUiTemplate("Para {para}", "para" to para), fontWeight = FontWeight.SemiBold, color = MushafInk)
             LocalizedText(
                 // Recitation files are whole surahs, so a Para that starts or ends mid-surah plays those surahs in full.
-                "${QuranAudioManager.surahName(chapters.first())} – ${QuranAudioManager.surahName(chapters.last())} (${localizedUiText("full surahs")})",
+                localizedUiTemplate("{first} – {last} (full surahs)", "first" to QuranAudioManager.surahName(chapters.first()), "last" to QuranAudioManager.surahName(chapters.last())),
                 fontSize = 12.sp, color = QuranMuted, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
             LocalizedText(
-                if (offline == chapters.size) "Available offline" else "$offline/${chapters.size} offline",
+                if (offline == chapters.size) "Available offline" else localizedUiTemplate("{done}/{total} offline", "done" to offline, "total" to chapters.size),
                 fontSize = 11.sp, color = if (offline == chapters.size) Color(0xFF2E7D32) else QuranMuted
             )
         }
         FilledTonalIconButton(
             { QuranAudioManager.playQueue(chapters) },
-            colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = QuranGreen, contentColor = Color.White)
+            colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = QuranGreen, contentColor = Color.White),
+            modifier = Modifier.tourTarget("quran_audio_play_para")
         ) { Icon(Icons.Default.PlayArrow, localizedUiText("Play Para")) }
-        if (offline < chapters.size) IconButton({ com.example.core.analytics.AppAnalytics.interaction("quran_screen", "download_para", "tap", item = "para_$para"); QuranAudioManager.downloadAll(chapters) }) {
+        if (offline < chapters.size) IconButton({ com.example.core.analytics.AppAnalytics.interaction("quran_screen", "download_para", "tap", item = "para_$para"); QuranAudioManager.downloadAll(chapters) }, Modifier.tourTarget("quran_audio_download_para")) {
             Icon(Icons.Default.Download, localizedUiText("Download Para"), tint = QuranGreen)
         } else Spacer(Modifier.width(48.dp))
     }
@@ -722,7 +722,8 @@ internal fun AudioRowActions(
         colors = IconButtonDefaults.filledTonalIconButtonColors(
             containerColor = if (playing || buffering) QuranGreen else QuranGreen.copy(alpha = .1f),
             contentColor = if (playing || buffering) Color.White else QuranGreen
-        )
+        ),
+        modifier = Modifier.tourTarget("quran_audio_row_play")
     ) {
         if (buffering) CircularProgressIndicator(Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
         else Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow, localizedUiText(if (playing) "Pause" else "Play"))
@@ -736,10 +737,10 @@ internal fun AudioRowActions(
                 }
             }
             downloading -> CircularProgressIndicator(Modifier.size(22.dp), color = QuranGreen, strokeWidth = 2.dp)
-            downloaded -> IconButton({ com.example.core.analytics.AppAnalytics.interaction("quran_screen", "open_remove_download", "tap"); confirmDelete = true }) {
+            downloaded -> IconButton({ com.example.core.analytics.AppAnalytics.interaction("quran_screen", "open_remove_download", "tap"); confirmDelete = true }, Modifier.tourTarget("quran_audio_row_downloaded")) {
                 Icon(Icons.Default.DownloadDone, localizedUiText("Delete offline audio"), tint = Color(0xFF2E7D32))
             }
-            else -> IconButton(download) {
+            else -> IconButton(download, Modifier.tourTarget("quran_audio_row_download")) {
                 Icon(Icons.Default.Download, localizedUiText("Download for offline"), tint = QuranMuted)
             }
         }
@@ -944,8 +945,8 @@ private fun ParaPickerDialog(dismiss: () -> Unit, open: (Int) -> Unit) {
                         Modifier.fillMaxWidth().clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("quran_screen", "pick_para", "tap", item = "para_${index + 1}"); open(paraStartPages[index]) }.padding(vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        LocalizedText("Para ${index + 1}", fontWeight = FontWeight.SemiBold)
-                        LocalizedText("Page ${paraStartPages[index]}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        LocalizedText(localizedUiTemplate("Para {para}", "para" to index + 1), fontWeight = FontWeight.SemiBold)
+                        LocalizedText(localizedUiTemplate("Page {page}", "page" to paraStartPages[index]), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .15f))
                 }

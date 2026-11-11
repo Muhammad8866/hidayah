@@ -84,6 +84,8 @@ class HomeScreenScreenshotTest {
     @Test
     fun quickActionsRevealEveryTool() {
         showHome()
+        // Today's times now sit above the shortcuts, so the grid starts below the first screen.
+        composeRule.onNodeWithTag("home_screen_scroll").performScrollToNode(hasTestTag("action_adhkar"))
         composeRule.onNodeWithTag("action_adhkar").assertExists()
         composeRule.onNodeWithTag("home_screen_scroll").performScrollToNode(hasTestTag("action_zakat"))
         composeRule.onNodeWithTag("action_zakat").assertExists()

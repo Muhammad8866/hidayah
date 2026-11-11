@@ -3,6 +3,7 @@ package com.example.ui.screens
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import org.json.JSONObject
@@ -13,7 +14,7 @@ internal const val KALIMA_AUDIO_DIR = "kalima_audio"
 internal const val KALIMA_TIMINGS_FILE = "timings.json"
 internal const val KALIMA_SLOW_SPEED = .75f
 private val KALIMA_AUDIO_EXTENSIONS = setOf("mp3", "ogg", "m4a")
-private const val KALIMA_TICK_MS = 100L
+private const val KALIMA_TICK_MS = 40L
 
 /** Entry id to asset path for every recording among [files] of the audio folder. */
 internal fun kalimaRecordings(files: List<String>): Map<String, String> =
@@ -43,6 +44,7 @@ internal class KalimaRecitation(
     private val assets = context.applicationContext.assets
     private val main = Handler(Looper.getMainLooper())
     private var player: MediaPlayer? = null
+    private var load: com.example.core.analytics.AppAnalytics.AudioLoad? = null
 
     val clips: Map<String, String> = runCatching { kalimaRecordings(assets.list(KALIMA_AUDIO_DIR).orEmpty().toList()) }
         .getOrDefault(emptyMap())
@@ -65,17 +67,35 @@ internal class KalimaRecitation(
         return runCatching {
             val mp = MediaPlayer()
             player = mp
+            val audioLoad = com.example.core.analytics.AppAnalytics.audioLoad("kalima_audio")
+            load = audioLoad
             mp.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
             assets.openFd(path).use { mp.setDataSource(it.fileDescriptor, it.startOffset, it.length) }
-            mp.setOnCompletionListener { if (player === mp) { stop(); onDone() } }
-            mp.setOnErrorListener { _, _, _ -> if (player === mp) { stop(); onError() }; true }
+            mp.setOnCompletionListener { if (player === mp) { com.example.core.analytics.AppAnalytics.mediaState("kalima_audio", "completed"); stop(); onDone() } }
+            mp.setOnErrorListener { _, _, _ ->
+                if (player === mp) { audioLoad.failed(); com.example.core.analytics.AppAnalytics.mediaState("kalima_audio", "failed", "playback_error"); stop(); onError() }
+                true
+            }
             mp.prepare()
-            if (from != null) mp.seekTo(from.toInt())
-            mp.start()
-            if (slow) mp.playbackParams = mp.playbackParams.setSpeed(KALIMA_SLOW_SPEED)
-            if (starts != null) tick(mp, starts, phrase, until)
-        }.onFailure { stop() }.isSuccess
+            audioLoad.ready()
+            val begin = {
+                mp.start()
+                // Setting the speed on a stopped MediaPlayer starts it too, so it follows start().
+                if (slow) mp.playbackParams = mp.playbackParams.setSpeed(KALIMA_SLOW_SPEED)
+                if (starts != null) tick(mp, starts, phrase, until)
+            }
+            com.example.core.analytics.AppAnalytics.media("kalima_audio", if (phrase == null) "play" else "play_phrase")
+            com.example.core.analytics.AppAnalytics.content("kalima_audio", id, "play")
+            if (from == null) begin()
+            else {
+                // Start only once the seek has landed, at the exact phrase start rather than the
+                // previous sync frame, so the phrase does not begin with the tail of the one before.
+                mp.setOnSeekCompleteListener { if (player === mp && !mp.isPlaying) runCatching(begin).onFailure { stop() } }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) mp.seekTo(from, MediaPlayer.SEEK_CLOSEST)
+                else mp.seekTo(from.toInt())
+            }
+        }.onFailure { load?.failed(); com.example.core.analytics.AppAnalytics.mediaState("kalima_audio", "failed", "prepare_error"); stop() }.isSuccess
     }
 
     private fun tick(mp: MediaPlayer, starts: List<Long>, phrase: Int?, until: Long?) {

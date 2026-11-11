@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
@@ -48,9 +50,9 @@ import com.example.ui.components.islamicPattern
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.Brush
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.LocalAppLanguage
-import com.example.ui.localization.localizeUiText
 import com.example.ui.localization.localizedUiText
 
 @Composable
@@ -59,7 +61,7 @@ internal fun QuranListenLibrary(modifier: Modifier = Modifier) {
 
     var collection by rememberSaveable { mutableIntStateOf(0) }
     Column(modifier.background(MushafPaper)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).tourTarget("quranmodes_tafsir_collection")) {
             FilterChip(collection == 0, { collection = 0 }, label = { LocalizedText("Tilawat") }, colors = quranChipColors(),
                 modifier = Modifier.testTag("quran_listen_tilawat"))
             Spacer(Modifier.width(8.dp))
@@ -74,29 +76,32 @@ internal fun QuranListenLibrary(modifier: Modifier = Modifier) {
 @Composable
 private fun TafsirAudioLibrary(modifier: Modifier = Modifier) {
     com.example.core.analytics.AnalyticsScreen("tafsir_audio_library")
+    TourScreen("quranmodes_tafsir_audio")
 
     val context = LocalContext.current
-    val allTracks = remember(context) {
-        TafsirAudioManager.init(context)
-        TafsirAudioCatalog.tracks(context)
+    // Asset parse + manager init run off the main thread; cached after the first visit so it is instant.
+    val loadedTracks by produceState(
+        initialValue = TafsirAudioCatalog.cachedTracks(),
+        context
+    ) {
+        // init() is idempotent (returns at once after the first call); the catalog is only cached via init().
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            TafsirAudioManager.init(context)
+            TafsirAudioCatalog.tracks(context)
+        }
     }
-    val tracks = allTracks
+    val tracks = loadedTracks ?: run {
+        // Same container as the loaded screen, shown only for the first-ever load.
+        Box(modifier.fillMaxSize().background(MushafPaper))
+        return
+    }
     val bySurah = remember(tracks) { tracks.groupBy { it.surah } }
     val state by TafsirAudioManager.state.collectAsState()
     var mode by rememberSaveable { mutableIntStateOf(0) }
     var query by rememberSaveable { mutableStateOf("") }
-    com.example.core.analytics.AnalyticsSearch("quran_tafsir_audio_screen", query)
+    com.example.core.analytics.AnalyticsSearch("tafsir_audio_library", query)
     val language = LocalAppLanguage.current
-    val surahs = remember(query, language) {
-        val q = query.trim()
-        if (q.isEmpty()) FullQuranCatalog.surahs
-        else FullQuranCatalog.surahs.filter {
-            it.number.toString() == q || it.englishName.contains(q, true) ||
-                it.englishMeaning.contains(q, true) || it.arabicName.contains(q) ||
-                localizeUiText(it.englishName, language).contains(q, true) ||
-                localizeUiText(it.englishMeaning, language).contains(q, true)
-        }
-    }
+    val surahs = remember(query, language) { com.example.quran.QuranSearch.surahs(query, language) }
 
     Column(modifier.background(MushafPaper)) {
         state.error?.let { error ->
@@ -113,24 +118,15 @@ private fun TafsirAudioLibrary(modifier: Modifier = Modifier) {
             item {
                 Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    FilterChip(mode == 0, { mode = 0 }, label = { LocalizedText("Surah wise") }, colors = quranChipColors())
+                    FilterChip(mode == 0, { mode = 0 }, label = { LocalizedText("Surah wise") }, colors = quranChipColors(),
+                        modifier = Modifier.tourTarget("quranmodes_tafsir_mode"))
                     Spacer(Modifier.width(8.dp))
-                    FilterChip(mode == 1, { mode = 1 }, label = { LocalizedText("Para wise") }, colors = quranChipColors())
+                    FilterChip(mode == 1, { mode = 1 }, label = { LocalizedText("Para wise") }, colors = quranChipColors(),
+                        modifier = Modifier.tourTarget("quranmodes_tafsir_mode"))
                     Spacer(Modifier.weight(1f))
-                    Icon(Icons.Default.DownloadDone, null, tint = QuranMuted, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.DownloadDone, null, tint = QuranMuted, modifier = Modifier.size(16.dp).tourTarget("quranmodes_tafsir_offline_count"))
                     Spacer(Modifier.width(4.dp))
                     LocalizedText("${tracks.count { it.id in state.downloaded }}/114", color = QuranMuted, fontSize = 12.sp)
-                }
-            }
-            item {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    LocalizedText("Sirat ul Jinan • Urdu • Dawat-e-Islami", Modifier.weight(1f),
-                        color = QuranMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    TextButton({ com.example.core.analytics.AppAnalytics.interaction("quran_tafsir_audio_screen", "open_tafsir_source", "tap"); context.startActivity(Intent(Intent.ACTION_VIEW,
-                        Uri.parse("https://www.dawateislami.net/medialibrary/category/35/?category=18"))) },
-                        colors = ButtonDefaults.textButtonColors(contentColor = QuranGreen)) {
-                        LocalizedText("Source")
-                    }
                 }
             }
             if (mode == 0) {
@@ -138,8 +134,8 @@ private fun TafsirAudioLibrary(modifier: Modifier = Modifier) {
                     QuranSearchField(
                         query = query,
                         onQueryChange = { query = it },
-                        onClear = { com.example.core.analytics.AppAnalytics.interaction("quran_tafsir_audio_screen", "clear_tafsir_search", "tap"); query = "" },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp).testTag("tafsir_audio_search")
+                        onClear = { com.example.core.analytics.AppAnalytics.interaction("tafsir_audio_library", "clear_tafsir_search", "tap"); query = "" },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp).testTag("tafsir_audio_search").tourTarget("quranmodes_tafsir_search")
                     ) { LocalizedText("Search surah by name or number") }
                 }
                 if (surahs.isEmpty()) item {
@@ -189,9 +185,9 @@ private fun TafsirSurahRow(surah: Int, tracks: List<TafsirAudioTrack>, state: Ta
     Row(
         Modifier.fillMaxWidth()
             .background(rowColor)
-            .clickable(role = Role.Button, onClick = com.example.core.analytics.AppAnalytics.trackItemAction("quran_tafsir_audio_screen", "play_tafsir_surah", "surah_$surah", play))
+            .clickable(role = Role.Button, onClick = com.example.core.analytics.AppAnalytics.trackItemAction("tafsir_audio_library", "play_tafsir_surah", "surah_$surah", play))
             .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp)
-            .testTag("tafsir_audio_surah_$surah"),
+            .testTag("tafsir_audio_surah_$surah").tourTarget("quranmodes_tafsir_surah_row"),
         verticalAlignment = Alignment.CenterVertically
     ) {
         NumberBadge(surah, active)
@@ -202,9 +198,9 @@ private fun TafsirSurahRow(surah: Int, tracks: List<TafsirAudioTrack>, state: Ta
                 when {
                     playable.isEmpty() -> "Official video • Open to listen"
                     downloading -> "Downloading tafseer…"
-                    resumable -> "Resume from ${time(state.resumePositionMs)}"
-                    tracks.size > 1 -> "Sirat ul Jinan • ${tracks.size} parts"
-                    else -> "${meta.englishMeaning} • Tafseer"
+                    resumable -> localizedUiTemplate("Resume from {time}", "time" to time(state.resumePositionMs))
+                    tracks.size > 1 -> localizedUiTemplate("Sirat ul Jinan • {count} parts", "count" to tracks.size)
+                    else -> localizedUiTemplate("{meaning} • Tafseer", "meaning" to localizedUiText(meta.englishMeaning))
                 }, fontSize = 12.sp,
                 color = if (downloading || resumable) MushafGold else QuranMuted, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
@@ -213,7 +209,9 @@ private fun TafsirSurahRow(surah: Int, tracks: List<TafsirAudioTrack>, state: Ta
         Spacer(Modifier.width(8.dp))
         Text(meta.arabicName, fontFamily = IndoPakFont, fontSize = 18.sp, color = QuranGreen)
         if (playable.isEmpty()) {
-            FilledTonalIconButton(openVideo, modifier = Modifier.testTag("tafsir_open_surah_$surah"),
+            // Same gap AudioRowActions leaves, so the Arabic name does not run into the button.
+            Spacer(Modifier.width(4.dp))
+            FilledTonalIconButton(openVideo, modifier = Modifier.testTag("tafsir_open_surah_$surah").tourTarget("quranmodes_tafsir_open_video"),
                 colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = QuranGreen, contentColor = Color.White)) {
                 Icon(Icons.AutoMirrored.Filled.OpenInNew, localizedUiText("Open official tafseer video"))
             }
@@ -237,30 +235,30 @@ private fun TafsirParaRow(para: Int, tracks: List<TafsirAudioTrack>, state: Tafs
     if (tracks.isEmpty()) return
     val play = { TafsirAudioManager.playQueue(playable) }
     Row(
-        Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = com.example.core.analytics.AppAnalytics.trackItemAction("quran_tafsir_audio_screen", "play_tafsir_para", "para_$para", play))
+        Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = com.example.core.analytics.AppAnalytics.trackItemAction("tafsir_audio_library", "play_tafsir_para", "para_$para", play))
             .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp)
-            .testTag("tafsir_audio_para_$para"),
+            .testTag("tafsir_audio_para_$para").tourTarget("quranmodes_tafsir_para_row"),
         verticalAlignment = Alignment.CenterVertically
     ) {
         NumberBadge(para, active)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            LocalizedText("Para $para", fontWeight = FontWeight.SemiBold, color = MushafInk)
-            LocalizedText("${QuranAudioManager.surahName(tracks.first().surah)} – " +
-                QuranAudioManager.surahName(tracks.last().surah),
+            LocalizedText(localizedUiTemplate("Para {para}", "para" to para), fontWeight = FontWeight.SemiBold, color = MushafInk)
+            Text("${localizedUiText(QuranAudioManager.surahName(tracks.first().surah))} – " +
+                localizedUiText(QuranAudioManager.surahName(tracks.last().surah)),
                 fontSize = 12.sp, color = QuranMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             LocalizedText(
-                if (offline == playable.size) "Available offline" else "$offline/${playable.size} offline",
+                if (offline == playable.size) "Available offline" else localizedUiTemplate("{done}/{total} offline", "done" to offline, "total" to playable.size),
                 fontSize = 11.sp, color = if (offline == playable.size) Color(0xFF2E7D32) else QuranMuted
             )
             if (tracks.any { !it.isStreamable }) LocalizedText("Surah 83 video: Surah wise list",
                 fontSize = 11.sp, color = MushafGold)
         }
-        FilledTonalIconButton(play,
+        FilledTonalIconButton(play, modifier = Modifier.tourTarget("quranmodes_tafsir_para_play"),
             colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = QuranGreen, contentColor = Color.White)) {
             Icon(Icons.Default.PlayArrow, localizedUiText("Play Para"))
         }
-        if (offline < playable.size) IconButton({ com.example.core.analytics.AppAnalytics.interaction("quran_tafsir_audio_screen", "download_tafsir_para", "tap", item = "para_$para"); TafsirAudioManager.downloadAll(playable) }) {
+        if (offline < playable.size) IconButton({ com.example.core.analytics.AppAnalytics.interaction("tafsir_audio_library", "download_tafsir_para", "tap", item = "para_$para"); TafsirAudioManager.downloadAll(playable) }, modifier = Modifier.tourTarget("quranmodes_tafsir_para_download")) {
             Icon(Icons.Default.Download, localizedUiText("Download Para"), tint = QuranGreen)
         } else Spacer(Modifier.width(48.dp))
     }
@@ -270,7 +268,7 @@ private fun TafsirParaRow(para: Int, tracks: List<TafsirAudioTrack>, state: Tafs
 @Composable
 private fun TafsirResumeCard(track: TafsirAudioTrack, positionMs: Int) {
     HeroSurface(
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp).tourTarget("quranmodes_tafsir_resume"),
         shape = RoundedCornerShape(20.dp),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
     ) {
@@ -282,9 +280,9 @@ private fun TafsirResumeCard(track: TafsirAudioTrack, positionMs: Int) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 LocalizedText("Continue listening", fontSize = 12.sp, color = QuranGoldLight, fontWeight = FontWeight.SemiBold)
-                LocalizedText(if (track.surah > 0) "${track.surah}. ${QuranAudioManager.surahName(track.surah)}" else track.title,
+                LocalizedText(if (track.surah > 0) "${track.surah}. ${localizedUiText(QuranAudioManager.surahName(track.surah))}" else track.title,
                     fontWeight = FontWeight.Bold, color = Color.White, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                LocalizedText("From ${time(positionMs)}", fontSize = 12.sp, color = Color.White.copy(alpha = .78f))
+                LocalizedText(localizedUiTemplate("From {time}", "time" to time(positionMs)), fontSize = 12.sp, color = Color.White.copy(alpha = .78f))
             }
             Spacer(Modifier.width(10.dp))
             FilledIconButton(TafsirAudioManager::resumeLast,
@@ -311,10 +309,10 @@ private fun TafsirNowPlaying(state: TafsirAudioState) {
                 Column(Modifier.weight(1f)) {
                     LocalizedText(if (state.isBuffering) "Loading tafseer audio…" else "Now playing • Tafseer",
                         color = QuranGoldLight, fontSize = 11.sp)
-                    LocalizedText(if (track.surah > 0) "${track.surah}. ${QuranAudioManager.surahName(track.surah)}" else track.title,
+                    LocalizedText(if (track.surah > 0) "${track.surah}. ${localizedUiText(QuranAudioManager.surahName(track.surah))}" else track.title,
                         color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                PlaybackSpeedButton(state.speed, TafsirAudioManager::setSpeed, color = QuranGoldLight)
+                PlaybackSpeedButton(state.speed, TafsirAudioManager::setSpeed, Modifier.tourTarget("quranmodes_tafsir_speed"), color = QuranGoldLight)
                 Spacer(Modifier.width(10.dp))
                 if (track.surah > 0) Text(FullQuranCatalog.surahs[track.surah - 1].arabicName,
                     color = QuranGoldLight, fontFamily = IndoPakFont, fontSize = 20.sp)
@@ -322,25 +320,26 @@ private fun TafsirNowPlaying(state: TafsirAudioState) {
             Slider(
                 value = state.positionMs.toFloat().coerceIn(0f, state.durationMs.coerceAtLeast(1).toFloat()),
                 onValueChange = { TafsirAudioManager.seekTo(it.toInt()) },
+                onValueChangeFinished = { com.example.core.analytics.AppAnalytics.media("tafsir_audio", "seek") },
                 valueRange = 0f..state.durationMs.coerceAtLeast(1).toFloat(),
                 colors = SliderDefaults.colors(thumbColor = QuranGoldLight, activeTrackColor = QuranGoldLight,
                     inactiveTrackColor = Color.White.copy(alpha = .25f)),
-                modifier = Modifier.fillMaxWidth().height(28.dp)
+                modifier = Modifier.fillMaxWidth().height(28.dp).tourTarget("quranmodes_tafsir_seek")
             )
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 LocalizedText(time(state.positionMs), color = QuranGoldLight, fontSize = 11.sp)
                 Spacer(Modifier.weight(1f))
-                IconButton(TafsirAudioManager::stop) { Icon(Icons.Default.Stop, localizedUiText("Stop"), tint = Color.White) }
-                IconButton(TafsirAudioManager::previous) {
+                IconButton(TafsirAudioManager::stop, Modifier.tourTarget("quranmodes_tafsir_stop")) { Icon(Icons.Default.Stop, localizedUiText("Stop"), tint = Color.White) }
+                IconButton(TafsirAudioManager::previous, Modifier.tourTarget("quranmodes_tafsir_previous")) {
                     Icon(Icons.Default.SkipPrevious, localizedUiText("Previous surah"), tint = Color.White)
                 }
                 FilledIconButton(TafsirAudioManager::toggle,
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = QuranGoldLight, contentColor = QuranGreen),
-                    modifier = Modifier.size(48.dp)) {
+                    modifier = Modifier.size(48.dp).tourTarget("quranmodes_tafsir_play_pause")) {
                     Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         localizedUiText(if (state.isPlaying) "Pause" else "Play"))
                 }
-                IconButton(TafsirAudioManager::next) {
+                IconButton(TafsirAudioManager::next, Modifier.tourTarget("quranmodes_tafsir_next")) {
                     Icon(Icons.Default.SkipNext, localizedUiText("Next surah"), tint = Color.White)
                 }
                 Spacer(Modifier.width(48.dp))

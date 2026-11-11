@@ -1,5 +1,8 @@
 package com.example.ui.screens
 
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
+
 import android.app.DatePickerDialog
 import android.content.Context
 import androidx.compose.animation.animateColorAsState
@@ -82,6 +85,7 @@ private fun RozaMark.color(): Color = when (this) {
 @Composable
 internal fun RozaTrackerScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     com.example.core.analytics.AnalyticsScreen("roza_tracker_screen")
+    TourScreen("ramadan_roza_tracker")
     val context = LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("daily_tools", Context.MODE_PRIVATE) }
     val store = remember(prefs) { RozaTrackerStore(prefs) }
@@ -123,11 +127,14 @@ internal fun RozaTrackerScreen(onBack: () -> Unit, modifier: Modifier = Modifier
         val date = selected
         val previous = store.mark(date)
         if (previous == next) return
+        val streakBefore = RozaLogic.stats(store.logs(), today).currentStreak
         if (!store.setMark(date, next, today)) {
             scope.launch { snackbar.showSnackbar(if (next == RozaMark.QAZA) noDebtText else conflictText) }
             return
         }
         revision++
+        val streakAfter = RozaLogic.stats(store.logs(), today).currentStreak
+        if (streakAfter > streakBefore) com.example.core.analytics.AppAnalytics.streak("roza_tracker", streakAfter)
         scope.launch {
             snackbar.currentSnackbarData?.dismiss()
             if (snackbar.showSnackbar(savedText, undoText, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) {
@@ -150,7 +157,8 @@ internal fun RozaTrackerScreen(onBack: () -> Unit, modifier: Modifier = Modifier
                     store = store,
                     today = today,
                     onChanged = { revision++ },
-                    onMessage = { message -> scope.launch { snackbar.showSnackbar(message) } }
+                    onMessage = { message -> scope.launch { snackbar.showSnackbar(message) } },
+                    modifier = Modifier.tourTarget("ramadan_roza_menu")
                 )
             })
             LazyColumn(
@@ -159,8 +167,8 @@ internal fun RozaTrackerScreen(onBack: () -> Unit, modifier: Modifier = Modifier
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
                 item { RozaHeroCard(balance, stats, numbers, onAdd = { count = ""; showAdd = true }) }
-                item { RozaStatsCard(stats, numbers) }
-                if (ramadan != null) item { RozaRamadanCard(ramadan, locale) }
+                item { Box(Modifier.tourTarget("ramadan_roza_stats")) { RozaStatsCard(stats, numbers) } }
+                if (ramadan != null) item { Box(Modifier.tourTarget("ramadan_roza_ramadan_progress")) { RozaRamadanCard(ramadan, locale) } }
                 item {
                     RozaDayEditor(
                         selected = selected, today = today, mark = logs[selected], balance = balance,
@@ -191,12 +199,12 @@ internal fun RozaTrackerScreen(onBack: () -> Unit, modifier: Modifier = Modifier
             }
         }
     }
-    if (showClear) AlertDialog(onDismissRequest = { showClear = false }, title = { LocalizedText("Clear day's log") },
+    if (showClear) AlertDialog(onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "dismiss_clear_day", "dismiss"); showClear = false }, title = { LocalizedText("Clear day's log") },
         text = { LocalizedText("Clearing this entry also updates your Qaza balance.") },
-        confirmButton = { TextButton(onClick = { showClear = false; updateLog(null) }) { LocalizedText("Clear day's log") } },
-        dismissButton = { TextButton(onClick = { showClear = false }) { LocalizedText("Cancel") } })
+        confirmButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "confirm_clear_day"); showClear = false; updateLog(null) }) { LocalizedText("Clear day's log") } },
+        dismissButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "dismiss_clear_day", "dismiss"); showClear = false }) { LocalizedText("Cancel") } })
     if (showAdd) AlertDialog(
-        onDismissRequest = { showAdd = false },
+        onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "dismiss_add_missed", "dismiss"); showAdd = false },
         title = { LocalizedText("Add previous missed fasts") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             LocalizedText("Only add fasts that are not already recorded in your daily log.", style = MaterialTheme.typography.bodyMedium)
@@ -206,9 +214,9 @@ internal fun RozaTrackerScreen(onBack: () -> Unit, modifier: Modifier = Modifier
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         } },
         confirmButton = { TextButton(enabled = (count.toIntOrNull() ?: 0) > 0 && (count.toLongOrNull() ?: 0) + balance <= Int.MAX_VALUE, onClick = {
-            store.addMissed(count.toInt()); revision++; showAdd = false
+            com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "add_missed_fasts"); store.addMissed(count.toInt()); revision++; showAdd = false
         }) { LocalizedText("Add") } },
-        dismissButton = { TextButton(onClick = { showAdd = false }) { LocalizedText("Cancel") } }
+        dismissButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "dismiss_add_missed", "dismiss"); showAdd = false }) { LocalizedText("Cancel") } }
     )
 }
 
@@ -223,20 +231,20 @@ private fun RozaHeroCard(balance: Int, stats: RozaStats, numbers: NumberFormat, 
                 style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
                 color = if (balance == 0) accent else MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.testTag("roza_balance")
+                modifier = Modifier.testTag("roza_balance").tourTarget("ramadan_roza_balance")
             )
             LocalizedText(
                 if (balance == 0) "No Qaza fasts pending" else "Fasts to make up",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).tourTarget("ramadan_roza_streaks"), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 RozaStreak("Current streak", numbers.format(stats.currentStreak), Modifier.weight(1f))
                 RozaStreak("Longest streak", numbers.format(stats.longestStreak), Modifier.weight(1f))
             }
             Button(
-                onClick = onAdd,
-                modifier = Modifier.heightIn(min = 48.dp),
+                onClick = com.example.core.analytics.AppAnalytics.trackAction("roza_tracker_screen", "open_add_missed", onAdd),
+                modifier = Modifier.heightIn(min = 48.dp).tourTarget("ramadan_roza_add_missed"),
                 colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = MaterialTheme.colorScheme.surface)
             ) { LocalizedText("Add previous missed fasts") }
         }
@@ -337,11 +345,12 @@ private fun RozaDayEditor(
     ToolCard {
         Column(Modifier.animateContentSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionTitle("Daily fast log")
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { onSelect(selected.minusDays(1)) }) {
+            Row(Modifier.fillMaxWidth().tourTarget("ramadan_roza_day_nav"), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "previous_day"); onSelect(selected.minusDays(1)) }) {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, localizedUiText("Previous day"))
                 }
                 TextButton(modifier = Modifier.weight(1f), onClick = {
+                    com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "open_date_picker");
                     DatePickerDialog(context, { _, year, monthIndex, day ->
                         onSelect(LocalDate.of(year, monthIndex + 1, day))
                     }, selected.year, selected.monthValue - 1, selected.dayOfMonth).apply {
@@ -353,11 +362,11 @@ private fun RozaDayEditor(
                         Text(hijriText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                IconButton(onClick = { onSelect(selected.plusDays(1)) }, enabled = selected < today) {
+                IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "next_day"); onSelect(selected.plusDays(1)) }, enabled = selected < today) {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, localizedUiText("Next day"))
                 }
             }
-            if (selected != today) TextButton(onClick = { onSelect(today) }) { LocalizedText("Today") }
+            if (selected != today) TextButton(modifier = Modifier.tourTarget("ramadan_roza_today"), onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "jump_today"); onSelect(today) }) { LocalizedText("Today") }
             if (occasion != null) RozaOccasion(occasion)
             LocalizedText(mark?.label ?: "Not logged yet", color = mark?.color() ?: MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold)
@@ -368,26 +377,26 @@ private fun RozaDayEditor(
                     active = active,
                     enabled = option != RozaMark.QAZA || balance.toLong() - (mark?.debt ?: 0) > 0 || active,
                     suggested = option == suggested && mark == null,
-                    onClick = { onMark(option) }
+                    onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "mark_day", "select", item = option.name); onMark(option) }
                 )
             }
             val warning = mark?.let { RozaLogic.warning(selected, it) }
             if (warning != null) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.tourTarget("ramadan_roza_warning"), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Warning, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
                     LocalizedText(warning.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
             }
             if (balance == 0 && mark != RozaMark.QAZA) LocalizedText("Add missed fasts before logging a Qaza fast.", style = MaterialTheme.typography.bodySmall)
             RozaNoteField(selected, note, onNote)
-            if (mark != null) TextButton(onClick = onClear) { LocalizedText("Clear day's log") }
+            if (mark != null) TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("roza_tracker_screen", "open_clear_day", onClear), modifier = Modifier.tourTarget("ramadan_roza_clear")) { LocalizedText("Clear day's log") }
         }
     }
 }
 
 @Composable
 private fun RozaOccasion(occasion: RozaSunnahDay) {
-    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.fillMaxWidth().tourTarget("ramadan_roza_occasion")) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             LocalizedText(occasion.title, style = MaterialTheme.typography.titleSmall)
             LocalizedText(occasion.reference, style = MaterialTheme.typography.bodySmall)
@@ -408,6 +417,7 @@ private fun RozaMarkOption(option: RozaMark, active: Boolean, enabled: Boolean, 
     Row(
         Modifier.fillMaxWidth()
             .testTag("roza_${option.name.lowercase()}")
+            .tourTarget("ramadan_roza_mark_options")
             .alpha(if (enabled) 1f else 0.38f)
             .clip(shape)
             .background(container)
@@ -437,7 +447,7 @@ private fun RozaNoteField(date: LocalDate, stored: String?, onSave: (String?) ->
     val focusManager = LocalFocusManager.current
     fun save() {
         val next = text.trim()
-        if (next != stored.orEmpty()) onSave(next.ifEmpty { null })
+        if (next != stored.orEmpty()) { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "save_note", "edit"); onSave(next.ifEmpty { null }) }
     }
     OutlinedTextField(
         value = text,
@@ -447,7 +457,7 @@ private fun RozaNoteField(date: LocalDate, stored: String?, onSave: (String?) ->
         maxLines = 3,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { save(); focusManager.clearFocus() }),
-        modifier = Modifier.fillMaxWidth().testTag("roza_note").onFocusChanged {
+        modifier = Modifier.fillMaxWidth().testTag("roza_note").tourTarget("ramadan_roza_note").onFocusChanged {
             if (focused && !it.isFocused) save()
             focused = it.isFocused
         }
@@ -479,16 +489,17 @@ private fun RozaCalendarCard(
     val occasions = remember(month) { (1..month.lengthOfMonth()).map { month.atDay(it) }.filter { RozaSunnahFasts.occasion(it) != null }.toSet() }
     ToolCard {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { onSelect(selected.minusMonths(1)) }) {
+            Row(Modifier.tourTarget("ramadan_roza_month_nav"), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "previous_month"); onSelect(selected.minusMonths(1)) }) {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, localizedUiText("Previous month"))
                 }
                 Text(selected.format(monthFormat), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 IconButton(enabled = month < YearMonth.from(today), onClick = {
+                    com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "next_month");
                     onSelect(selected.plusMonths(1).coerceAtMost(today))
                 }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, localizedUiText("Next month")) }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth().tourTarget("ramadan_roza_month_stats"), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f)) { Text(numbers.format(fasts), style = MaterialTheme.typography.headlineMedium); LocalizedText("Fasts completed") }
                 Column(Modifier.weight(1f)) { Text(numbers.format(qaza), style = MaterialTheme.typography.headlineMedium); LocalizedText("Qaza completed") }
             }
@@ -496,7 +507,7 @@ private fun RozaCalendarCard(
             val elapsed = if (month == YearMonth.from(today)) today.dayOfMonth else month.lengthOfMonth()
             LinearProgressIndicator(
                 progress = { monthlyLogs.size.toFloat() / elapsed },
-                modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape).tourTarget("ramadan_roza_days_logged"),
                 strokeCap = StrokeCap.Round,
                 drawStopIndicator = {}
             )
@@ -519,8 +530,8 @@ private fun RozaCalendarCard(
                         if (date == null) Spacer(Modifier.weight(1f)) else RozaDayCell(
                             date = date, mark = logs[date], isSelected = date == selected, isToday = date == today,
                             enabled = date <= today, hasDot = date in notes || date in occasions,
-                            numbers = numbers, dateFormat = dateFormat, onClick = { onSelect(date) },
-                            modifier = Modifier.weight(1f)
+                            numbers = numbers, dateFormat = dateFormat, onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "calendar_day"); onSelect(date) },
+                            modifier = Modifier.weight(1f).tourTarget("ramadan_roza_calendar_day")
                         )
                     }
                     repeat(7 - week.size) { Spacer(Modifier.weight(1f)) }
@@ -584,7 +595,7 @@ private fun RozaDayCell(
 
 @Composable
 private fun RozaLegend() {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.tourTarget("ramadan_roza_legend"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         RozaMark.entries.chunked(2).forEach { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { mark ->
@@ -604,12 +615,12 @@ private fun RozaLegend() {
 
 @Composable
 private fun RozaRecentDays(today: LocalDate, logs: Map<LocalDate, RozaMark>, dateFormat: DateTimeFormatter, onSelect: (LocalDate) -> Unit) {
-    Column {
+    Column(Modifier.tourTarget("ramadan_roza_recent")) {
         SectionTitle("Last 7 days")
         repeat(7) { offset ->
             val date = today.minusDays(offset.toLong())
             val mark = logs[date]
-            TextButton(onClick = { onSelect(date) }, modifier = Modifier.fillMaxWidth()) {
+            TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("roza_tracker_screen", "recent_day"); onSelect(date) }, modifier = Modifier.fillMaxWidth()) {
                 Box(Modifier.size(28.dp).background((mark?.color() ?: MaterialTheme.colorScheme.outline).copy(alpha = 0.18f), CircleShape),
                     contentAlignment = Alignment.Center) {
                     if (mark != null) Icon(mark.icon, null, Modifier.size(16.dp), tint = mark.color())

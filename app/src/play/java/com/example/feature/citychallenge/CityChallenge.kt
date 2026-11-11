@@ -124,6 +124,13 @@ internal fun weekId(date: LocalDate): String =
 internal fun ccCleanName(text: String, max: Int): String =
     text.replace(Regex("\\p{Cntrl}"), " ").replace(Regex("\\s+"), " ").trim().take(max).trim()
 
+/**
+ * Every city whose board may hold this user's rows: the current one first, then each city the
+ * user ever published to, so deleting community data also clears boards from earlier cities.
+ */
+internal fun ccCitiesToDelete(current: String?, published: Set<String>): List<String> =
+    (listOfNotNull(current) + published).filter { it.isNotBlank() }.distinct()
+
 /** Prayer marks that count as offered; "Late" is still a prayer prayed. */
 internal val CC_PRAYED_MARKS = setOf("Jamaat", "Prayed", "Late")
 
@@ -206,6 +213,19 @@ class CcLocalStore(context: Context) {
     }
 
     fun clearPublished() { prefs.edit().remove("pub_sig").remove("pub_at").apply() }
+
+    /** Every city id this user has uploaded a row to, kept so account deletion can clear them all. */
+    val publishedCities: Set<String>
+        get() = prefs.getStringSet("published_cities", null)?.toSet() ?: emptySet()
+
+    fun rememberPublishedCity(cityId: String) {
+        val now = publishedCities
+        if (cityId !in now) prefs.edit().putStringSet("published_cities", now + cityId).apply()
+    }
+
+    fun forgetPublishedCities(cityIds: Collection<String>) {
+        prefs.edit().putStringSet("published_cities", publishedCities - cityIds.toSet()).apply()
+    }
 
     /** A leave that could not reach the server yet; retried the next time the screen opens. */
     var pendingLeave: Pair<String, String>?
@@ -310,6 +330,8 @@ class CcRemote(private val context: Context) {
     /** Uploads this week's totals. The rules allow one write per 30 s, so a throttled write is skipped. */
     suspend fun publish(profile: CcProfile, weekId: String, scores: CcScores): Boolean {
         val uid = uid()
+        // Remembered before the write: a write that lands but whose reply is lost still counts.
+        CcLocalStore(context).rememberPublishedCity(profile.cityId)
         val capped = capped(scores)
         val data = mapOf(
             "name" to ccCleanName(profile.displayName, 24).ifBlank { "?" },
@@ -357,16 +379,22 @@ class CcRemote(private val context: Context) {
     )
 
     /**
-     * Removes this user's board entries for the last year of weeks in [cityId]. Deleting a missing
-     * document succeeds, so weeks the user never joined cost nothing but a write.
+     * Removes this user's board entries for the last year of weeks in [cityId] and in every other
+     * city this user has published to. Deleting a missing document succeeds, so weeks the user
+     * never joined cost nothing but a write. One batch per city keeps each under Firestore's limit.
      */
-    suspend fun deleteMine(cityId: String, today: LocalDate) {
+    suspend fun deleteMine(cityId: String?, today: LocalDate) {
         val current = auth.currentUser ?: return
-        val batch = firestore.batch()
-        repeat(DELETE_WEEKS) { i ->
-            batch.delete(members(cityId, weekId(today.minusWeeks(i.toLong()))).document(current.uid))
+        val store = CcLocalStore(context)
+        val cities = ccCitiesToDelete(cityId, store.publishedCities)
+        for (city in cities) {
+            val batch = firestore.batch()
+            repeat(DELETE_WEEKS) { i ->
+                batch.delete(members(city, weekId(today.minusWeeks(i.toLong()))).document(current.uid))
+            }
+            batch.commit().awaitCm()
+            store.forgetPublishedCities(listOf(city))
         }
-        batch.commit().awaitCm()
     }
 
     private fun DocumentSnapshot.toMember(): CcMember? {

@@ -34,7 +34,9 @@ import com.example.ui.components.IconBadge
 import com.example.ui.components.OnReconnect
 import com.example.ui.components.rememberIsOnline
 import com.example.ui.localization.LocalizedText
+import com.example.ui.tour.tourTarget
 import com.example.ui.localization.localizedUiText
+import com.example.ui.localization.localizedUiTemplate
 
 private fun speedLabel(speed: Float) = (if (speed % 1f == 0f) speed.toInt().toString() else speed.toString()) + "×"
 
@@ -72,9 +74,9 @@ internal fun RecitationPlayerBar(audio: RecitationAudio, passages: List<Recitati
                             color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     FilledIconButton(onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "player_play_all"); haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         audio.playAll(passages)
-                    }, modifier = Modifier.size(48.dp).testTag("collection_play_all")) {
+                    }, modifier = Modifier.size(48.dp).testTag("collection_play_all").tourTarget("recitation_play_all")) {
                         Icon(Icons.Default.PlayArrow, contentDescription = localizedUiText("Play all"))
                     }
                 }
@@ -88,21 +90,21 @@ internal fun RecitationPlayerBar(audio: RecitationAudio, passages: List<Recitati
                     Column(Modifier.weight(1f)) {
                         LocalizedText(current.title, style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("Quran ${current.surah}:${state.ayah ?: current.first}" +
+                        Text(localizedUiTemplate("Quran {surah}:{ayah}", "surah" to current.surah, "ayah" to (state.ayah ?: current.first)) +
                             if (state.queueSize > 1) "  •  ${state.queueIndex + 1} / ${state.queueSize}" else "",
                             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, maxLines = 1)
                     }
-                    IconButton(onClick = { audio.previousAyah() }) {
+                    IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "player_prev_ayah"); audio.previousAyah() }, modifier = Modifier.tourTarget("recitation_prev_ayah")) {
                         Icon(Icons.Default.SkipPrevious, contentDescription = localizedUiText("Previous ayah"))
                     }
                     FilledIconButton(onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "player_toggle"); haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         audio.toggle()
-                    }, modifier = Modifier.size(48.dp).testTag("collection_player_toggle")) {
+                    }, modifier = Modifier.size(48.dp).testTag("collection_player_toggle").tourTarget("recitation_player_toggle")) {
                         if (state.playing) Icon(Icons.Default.Pause, contentDescription = localizedUiText("Pause"))
                         else Icon(Icons.Default.PlayArrow, contentDescription = localizedUiText("Listen"))
                     }
-                    IconButton(onClick = { audio.nextAyah() }) {
+                    IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "player_next_ayah"); audio.nextAyah() }, modifier = Modifier.tourTarget("recitation_next_ayah")) {
                         Icon(Icons.Default.SkipNext, contentDescription = localizedUiText("Next ayah"))
                     }
                 }
@@ -112,7 +114,7 @@ internal fun RecitationPlayerBar(audio: RecitationAudio, passages: List<Recitati
                     (current.last - current.first + 1)).coerceIn(0f, 1f)
                 LinearProgressIndicator(
                     progress = { ((state.queueIndex + within) / total).coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
+                    modifier = Modifier.fillMaxWidth().tourTarget("recitation_player_progress").height(4.dp).clip(CircleShape),
                     trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                     strokeCap = StrokeCap.Round, gapSize = 0.dp, drawStopIndicator = {}
                 )
@@ -121,11 +123,11 @@ internal fun RecitationPlayerBar(audio: RecitationAudio, passages: List<Recitati
                     LocalizedText(if (isOnline) "Audio could not play. Try again." else "You're offline",
                         modifier = Modifier.weight(1f),
                         color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = { audio.retry() }) { LocalizedText("Retry") }
+                    TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "player_retry"); audio.retry() }) { LocalizedText("Retry") }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // A quiet summary of the options; tapping it reveals them.
-                    TextButton(onClick = { showOptions = !showOptions }, modifier = Modifier.weight(1f)) {
+                    TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "player_options"); showOptions = !showOptions }, modifier = Modifier.weight(1f).tourTarget("recitation_player_options")) {
                         Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(
@@ -135,7 +137,7 @@ internal fun RecitationPlayerBar(audio: RecitationAudio, passages: List<Recitati
                         )
                         Spacer(Modifier.weight(1f))
                     }
-                    TextButton(onClick = { audio.stop() }, modifier = Modifier.testTag("collection_player_stop")) {
+                    TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "player_stop"); audio.stop() }, modifier = Modifier.testTag("collection_player_stop").tourTarget("recitation_player_stop")) {
                         Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
                         LocalizedText("Stop")
@@ -143,12 +145,12 @@ internal fun RecitationPlayerBar(audio: RecitationAudio, passages: List<Recitati
                 }
                 AnimatedVisibility(showOptions, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        AssistChip(onClick = { audio.setSpeed(recitationSpeeds.recitationNext(state.speed)) },
+                        AssistChip(onClick = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "player_speed"); audio.setSpeed(recitationSpeeds.recitationNext(state.speed)) }, modifier = Modifier.tourTarget("recitation_speed"),
                             label = { Text("${localizedUiText("Speed")} ${speedLabel(state.speed)}") })
-                        AssistChip(onClick = { audio.setRepeat(recitationRepeats.recitationNext(state.repeat)) },
+                        AssistChip(onClick = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "player_repeat"); audio.setRepeat(recitationRepeats.recitationNext(state.repeat)) }, modifier = Modifier.tourTarget("recitation_repeat"),
                             label = { Text("${localizedUiText("Repeat")} ${if (state.repeat == 0) "∞" else "${state.repeat}×"}") })
-                        FilterChip(selected = state.sleepMinutesLeft != null,
-                            onClick = { audio.setSleepTimer(nextRecitationSleep(state.sleepMinutesLeft)) },
+                        FilterChip(selected = state.sleepMinutesLeft != null, modifier = Modifier.tourTarget("recitation_sleep_timer"),
+                            onClick = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "player_sleep_timer"); audio.setSleepTimer(nextRecitationSleep(state.sleepMinutesLeft)) },
                             label = { Text("${localizedUiText("Sleep timer")}: " + (state.sleepMinutesLeft
                                 ?.let { "$it ${localizedUiText("min")}" } ?: localizedUiText("Off"))) })
                     }

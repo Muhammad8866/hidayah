@@ -12,6 +12,8 @@ class QuranPdfCatalogTest {
         assertEquals(QuranPdfCatalog.all.size, QuranPdfCatalog.all.map { it.id }.toSet().size)
         assertEquals(emptyList<String>(), QuranPdfCatalog.all.filter { it.bundled }.map { it.id })
         assertEquals("quran_hindi_kanzul_iman.pdf", QuranPdfCatalog.byId("kanzul_iman")?.fileName)
+        assertEquals("https://github.com/Muhammad8866/hidayah/releases/download/quran-pdfs-v1/quran_hindi_kanzul_iman.pdf",
+            QuranPdfCatalog.byId("kanzul_iman")?.url)
         QuranPdfCatalog.all.forEach { book ->
             assertEquals(book.id, 114, book.surahPages.size)
             assertEquals(book.id, 30, book.paraPages.size)

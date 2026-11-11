@@ -4,12 +4,13 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Hearing
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.ui.tour.tourTarget
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -63,7 +64,7 @@ internal fun QaidaListenDrill(
         heard = true
         audio.play(current.target.copy(id = "drill-${current.target.id}"))
     }
-    AppCard(Modifier.fillMaxWidth().animateContentSize().testTag("qaida_drill"), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+    AppCard(Modifier.fillMaxWidth().animateContentSize().testTag("qaida_drill").tourTarget("qaida_drill"), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconBadge(Icons.Default.Hearing, accent, size = 40.dp, iconSize = 22.dp)
             Spacer(Modifier.width(12.dp))
@@ -75,8 +76,8 @@ internal fun QaidaListenDrill(
             }
             Text("${round + 1}/$QAIDA_DRILL_ROUNDS", style = MaterialTheme.typography.labelLarge, color = accent, fontWeight = FontWeight.Bold)
         }
-        FilledTonalButton(onClick = play, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("qaida_drill_play")) {
-            Icon(Icons.Default.VolumeUp, contentDescription = null, modifier = Modifier.size(20.dp))
+        FilledTonalButton(onClick = play, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("qaida_drill_play").tourTarget("qaida_drill_play")) {
+            Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
             Text(label("Play sound", "Awaaz sunein"))
         }
@@ -91,7 +92,7 @@ internal fun QaidaListenDrill(
                         // Answers unlock once the sound has been played at least once.
                         answered = picked != null || !heard,
                         accent = accent, tag = "qaida_drill_option_$i", arabic = true,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).tourTarget("qaida_drill_option")
                     ) {
                         picked = option.id
                         if (isAnswer) correct += 1 else haptics.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -110,14 +111,14 @@ internal fun QaidaListenDrill(
         }
         if (finished) {
             Text(label("Score: $correct / $QAIDA_DRILL_ROUNDS", "Score: $correct / $QAIDA_DRILL_ROUNDS"),
-                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.testTag("qaida_drill_score"))
-            Button(onClick = { seed += 1; round = 0; picked = null; correct = 0; heard = false },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qaida_drill_again")) {
+                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.testTag("qaida_drill_score").tourTarget("qaida_drill_score"))
+            Button(onClick = { com.example.core.analytics.AppAnalytics.interaction("qaida_lesson_screen", "listen_drill_restart", "tap"); seed += 1; round = 0; picked = null; correct = 0; heard = false },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qaida_drill_again").tourTarget("qaida_drill_again")) {
                 Text(label("Practise again", "Dobara mashq karein"))
             }
         } else if (picked != null) {
-            Button(onClick = { round += 1; picked = null; heard = false },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qaida_drill_next")) {
+            Button(onClick = { com.example.core.analytics.AppAnalytics.interaction("qaida_lesson_screen", "listen_drill_next", "tap"); round += 1; picked = null; heard = false },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qaida_drill_next").tourTarget("qaida_drill_next")) {
                 Text(label("Next question", "Agla sawal"))
             }
         }

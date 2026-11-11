@@ -14,7 +14,7 @@ HINDI_P = [8, 53, 93, 131, 167, 204, 240, 277, 312, 350, 385, 423, 459, 496, 531
 # Other languages of Kanzul Iman: surah and para pages read from each PDF's own index and page headers.
 K = lambda k: json.load(open(os.path.join(S, f'kanz_{k}.json')))
 books = [
-    ('deeniyat_11', 'Quraan-E-Karim (11 Lines)', 'Deeniyat edition, original 11-line pages', 'quran_deeniyat_11_lines.pdf', False,
+    ('deeniyat_11', 'Quraan-E-Karim (11 Lines)', 'Original 11-line pages', 'quran_deeniyat_11_lines.pdf', False,
      K('deeniyat_11')['surahs'], K('deeniyat_11')['paras'], None),
     # id, title, subtitle, file, bundled, surahs, paras, source path
     ('kanzul_iman', 'Kanzul Iman (Hindi Tarjuma)', 'Quran with Hindi translation by Imam Ahmad Raza Khan', 'quran_hindi_kanzul_iman.pdf', False,
@@ -85,7 +85,7 @@ data class QuranPdf(
 
 object QuranPdfCatalog {
     /** Where the non-bundled PDFs are hosted, unchanged; the file name is appended. */
-    const val BASE_URL = "https://github.com/Muhammad8866/deen-companion-quran/releases/download/v1/"
+    const val BASE_URL = "https://github.com/Muhammad8866/hidayah/releases/download/quran-pdfs-v1/"
 
     val all: List<QuranPdf> = listOf(
 ''' + ',\n'.join(out) + '''

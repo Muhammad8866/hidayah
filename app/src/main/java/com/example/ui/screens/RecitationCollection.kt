@@ -17,7 +17,6 @@ data class RecitationPassage(val surah: Int, val first: Int, val last: Int) {
 
 /** Traditional Manzil selection; the compilation is distinct from the Quran's seven divisions. */
 object RecitationCollection {
-    const val MANZIL_SOURCE = "https://jamiat.org.za/manzil-the-remedy-for-black-magic/"
     val manzil = listOf(
         RecitationPassage(1, 1, 7), RecitationPassage(2, 1, 5), RecitationPassage(2, 163, 163),
         RecitationPassage(2, 255, 257), RecitationPassage(2, 284, 286), RecitationPassage(3, 18, 18),

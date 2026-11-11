@@ -285,7 +285,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             application.applicationContext,
             DeenDatabase::class.java,
             "deen_companion.db"
-        ).addMigrations(DeenDatabase.MIGRATION_2_3).fallbackToDestructiveMigration(dropAllTables = true).build()
+        ).addMigrations(DeenDatabase.MIGRATION_2_3).fallbackToDestructiveMigrationFrom(true, 1).fallbackToDestructiveMigrationOnDowngrade(true).build()
     }
 
     private val _uiState = MutableStateFlow(loadPersistedState())
@@ -536,6 +536,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (event.liveLocationGeneration != null &&
                     (!useLiveLocation || event.liveLocationGeneration != liveLocationGeneration)) return@collect
                 persistCity(event.newLocation)
+                if (!_uiState.value.hasConfirmedLocation) com.example.core.analytics.AppAnalytics.onboarding("location_set")
                 _uiState.update {
                     it.copy(
                         selectedCity = event.newLocation,

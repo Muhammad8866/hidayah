@@ -36,54 +36,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.ui.components.BackIconButton
 import com.example.ui.components.AppCard
 import com.example.ui.components.IconBadge
-import com.example.ui.components.groupedShape
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.ui.text.style.TextOverflow
 import com.example.ui.localization.LocalizedText
 
 /** Hosted privacy policy (source: docs/privacy-policy.html). Also entered in Play Console. */
-const val PRIVACY_POLICY_URL = "https://muhammad8866.github.io/deen-companion/privacy-policy.html"
+const val PRIVACY_POLICY_URL = "https://muhammad8866.github.io/hidayah/privacy-policy.html"
 
 const val SUPPORT_DEVELOPER_URL = "https://rzp.io/rzp/hidayah-app"
 const val SUPPORT_DEVELOPER_PAYPAL_URL = "https://www.paypal.com/ncp/payment/U3FAR43PQFMVC"
 
 const val CONTACT_EMAIL = "misuhrobir@gmail.com"
 const val CONTACT_PHONE = "+91 8866389636"
-
-private data class Credit(val name: String, val usage: String, val url: String)
-
-private val credits = listOf(
-    Credit("Tanzil", "Quran Arabic text (quiz & search)", "https://tanzil.net"),
-    Credit("Quran.com / QuranCDN", "Page layout data and word-by-word audio", "https://quran.com"),
-    Credit("EveryAyah", "Mishary Rashid Alafasy verse-by-verse audio", "https://everyayah.com"),
-    Credit("QuranicAudio", "Mishary Rashid Alafasy full surah audio", "https://quranicaudio.com"),
-    Credit("AlQuran Cloud", "Surah text API", "https://alquran.cloud"),
-    Credit("Dawat-e-Islami", "Kanzul Iman, Sirat-ul-Jinan tafsir, books and naats", "https://www.dawateislami.net"),
-    Credit("Abde Mustafa Official", "Kanzul Iman in Roman Urdu", "https://www.abdemustafa.com"),
-    Credit("Internet Archive", "Public book scans, Kanzul Iman in Gujarati and Bangla, and azan recordings", "https://archive.org"),
-    Credit("Currency API (fawazahmed0)", "Gold/silver & currency rates for Zakat", "https://github.com/fawazahmed0/exchange-api"),
-    Credit("Google Firebase", "Community masjid timings (anonymous)", "https://firebase.google.com")
-)
 
 fun openExternalUrl(context: Context, url: String) {
     try {
@@ -110,7 +87,7 @@ fun PrivacyPolicyDialog(onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize().testTag("privacy_policy_screen"), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing)) {
-                ScreenHeader("Privacy Policy", onBack = onDismiss)
+                ScreenHeader("Privacy Policy", onBack = com.example.core.analytics.AppAnalytics.trackAction("privacy_policy_dialog", "back", onDismiss))
                 AndroidView(
                     factory = { context ->
                         WebView(context).apply {
@@ -147,66 +124,13 @@ fun CreditsDialog(onDismiss: () -> Unit) {
                 // Keeps the list clear of the status bar, cutouts and gesture bar on edge-to-edge devices.
                 modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing),
                 contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 24.dp),
-                // Rows of the sources list sit close so the group reads as one block.
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 item {
-                    ScreenHeader("Sources & Credits", onBack = com.example.core.analytics.AppAnalytics.trackAction("credits_screen", "credits_back", onDismiss))
-                    LocalizedText(
-                        "Content belongs to its respective publishers. Jazakallah khair to everyone below.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 14.dp)
-                    )
-                }
-                itemsIndexed(credits, key = { _, credit -> credit.name }) { index, credit ->
-                    // One rounded block of sources; each row opens the publisher's site.
-                    Surface(
-                        onClick = { com.example.core.analytics.AppAnalytics.interaction("credits_screen", "open_credit_source", "tap"); openExternalUrl(context, credit.url) },
-                        shape = groupedShape(index, credits.size),
-                        color = MaterialTheme.colorScheme.surface,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconBadge(Icons.Default.Public, accent = MaterialTheme.colorScheme.primary, size = 40.dp, iconSize = 20.dp)
-                            Spacer(Modifier.width(14.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(credit.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                                LocalizedText(
-                                    credit.usage,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    credit.url.removePrefix("https://"),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Icon(
-                                Icons.AutoMirrored.Filled.OpenInNew,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
+                    ScreenHeader("Contact", onBack = com.example.core.analytics.AppAnalytics.trackAction("credits_screen", "credits_back", onDismiss))
                 }
                 item {
                     Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-                        LocalizedText(
-                            "Contact",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(start = 6.dp, bottom = 8.dp)
-                        )
                         AppCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)) {
                             ContactRow(Icons.Default.Email, CONTACT_EMAIL) {
                                 com.example.core.analytics.AppAnalytics.interaction("credits_screen", "contact_email", "tap"); openExternalUrl(context, "mailto:$CONTACT_EMAIL")

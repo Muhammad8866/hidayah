@@ -2,6 +2,8 @@
 
 package com.example.ui.screens
 
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import com.example.ui.components.ScreenHeader
 import android.content.Context
 import android.content.SharedPreferences
@@ -53,6 +55,7 @@ import com.example.ui.components.AppCard
 import com.example.ui.components.BackIconButton
 import com.example.ui.components.islamicPattern
 import com.example.ui.components.ProvenanceCard
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.LocalAppLocale
 import com.example.ui.localization.LocalizedText
@@ -125,6 +128,7 @@ fun DailyToolScreen(
 @Composable
 private fun QuizScreen(onBack: () -> Unit, modifier: Modifier) {
     com.example.core.analytics.AnalyticsScreen("quiz_screen")
+    TourScreen("dailytools_quiz")
 
     val prefs = rememberToolPrefs()
     var round by rememberSaveable { mutableIntStateOf(0) }
@@ -210,13 +214,13 @@ private fun QuizScreen(onBack: () -> Unit, modifier: Modifier) {
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (finished) {
-                        OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+                        OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f).heightIn(min = 48.dp).tourTarget("dailytools_quiz_back")) {
                             LocalizedText("Back", maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                     Button(
                         onClick = { com.example.core.analytics.AppAnalytics.interaction("daily_tools_screens", "quiz_next", "tap"); if (finished) nextRound() else advance() },
-                        modifier = Modifier.weight(if (finished) 1.4f else 1f).heightIn(min = 48.dp).testTag("quiz_next")
+                        modifier = Modifier.weight(if (finished) 1.4f else 1f).heightIn(min = 48.dp).testTag("quiz_next").tourTarget("dailytools_quiz_next")
                     ) {
                         LocalizedText(
                             when {
@@ -251,7 +255,7 @@ private fun LazyListScope.quizQuestion(
     onPick: (String) -> Unit
 ) {
     item(key = "quiz_progress") {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.tourTarget("dailytools_quiz_progress"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "${localizedUiText("Question")} ${index + 1} / $total",
@@ -259,7 +263,7 @@ private fun LazyListScope.quizQuestion(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
                 )
-                Surface(shape = CircleShape, color = accent.copy(alpha = 0.14f)) {
+                Surface(shape = CircleShape, color = accent.copy(alpha = 0.14f), modifier = Modifier.tourTarget("dailytools_quiz_score")) {
                     Text(
                         "${localizedUiText("Score")}: $score",
                         style = MaterialTheme.typography.labelLarge,
@@ -280,7 +284,7 @@ private fun LazyListScope.quizQuestion(
         }
     }
     item(key = "quiz_question_${question.id}") {
-        HeroCard(accent) {
+        Box(Modifier.tourTarget("dailytools_quiz_question")) { HeroCard(accent) {
             QuizPrompt(question, MaterialTheme.typography.titleLarge)
             question.passage?.let { passage ->
                 Spacer(Modifier.height(12.dp))
@@ -291,7 +295,7 @@ private fun LazyListScope.quizQuestion(
                     )
                 }
             }
-        }
+        } }
     }
     item(key = "quiz_options_${question.id}") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -314,7 +318,7 @@ private fun LazyListScope.quizQuestion(
     if (picked != null) {
         item(key = "quiz_feedback_${question.id}") {
             val correct = picked == question.answer
-            ToolCard {
+            Box(Modifier.tourTarget("dailytools_quiz_feedback")) { ToolCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         if (correct) Icons.Default.CheckCircle else Icons.Default.Info,
@@ -333,7 +337,7 @@ private fun LazyListScope.quizQuestion(
                     QuizContentText(question.answer, question, question.optionsArabic, MaterialTheme.typography.bodyLarge, FontWeight.SemiBold, SuccessGreen)
                 }
                 ReferenceRow(question.reference, accent)
-            }
+            } }
         }
     }
 }
@@ -349,7 +353,7 @@ private fun LazyListScope.quizResult(
     val fraction = if (total == 0) 0f else score.toFloat() / total
     item(key = "quiz_result") {
         HeroCard(accent) {
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.fillMaxWidth().tourTarget("dailytools_quiz_result"), horizontalAlignment = Alignment.CenterHorizontally) {
                 LocalizedText("Round complete", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(16.dp))
                 ProgressRing(fraction, accent, 132.dp, stroke = 10.dp) {
@@ -373,14 +377,14 @@ private fun LazyListScope.quizResult(
         }
     }
     item(key = "quiz_stats") {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.tourTarget("dailytools_quiz_stats"), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             QuizStat("Correct", "$score", SuccessGreen, Icons.Default.CheckCircle, Modifier.weight(1f))
             QuizStat("Wrong", "${total - score}", MaterialTheme.colorScheme.error, Icons.Default.Cancel, Modifier.weight(1f))
             QuizStat("Best score", "$bestScore", accent, Icons.Default.EmojiEvents, Modifier.weight(1f))
         }
     }
     item(key = "quiz_rounds") {
-        InfoNote("${localizedUiText("Rounds played")}: $roundsPlayed")
+        Box(Modifier.tourTarget("dailytools_quiz_rounds")) { InfoNote(localizedUiTemplate("Rounds played: {count}", "count" to roundsPlayed)) }
     }
     if (review.isEmpty()) {
         item(key = "quiz_no_review") {
@@ -393,7 +397,7 @@ private fun LazyListScope.quizResult(
             }
         }
     } else {
-        item(key = "quiz_review_title") { SectionTitle("Review these questions") }
+        item(key = "quiz_review_title") { Box(Modifier.tourTarget("dailytools_quiz_review")) { SectionTitle("Review these questions") } }
         items(review, key = { "quiz_review_${it.first.id}" }) { (missed, yourPick) ->
             ToolCard {
                 QuizPrompt(missed, MaterialTheme.typography.titleMedium)
@@ -525,7 +529,7 @@ private fun QuizOption(text: String, question: QuizQuestion, letter: String, sta
     Card(
         onClick = onClick,
         enabled = state == OptionState.Idle,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().tourTarget("dailytools_quiz_option"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = container,
@@ -577,6 +581,7 @@ internal fun ToolScreen(
     ) {
         item(key = "header") {
             ScreenHeader(
+                modifier = Modifier.tourTarget("dailytools_header"),
                 title = tool.title,
                 subtitle = tool.subtitle,
                 onBack = onBack,

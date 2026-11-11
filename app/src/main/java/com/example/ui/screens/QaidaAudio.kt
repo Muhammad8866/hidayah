@@ -73,13 +73,31 @@ internal fun qaidaLessonAudio(id: String): List<QaidaAudioClip> = when (id) {
     "laam" -> listOf(qaidaAyahAudio(91, 1, "وَٱلشَّمْسِ"), qaidaAyahAudio(1, 2, "ٱلْحَمْدُ لِلَّهِ"), qaidaAyahAudio(110, 1, "نَصْرُ ٱللَّهِ"))
     "raa" -> listOf(qaidaAyahAudio(108, 2, "لِرَبِّكَ وَٱنْحَرْ"), qaidaAyahAudio(89, 10, "وَفِرْعَوْنَ"))
     "waqf" -> listOf(qaidaAyahAudio(112, 2, "ٱللَّهُ ٱلصَّمَدُ"), qaidaAyahAudio(101, 11, "نَارٌ حَامِيَةٌ"))
+    "harakat_practice" -> listOf(qaidaAyahAudio(112, 1, "قُلْ هُوَ ٱللَّهُ أَحَدٌ"), qaidaAyahAudio(112, 2, "ٱللَّهُ ٱلصَّمَدُ"))
+    "hijjay" -> qaidaAlphabet.indices.map { qaidaLetterAudio(it, "fatha") }
+    "madd_letters" -> listOf(qaidaAyahAudio(1, 5, "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ"), qaidaAyahAudio(114, 1, "قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ"))
+    "khari" -> listOf(qaidaAyahAudio(1, 3, "ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"), qaidaAyahAudio(2, 2, "ذَٰلِكَ ٱلْكِتَٰبُ"))
+    "leen" -> listOf(qaidaAyahAudio(106, 2, "رِحْلَةَ ٱلشِّتَآءِ وَٱلصَّيْفِ"), qaidaAyahAudio(106, 3, "رَبَّ هَٰذَا ٱلْبَيْتِ"))
+    "review_madd" -> listOf(qaidaAyahAudio(108, 1, "إِنَّآ أَعْطَيْنَٰكَ ٱلْكَوْثَرَ"), qaidaAyahAudio(106, 4, "وَءَامَنَهُم مِّنْ خَوْفٍۭ"))
+    "sukoon_practice" -> listOf(qaidaAyahAudio(112, 3, "لَمْ يَلِدْ وَلَمْ يُولَدْ"), qaidaAyahAudio(1, 7, "غَيْرِ ٱلْمَغْضُوبِ"))
+    "salah" -> (1..7).map { qaidaAyahAudio(1, it, "ٱلْفَاتِحَة $it") } + (1..4).map { qaidaAyahAudio(112, it, "ٱلْإِخْلَاص $it") }
+    "muqattaat" -> listOf(qaidaAyahAudio(2, 1, "الٓمٓ"), qaidaAyahAudio(19, 1, "كٓهيعٓصٓ"), qaidaAyahAudio(36, 1, "يسٓ"),
+        qaidaAyahAudio(20, 1, "طه"))
+    "zaid_alif" -> listOf(qaidaAyahAudio(76, 4, "سَلَٰسِلَا۟"), qaidaAyahAudio(18, 38, "لَّٰكِنَّا۠ هُوَ ٱللَّهُ رَبِّى"))
+    "misc_rules" -> listOf(qaidaAyahAudio(83, 14, "كَلَّا ۖ بَلْ ۜ رَانَ"), qaidaAyahAudio(11, 41, "مَجْر۪ىٰهَا"),
+        qaidaAyahAudio(12, 11, "لَا تَأْمَ۫نَّا"), qaidaAyahAudio(61, 4, "بُنْيَٰنٌ"))
+    "qa_review" -> qaidaAlphabet.indices.map { qaidaLetterAudio(it) }
     else -> emptyList()
 }
+
+/** Every distinct recording the course uses, for the offline download. */
+internal fun qaidaAllAudioUrls(): List<String> = qaidaLessons.flatMap { qaidaLessonAudio(it.id) }.map { it.url }.distinct()
 
 internal class StreamingQaidaAudio(private val context: Context) : QaidaAudioController {
     private val mutable = MutableStateFlow(QaidaAudioState())
     override val state: StateFlow<QaidaAudioState> = mutable
     private var player: ExoPlayer? = null
+    private var audioLoad: com.example.core.analytics.AppAnalytics.AudioLoad? = null
     private val queued get() = state.value.queue.isNotEmpty()
     private fun repeatMode() = when {
         !state.value.repeat -> Player.REPEAT_MODE_OFF
@@ -105,7 +123,13 @@ internal class StreamingQaidaAudio(private val context: Context) : QaidaAudioCon
                         player.playbackState != Player.STATE_IDLE && !current.failed,
                     loading = player.playbackState == Player.STATE_BUFFERING && !current.failed)
             }
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                AppAnalytics.playbackState("qaida_audio", playbackState)
+                if (playbackState == Player.STATE_READY) audioLoad?.ready()
+            }
             override fun onPlayerError(error: PlaybackException) {
+                audioLoad?.failed()
+                AppAnalytics.mediaState("qaida_audio", "failed", "playback_error")
                 mutable.value = mutable.value.copy(playing = false, loading = false, failed = true)
             }
         })
@@ -123,25 +147,30 @@ internal class StreamingQaidaAudio(private val context: Context) : QaidaAudioCon
         val p = player()
         val current = state.value
         if (current.clipId == clip.id && !current.failed && p.playbackState != Player.STATE_ENDED && p.playbackState != Player.STATE_IDLE) {
+            AppAnalytics.media("qaida_audio", if (p.playWhenReady) "pause" else "resume")
             if (p.playWhenReady) p.pause() else p.play()
             return
         }
+        AppAnalytics.media("qaida_audio", if (current.clipId == clip.id && current.failed) "retry" else "play")
         stopOtherAudio()
         // Retrying the clip a queue failed on resumes that queue instead of dropping it.
         if (current.clipId == clip.id && current.failed && queued && p.mediaItemCount > 0) {
             mutable.value = current.copy(playing = true, loading = true, failed = false)
-            p.prepare()
+            audioLoad = com.example.core.analytics.AppAnalytics.audioLoad("qaida_audio")
+        p.prepare()
             p.play()
             return
         }
         mutable.value = current.copy(clipId = clip.id, playing = true, loading = true, failed = false, queue = emptyList(), queueIndex = -1)
         p.repeatMode = repeatMode()
         p.setMediaItem(clip.item())
+        audioLoad = com.example.core.analytics.AppAnalytics.audioLoad("qaida_audio")
         p.prepare()
         p.play()
     }
     override fun playAll(clips: List<QaidaAudioClip>, startIndex: Int) {
         if (clips.isEmpty()) return
+        AppAnalytics.media("qaida_audio", "play_all")
         val start = startIndex.coerceIn(0, clips.lastIndex)
         val p = player()
         stopOtherAudio()
@@ -149,6 +178,7 @@ internal class StreamingQaidaAudio(private val context: Context) : QaidaAudioCon
             queue = clips.map { it.id }, queueIndex = start)
         p.repeatMode = repeatMode()
         p.setMediaItems(clips.map { it.item() }, start, 0L)
+        audioLoad = com.example.core.analytics.AppAnalytics.audioLoad("qaida_audio")
         p.prepare()
         p.play()
     }
@@ -157,27 +187,31 @@ internal class StreamingQaidaAudio(private val context: Context) : QaidaAudioCon
         if (!queued || index !in 0 until p.mediaItemCount) return
         mutable.value = state.value.copy(clipId = state.value.queue[index], queueIndex = index, playing = true, loading = true, failed = false)
         p.seekTo(index, 0L)
+        audioLoad = com.example.core.analytics.AppAnalytics.audioLoad("qaida_audio")
         p.prepare()
         p.play()
     }
     override fun next() {
+        AppAnalytics.media("qaida_audio", "next")
         val size = state.value.queue.size
         val target = state.value.queueIndex + 1
         if (size > 0) jump(if (target >= size && state.value.repeat) 0 else target)
     }
-    override fun previous() = jump(state.value.queueIndex - 1)
+    override fun previous() { AppAnalytics.media("qaida_audio", "previous"); jump(state.value.queueIndex - 1) }
     override fun stop() {
+        if (mutable.value.clipId != null) AppAnalytics.media("qaida_audio", "stop")
         player?.stop()
         player?.clearMediaItems()
         mutable.value = mutable.value.copy(clipId = null, playing = false, loading = false, failed = false, queue = emptyList(), queueIndex = -1)
     }
-    override fun pause() { player?.pause() }
+    override fun pause() { if (player?.playWhenReady == true) AppAnalytics.media("qaida_audio", "pause"); player?.pause() }
     override fun speed(value: Float) {
         val speed = value.coerceIn(qaidaAudioSpeeds.first(), qaidaAudioSpeeds.last())
+        AppAnalytics.media("qaida_audio", "speed_change")
         mutable.value = mutable.value.copy(speed = speed, slow = speed < 1f)
         player?.setPlaybackSpeed(speed)
     }
     override fun slow(enabled: Boolean) = speed(if (enabled) .75f else 1f)
-    override fun repeat(enabled: Boolean) { mutable.value = mutable.value.copy(repeat = enabled); player?.repeatMode = repeatMode() }
+    override fun repeat(enabled: Boolean) { AppAnalytics.setting("qaida_audio_repeat", enabled.toString()); mutable.value = mutable.value.copy(repeat = enabled); player?.repeatMode = repeatMode() }
     override fun close() { player?.release(); player = null }
 }

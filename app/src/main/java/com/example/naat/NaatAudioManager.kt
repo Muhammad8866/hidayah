@@ -9,6 +9,7 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.ContextCompat
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -50,7 +51,7 @@ data class NaatTrack(
 /** Voice-only naats bundled in assets/naat_catalog.json; GitHub can publish an updated list. */
 object NaatCatalog {
     private const val ASSET = "naat_catalog.json"
-    private const val CATALOG_URL = "https://raw.githubusercontent.com/Muhammad8866/deen-companion-naat/main/catalog.json"
+    private const val CATALOG_URL = "https://raw.githubusercontent.com/Muhammad8866/hidayah/main/docs/naat/catalog.json"
     private val allowedHosts = setOf("archive.org", "alhajowaisrazaqadri.com", "github.com")
 
     private val _current = MutableStateFlow<List<NaatTrack>>(emptyList())
@@ -78,14 +79,20 @@ object NaatCatalog {
         }
     }
 
-    private fun parse(text: String): List<NaatTrack> {
+    /** Ids become file names in [NaatAudioManager], so only plain lowercase names are accepted. */
+    private val safeId = Regex("^[a-z0-9_-]{1,80}$")
+
+    @VisibleForTesting
+    internal fun parse(text: String): List<NaatTrack> {
         val json = JSONArray(text)
-        val tracks = (0 until json.length()).map { index ->
+        val tracks = (0 until json.length()).mapNotNull { index ->
             val item = json.getJSONObject(index)
+            // An unsafe id (for example "../x") is skipped so it can never name a file outside the naat folder.
+            if (!safeId.matches(item.getString("id"))) return@mapNotNull null
             val url = item.getString("url")
             val host = Uri.parse(url).host.orEmpty()
             require(url.startsWith("https://") && allowedHosts.any { host == it || host.endsWith(".$it") }) { "Untrusted URL" }
-            if (host == "github.com") require(url.startsWith("https://github.com/Muhammad8866/deen-companion-naat/releases/download/"))
+            if (host == "github.com") require(url.startsWith("https://github.com/Muhammad8866/hidayah/releases/download/"))
             NaatTrack(item.getString("id"), item.getString("title"), item.getString("performer"),
                 item.optString("category", "Naat"), url, item.optLong("size", 0))
         }
@@ -129,6 +136,7 @@ object NaatAudioManager {
     private val jobs = mutableMapOf<String, Job>()
     private val downloadSlots = Semaphore(3)
     private var player: ExoPlayer? = null
+    private var audioLoad: com.example.core.analytics.AppAnalytics.AudioLoad? = null
     private var prepared = false
     private var ticker: Job? = null
     private var queue: List<NaatTrack> = emptyList()
@@ -343,6 +351,7 @@ object NaatAudioManager {
             return
         }
         NaatAudioService.start(context)
+        audioLoad = com.example.core.analytics.AppAnalytics.audioLoad("naat_audio")
         try {
             val candidate = StreamPlayer.build(context)
             player = candidate
@@ -359,6 +368,7 @@ object NaatAudioManager {
                     when (playbackState) {
                         Player.STATE_BUFFERING -> _state.update { it.copy(buffering = true) }
                         Player.STATE_READY -> {
+                            audioLoad?.ready()
                             _state.update { it.copy(buffering = false, error = null) }
                             _position.update { it.copy(durationMs = candidate.duration.playerMillis()) }
                             if (!prepared) {
@@ -388,6 +398,7 @@ object NaatAudioManager {
                 override fun onPlayerError(error: PlaybackException) {
                     if (player !== candidate) return
                 com.example.core.analytics.AppAnalytics.mediaState("naat_audio", "failed", "playback_error")
+                    audioLoad?.failed()
                     releasePlayer()
                     _state.update { it.copy(playing = false, buffering = false, error = PLAY_ERROR) }
                     NaatAudioService.update(context)

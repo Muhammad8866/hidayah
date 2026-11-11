@@ -38,6 +38,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.core.analytics.AppAnalytics
 import com.example.ui.localization.LocalAppLocale
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizedUiText
 import java.text.NumberFormat
@@ -67,6 +69,9 @@ internal fun MirathScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val focus = LocalFocusManager.current
     val listState = rememberLazyListState()
+    com.example.core.analytics.AnalyticsScreen("mirath_screen")
+    TourScreen("calc_mirath")
+    com.example.core.analytics.AnalyticsScroll("mirath_screen", listState)
     LaunchedEffect(result) {
         if (result != null) listState.animateScrollToItem(5)
     }
@@ -94,21 +99,20 @@ internal fun MirathScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             ToolCard {
                 MirathStepTitle(1, "Estate & deductions", accent)
                 MirathHint("Use the same currency for all amounts. Include only assets owned by the deceased.")
-                MirathAmount("Total estate", estate, "mirath_estate") { estate = it }
-                MirathAmount("Funeral expenses", funeral, "mirath_funeral") { funeral = it }
-                MirathAmount("Outstanding debts", debts, "mirath_debts") { debts = it }
-                MirathAmount("Wasiyyat (bequest)", bequest, "mirath_bequest") { bequest = it }
-                if (bequestLimit != null || available != null) {
-                    Surface(shape = MaterialTheme.shapes.medium, color = accent.copy(alpha = 0.08f), modifier = Modifier.fillMaxWidth()) {
+                MirathAmount("Total estate", estate, "mirath_estate", "calc_mirath_estate") { estate = it }
+                MirathAmount("Funeral expenses", funeral, "mirath_funeral", "calc_mirath_funeral") { funeral = it }
+                MirathAmount("Outstanding debts", debts, "mirath_debts", "calc_mirath_debts") { debts = it }
+                MirathAmount("Wasiyyat (bequest)", bequest, "mirath_bequest", "calc_mirath_bequest") { bequest = it }
+                // bequestLimit is derived from available, so available alone decides whether this shows.
+                if (available != null) {
+                    Surface(shape = MaterialTheme.shapes.medium, color = accent.copy(alpha = 0.08f), modifier = Modifier.fillMaxWidth().tourTarget("calc_mirath_available")) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             if (bequestLimit != null) {
                                 MirathSummaryRow("Maximum supported bequest", money.format(bequestLimit))
                                 if (amounts[3]!! > bequestLimit) MirathWarning("Wasiyyat exceeds one third after expenses and debts. Scholar review is required.")
                             }
-                            if (available != null) {
-                                MirathSummaryRow("Distributable estate", money.format((available - amounts[3]!!).max(BigDecimal.ZERO)), emphasize = true, accent = accent)
-                                if (estate.isNotBlank() && available.signum() <= 0) MirathWarning("No distributable estate remains after expenses and debts.")
-                            }
+                            MirathSummaryRow("Distributable estate", money.format((available - amounts[3]!!).max(BigDecimal.ZERO)), emphasize = true, accent = accent)
+                            if (estate.isNotBlank() && available.signum() <= 0) MirathWarning("No distributable estate remains after expenses and debts.")
                         }
                     }
                 }
@@ -118,19 +122,20 @@ internal fun MirathScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         item {
             ToolCard {
                 MirathStepTitle(2, "Surviving heirs", accent)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MirathGenderChip("Deceased: male", male) { if (!male) { male = true; spouses = 0; confirmed = false } }
-                    MirathGenderChip("Deceased: female", !male) { if (male) { male = false; spouses = 0; confirmed = false } }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.tourTarget("calc_mirath_gender")) {
+                    MirathGenderChip("Deceased: male", male) { AppAnalytics.interaction("mirath_screen", "deceased_gender", "select", item = "male"); if (!male) { male = true; spouses = 0; confirmed = false } }
+                    MirathGenderChip("Deceased: female", !male) { AppAnalytics.interaction("mirath_screen", "deceased_gender", "select", item = "female"); if (male) { male = false; spouses = 0; confirmed = false } }
                 }
-                MirathCount(if (male) "Wives" else "Husband", spouses, if (male) 4 else 1) { spouses = it; confirmed = false }
-                MirathCount("Sons", sons) { sons = it; confirmed = false }
-                MirathCount("Daughters", daughters) { daughters = it; confirmed = false }
+                // Heir counts are never sent, only that a count changed.
+                MirathCount(if (male) "Wives" else "Husband", spouses, if (male) 4 else 1, "calc_mirath_spouse") { AppAnalytics.interaction("mirath_screen", "spouses_count", "change"); spouses = it; confirmed = false }
+                MirathCount("Sons", sons, tourKey = "calc_mirath_children") { AppAnalytics.interaction("mirath_screen", "sons_count", "change"); sons = it; confirmed = false }
+                MirathCount("Daughters", daughters, tourKey = "calc_mirath_children") { AppAnalytics.interaction("mirath_screen", "daughters_count", "change"); daughters = it; confirmed = false }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                MirathToggle("Father alive", father) { father = it; confirmed = false }
-                MirathToggle("Mother alive", mother) { mother = it; confirmed = false }
-                MirathCount("Brothers & sisters (all types)", siblings) { siblings = it; confirmed = false }
+                MirathToggle("Father alive", father, "calc_mirath_parents") { father = it; confirmed = false }
+                MirathToggle("Mother alive", mother, "calc_mirath_parents") { mother = it; confirmed = false }
+                MirathCount("Brothers & sisters (all types)", siblings, tourKey = "calc_mirath_siblings") { AppAnalytics.interaction("mirath_screen", "siblings_count", "change"); siblings = it; confirmed = false }
                 MirathHint("Siblings can reduce the mother's share even when excluded by the father. Without a father or son, sibling cases need scholar review.")
-                MirathToggle("Other heirs or special circumstances", others) { others = it; confirmed = false }
+                MirathToggle("Other heirs or special circumstances", others, "calc_mirath_others") { others = it; confirmed = false }
                 MirathHint("Select this for grandchildren, grandparents, other relatives, pregnancy, missing heirs, disputed eligibility or a bequest to an heir.")
                 if (others || (siblings > 0 && !father && sons == 0)) {
                     MirathWarning("This family includes heirs outside this calculator's scope. Ask a qualified inheritance scholar for a complete calculation.")
@@ -140,11 +145,11 @@ internal fun MirathScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         // Confirmation and actions get their own block so they stay reachable after a long heirs list.
         item {
             ToolCard {
-                MirathToggle("I have checked all surviving heirs and no special circumstances apply", confirmed) { confirmed = it }
+                MirathToggle("I have checked all surviving heirs and no special circumstances apply", confirmed, "calc_mirath_confirm") { confirmed = it }
                 if (requested && result == null) MirathHint("Details changed. Calculate again to update your shares.")
                 Button(
-                    onClick = { focus.clearFocus(); submittedInput = input; requested = true },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("mirath_calculate"),
+                    onClick = { AppAnalytics.interaction("mirath_screen", "calculate_shares"); focus.clearFocus(); submittedInput = input; requested = true },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("mirath_calculate").tourTarget("calc_mirath_calculate"),
                     colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Icon(Icons.Default.Calculate, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -152,10 +157,11 @@ internal fun MirathScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                     LocalizedText("Calculate shares")
                 }
                 TextButton(onClick = {
+                    AppAnalytics.interaction("mirath_screen", "reset_form")
                     estate = ""; funeral = ""; debts = ""; bequest = ""; male = true
                     spouses = 0; sons = 0; daughters = 0; siblings = 0
                     father = false; mother = false; others = false; confirmed = false; requested = false
-                }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                }, modifier = Modifier.align(Alignment.CenterHorizontally).tourTarget("calc_mirath_reset")) {
                     Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     LocalizedText("Reset")
@@ -164,7 +170,7 @@ internal fun MirathScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         }
         if (result != null) item {
             ToolCard {
-                MirathStepTitle(3, "Inheritance breakdown", accent, Modifier.testTag("mirath_result"))
+                MirathStepTitle(3, "Inheritance breakdown", accent, Modifier.testTag("mirath_result").tourTarget("calc_mirath_result"))
                 if (result.error != null) {
                     LocalizedText(result.error, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("mirath_error"))
                 } else {
@@ -185,7 +191,7 @@ internal fun MirathScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                         Surface(
                             shape = MaterialTheme.shapes.medium,
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().tourTarget("calc_mirath_share_row")
                         ) {
                             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -238,13 +244,13 @@ internal fun MirathScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                             if (result.roundingDifference.signum() != 0) appendLine("${localizedUiText("Rounding difference")}: ${money.format(result.roundingDifference)}")
                             appendLine(localizedUiText("Fractions are exact. Displayed amounts are rounded; reconcile minor currency differences before distribution."))
                             appendLine(localizedUiText("Verify the result with a qualified scholar before distribution."))
-                            appendLine("https://legacy.quran.com/4/11-12")
                     }
                     FilledTonalButton(onClick = {
+                        AppAnalytics.interaction("mirath_screen", "share_result")
                         context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"; putExtra(Intent.EXTRA_TEXT, report)
+                            type = "text/plain"; putExtra(Intent.EXTRA_TEXT, com.example.core.share.AppShareLink.withLink(context, report))
                         }, shareTitle))
-                    }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("mirath_share")) {
+                    }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("mirath_share").tourTarget("calc_mirath_share")) {
                         Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         LocalizedText("Share breakdown")
@@ -257,10 +263,9 @@ internal fun MirathScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
-                    SectionTitle("Sources")
+                    SectionTitle("Reference")
                 }
                 MirathHint("Quran: Surah An-Nisa 4:11–12. Hanafi rules for Awl, Radd and Umariyyatain are applied within the supported family scope.")
-                TextButton(onClick = { openExternalUrl(context, "https://legacy.quran.com/4/11-12") }, contentPadding = PaddingValues(horizontal = 0.dp)) { LocalizedText("Read Quran 4:11–12") }
             }
         }
     }
@@ -313,18 +318,18 @@ private fun MirathGenderChip(label: String, selected: Boolean, onClick: () -> Un
 }
 
 @Composable
-private fun MirathAmount(label: String, value: String, tag: String, onChange: (String) -> Unit) {
+private fun MirathAmount(label: String, value: String, tag: String, tourKey: String, onChange: (String) -> Unit) {
     val error = mirathAmountError(value)
     OutlinedTextField(value, onChange, label = { LocalizedText(label) }, singleLine = true,
         isError = error != null,
         shape = RoundedCornerShape(14.dp),
         supportingText = { LocalizedText(error ?: if (tag == "mirath_estate") "Required • up to 2 decimal places" else "Optional • leave empty for zero") },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth().testTag(tag))
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth().testTag(tag).tourTarget(tourKey))
 }
 
 @Composable
-private fun MirathCount(label: String, count: Int, max: Int = 50, onChange: (Int) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+private fun MirathCount(label: String, count: Int, max: Int = 50, tourKey: String, onChange: (Int) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.tourTarget(tourKey)) {
         LocalizedText(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         val decrease = "${localizedUiText("Decrease")}: ${localizedUiText(label)}"
         val increase = "${localizedUiText("Increase")}: ${localizedUiText(label)}"
@@ -345,8 +350,8 @@ private fun MirathCount(label: String, count: Int, max: Int = 50, onChange: (Int
 }
 
 @Composable
-private fun MirathToggle(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value = checked, role = Role.Checkbox, onValueChange = { AppAnalytics.interaction("mirath_screen", "family_review", "toggle"); onChange(it) }), verticalAlignment = Alignment.CenterVertically) {
+private fun MirathToggle(label: String, checked: Boolean, tourKey: String, onChange: (Boolean) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).tourTarget(tourKey).toggleable(value = checked, role = Role.Checkbox, onValueChange = { AppAnalytics.interaction("mirath_screen", "family_review", "toggle"); onChange(it) }), verticalAlignment = Alignment.CenterVertically) {
         Checkbox(checked, null)
         LocalizedText(label, modifier = Modifier.weight(1f))
     }

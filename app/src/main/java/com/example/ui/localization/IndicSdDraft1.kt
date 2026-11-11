@@ -57,7 +57,7 @@ internal object IndicSdDraft1 {
         "Witr" to "Witr",
         "Today" to "اڄ",
         "All five prayers prayed. Alhamdulillah!" to "سڀنی پنجن نمازن جی دعا ڪئی۔ الھمدالللہ!",
-        "Tap ✓ or ✗ to log each prayer." to "ہر دعا کی لاگ ڪرڻ لاء Â یا Â تی ڪلڪ ڪریو",
+        "Tap ✓ or ✗ to log each prayer." to "ہر دعا کی لاگ ڪرڻ لاء ✓ یا ✗ تی ڪلڪ ڪریو",
         "Muslimah mode: today is marked as excused from salah." to "مسلمھ انداز: اڄ جی دھن کی سلامی مان معافی جی روپ ۾ نشان لڳایو ویو آھی۔",
         "Today's salah" to "اڄ جی سلامی",
         "This week" to "ھن ہفتی",

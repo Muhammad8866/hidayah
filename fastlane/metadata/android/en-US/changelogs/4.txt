@@ -1,2 +1,0 @@
-- Allah & Prophet names, tally counter and language screens improved
-- Better stability and performance

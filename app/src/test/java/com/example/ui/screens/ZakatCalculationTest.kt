@@ -108,4 +108,35 @@ class ZakatCalculationTest {
         assertEquals(HijriDay(1450, 9, 12), yearsLater.nextDue)
         assertEquals(start, HijriDay.parse(start.toString()))
     }
+
+    @Test fun nisabBoundaryTable() {
+        // (input, expected status, expected due)
+        val cases = listOf(
+            Triple(grams.copy(cash = "612.35", lunarYearPassed = true), ZakatStatus.BELOW_NISAB, null),
+            Triple(grams.copy(cash = "612.36", lunarYearPassed = true), ZakatStatus.DUE, "15.31"),
+            Triple(grams.copy(cash = "612.37", lunarYearPassed = true), ZakatStatus.DUE, "15.31"),
+            // Net reaches the nisab exactly only after debts are subtracted.
+            Triple(grams.copy(cash = "700", debts = "87.64", lunarYearPassed = true), ZakatStatus.DUE, "15.31"),
+            Triple(grams.copy(cash = "700", debts = "87.65", lunarYearPassed = true), ZakatStatus.BELOW_NISAB, null),
+            // Below nisab wins over the hawl check.
+            Triple(grams.copy(cash = "612.35"), ZakatStatus.BELOW_NISAB, null),
+            Triple(grams.copy(cash = "612.36"), ZakatStatus.AWAITING_HAWL, null),
+            // Gold alone at exactly 87.48 g (7.5 tola) of 24K gold.
+            Triple(grams.copy(goldWeight = "87.48", lunarYearPassed = true), ZakatStatus.DUE, "4.37"),
+            Triple(grams.copy(goldWeight = "87.47", lunarYearPassed = true), ZakatStatus.BELOW_NISAB, null),
+        )
+        for ((input, status, due) in cases) {
+            val r = calculateZakat(input)
+            assertEquals(input.toString(), status, r.status)
+            assertEquals(input.toString(), due?.let(::BigDecimal), r.due)
+        }
+    }
+
+    @Test fun goldAloneAtExactNisabUsesGoldBasis() {
+        val r = calculateZakat(grams.copy(goldWeight = "87.48", lunarYearPassed = true))
+        assertEquals(ZakatNisabBasis.GOLD, r.basis)
+        assertEquals(BigDecimal("174.96"), r.goldValue)
+        assertEquals(BigDecimal("174.96"), r.nisab)
+        assertEquals(1f, r.nisabProgress)
+    }
 }

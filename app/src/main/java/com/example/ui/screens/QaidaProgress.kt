@@ -55,6 +55,7 @@ internal class QaidaProgress(
             .putInt(KEY_STREAK, streak)
             .putLong(KEY_STREAK_DAY, day)
             .apply()
+        if (streakDay != day) com.example.core.analytics.AppAnalytics.streak("qaida_tajweed", streak)
     }
 
     fun toggleBookmark(lessonId: String) {

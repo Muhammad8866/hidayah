@@ -82,7 +82,7 @@ interface DeenDao {
         SyncOutboxEntity::class
     ],
     version = 3,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class DeenDatabase : RoomDatabase() {
     abstract fun deenDao(): DeenDao

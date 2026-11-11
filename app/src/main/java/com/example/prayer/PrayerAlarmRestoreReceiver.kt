@@ -7,11 +7,15 @@ import android.content.Intent
 /** Alarms are wiped on reboot and app update, and go stale when the clock or timezone changes. */
 class PrayerAlarmRestoreReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        com.example.core.analytics.AppAnalytics.wake(context, "alarm_restore", intent.action)
         if (intent.action !in HANDLED_ACTIONS) return
         val pending = goAsync()
         Thread {
             try {
                 PrayerNotificationReceiver.rescheduleFromPreferences(context)
+                // Only the fixed system trigger is reported, so reports show whether alarms survive reboots and updates.
+                com.example.core.analytics.AppAnalytics.milestone("prayer_alerts", "alarms_restored",
+                    intent.action.orEmpty().substringAfterLast('.'))
             } finally {
                 pending.finish()
             }

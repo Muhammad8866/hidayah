@@ -212,15 +212,9 @@ object QuranDatasetRepository {
         }
     }
 
-    fun searchQuran(query: String): List<Ayah> {
-        val q = query.trim().lowercase()
-        if (q.isEmpty()) return emptyList()
-        val all = AL_FATIHAH_AYAT + AL_BAQARAH_KEY_AYAT
-        return all.filter {
-            it.arabicText.contains(q) ||
-            it.englishTranslation.lowercase().contains(q) ||
-            it.transliteration.lowercase().contains(q) ||
-            it.urduTranslation.contains(q)
-        }
-    }
+    /** Built once on the first search; see [QuranSearch.AyahSearch]. */
+    private val ayahSearch by lazy { QuranSearch.AyahSearch(AL_FATIHAH_AYAT + AL_BAQARAH_KEY_AYAT) }
+
+    /** The bundled ayat that match [query], a typed reference ("2:255") first; none for a blank query. */
+    fun searchQuran(query: String): List<Ayah> = ayahSearch.search(query)
 }

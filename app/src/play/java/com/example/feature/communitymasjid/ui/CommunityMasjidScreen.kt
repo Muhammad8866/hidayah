@@ -29,6 +29,7 @@ import com.example.ui.components.groupedShape
 import com.example.ui.components.LoadingState
 import com.example.ui.components.OnReconnect
 import com.example.ui.localization.localizedUiText
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.localizeUiText
 import com.example.ui.localization.LocalAppLanguage
 import androidx.compose.foundation.text.KeyboardActions
@@ -108,7 +109,6 @@ import com.example.feature.communitymasjid.model.CmCommunityRecord
 import com.example.feature.communitymasjid.model.CmMosque
 import com.example.feature.communitymasjid.model.CmPrayer
 import com.example.feature.communitymasjid.model.CmTimings
-import com.example.feature.communitymasjid.model.CmDownReason
 import com.example.ui.localization.LocalAppLocale
 import com.example.ui.localization.LocalizedText
 
@@ -127,7 +127,6 @@ fun CommunityMasjidScreen(
 
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    var showAddMosque by rememberSaveable { mutableStateOf(false) }
     var showDeleteData by rememberSaveable { mutableStateOf(false) }
     var pendingContribution by remember { mutableStateOf<(() -> Unit)?>(null) }
     val requireGuidelines: (() -> Unit) -> Unit = { action ->
@@ -163,7 +162,6 @@ fun CommunityMasjidScreen(
                     onBack = onBack,
                     onRefresh = { com.example.core.analytics.AppAnalytics.interaction("community_masjid_screen", "refresh_masjid_list", "refresh"); viewModel.refreshList(force = true) },
                     onOpen = viewModel::openMosque,
-                    onAddMosque = { requireGuidelines { showAddMosque = true } },
                     onDeleteData = { showDeleteData = true },
                     onRequestPermission = {
                         permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
@@ -187,14 +185,6 @@ fun CommunityMasjidScreen(
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(12.dp))
     }
 
-    if (showAddMosque) {
-        CmAddMosqueDialog(
-            isSubmitting = state.isAddingMosque,
-            validate = viewModel::validateNewMosque,
-            onSubmit = { name, address -> viewModel.addMosque(name, address) { ok -> if (ok) showAddMosque = false } },
-            onDismiss = { showAddMosque = false }
-        )
-    }
     pendingContribution?.let { action ->
         AlertDialog(
             onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("community_masjid_screen", "dismiss_guidelines", "dismiss"); pendingContribution = null },
@@ -250,7 +240,6 @@ private fun CmListContent(
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     onOpen: (CmMosque) -> Unit,
-    onAddMosque: () -> Unit,
     onDeleteData: () -> Unit,
     onRequestPermission: () -> Unit
 ) {
@@ -266,9 +255,6 @@ private fun CmListContent(
                 subtitle = "Azan & Jamaat timings shared by people at the masjid",
                 onBack = onBack
             ) {
-                if (state.hasLocationPermission && state.communityConfigured) {
-                    IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("community_masjid_screen", "open_add_masjid_header", onAddMosque)) { Icon(Icons.Filled.AddLocationAlt, contentDescription = localizedUiText("Add Masjid")) }
-                }
                 if (state.isLoadingList) CmHeaderSpinner()
                 else IconButton(onClick = onRefresh, enabled = state.hasLocationPermission) { Icon(Icons.Filled.Refresh, contentDescription = localizedUiText("Refresh")) }
                 if (state.communityConfigured) {
@@ -299,8 +285,12 @@ private fun CmListContent(
         if (!state.communityConfigured || state.communityError != null) {
             item {
                 CmNoticeCard(
-                    text = if (!state.communityConfigured) "Community timings are not available on this build. Nearby masjids are still shown."
-                    else "Community timings could not be refreshed (${state.communityError}). Showing saved data."
+                    text = if (!state.communityConfigured) localizedUiText("Community timings are not available on this build. Nearby masjids are still shown.")
+                    else localizedUiTemplate(
+                        "Community timings could not be refreshed ({error}). Showing saved data.",
+                        "error" to localizedUiText(state.communityError.orEmpty())
+                    ),
+                    translate = false
                 )
             }
         }
@@ -334,7 +324,7 @@ private fun CmListContent(
                 val noFix = state.location == null
                 CmEmptyCard(
                     icon = Icons.Filled.MyLocation,
-                    text = state.listError ?: "No nearby masjids found within 5 km. Try refreshing or add one below.",
+                    text = state.listError ?: "No nearby masjids found within 5 km. Try refreshing or search in Google Maps.",
                     action = "Retry",
                     onAction = onRefresh,
                     secondaryAction = if (noFix) "Location" else null,
@@ -351,128 +341,9 @@ private fun CmListContent(
                 )
             }
         }
-        if (state.hasLocationPermission && state.communityConfigured && !(state.visibleMosques.isEmpty() && state.isLoadingList)) {
-            item { CmAddMosqueCard(onAddMosque) }
-        }
     }
 }
 
-@Composable
-private fun CmAddMosqueCard(onAddMosque: () -> Unit) {
-    AppCard(
-        modifier = Modifier.fillMaxWidth(),
-        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
-        outlined = false,
-        verticalArrangement = Arrangement.spacedBy(Spacing.md)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconBadge(Icons.Filled.AddLocationAlt, MaterialTheme.colorScheme.primary, size = 40.dp, iconSize = 22.dp)
-            Spacer(Modifier.width(Spacing.md))
-            Column(Modifier.weight(1f)) {
-                LocalizedText("Masjid not in the list?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                LocalizedText(
-                    "Stand at the masjid and add it. Everyone nearby sees it at once.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        FilledTonalButton(
-            onClick = com.example.core.analytics.AppAnalytics.trackAction("community_masjid_screen", "open_add_masjid_card", onAddMosque),
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("cm_add_mosque")
-        ) {
-            Icon(Icons.Filled.AddLocationAlt, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(Spacing.sm))
-            LocalizedText("Add Masjid")
-        }
-    }
-}
-
-@Composable
-private fun CmAddMosqueDialog(
-    isSubmitting: Boolean,
-    validate: (String, String) -> List<String>,
-    onSubmit: (String, String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var name by rememberSaveable { mutableStateOf("") }
-    var address by rememberSaveable { mutableStateOf("") }
-    var showErrors by rememberSaveable { mutableStateOf(false) }
-    val problems = validate(name, address)
-    val keyboard = LocalSoftwareKeyboardController.current
-    val submit = {
-        showErrors = true
-        if (problems.isEmpty() && !isSubmitting) {
-            keyboard?.hide()
-            onSubmit(name, address)
-        }
-    }
-    val firstProblem = if (showErrors) problems.firstOrNull() else null
-    AlertDialog(
-        onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("community_masjid_screen", "dismiss_add_masjid", "dismiss"); if (!isSubmitting) onDismiss() },
-        icon = { Icon(Icons.Filled.AddLocationAlt, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = { LocalizedText("Add Masjid") },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(MaterialTheme.shapes.medium)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(Spacing.md),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Icon(Icons.Filled.MyLocation, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(Spacing.sm))
-                    LocalizedText(
-                        "Add only while you are at the masjid. Your current GPS location becomes the masjid's location.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it.take(CmTimingRules.MOSQUE_NAME_MAX) },
-                    label = { LocalizedText("Masjid name") },
-                    singleLine = true,
-                    isError = firstProblem != null,
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
-                    modifier = Modifier.fillMaxWidth().testTag("cm_add_mosque_name")
-                )
-                OutlinedTextField(
-                    value = address,
-                    onValueChange = { address = it.take(CmTimingRules.MOSQUE_ADDRESS_MAX) },
-                    label = { LocalizedText("Area / address (optional)") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { submit() }),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                AnimatedVisibility(visible = firstProblem != null) {
-                    firstProblem?.let {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            LocalizedText(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { com.example.core.analytics.AppAnalytics.interaction("community_masjid_screen", "submit_add_masjid", "tap"); submit() },
-                enabled = !isSubmitting
-            ) {
-                if (isSubmitting) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                else LocalizedText("Add here")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("community_masjid_screen", "cancel_add_masjid", onDismiss), enabled = !isSubmitting) { LocalizedText("Cancel") }
-        }
-    )
-}
 
 /** Label shared by the list card and the detail view; the same phrase the screen has always shown. */
 private const val CM_LAST_UPDATED = "Last Updated"
@@ -515,9 +386,6 @@ private fun CmMosqueCard(mosque: CmMosque, record: CmCommunityRecord?, onClick: 
                 Text(mosque.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (mosque.address.isNotBlank()) {
                     Text(mosque.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                if (mosque.isUserAdded) {
-                    LocalizedText("Added by the community", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
                 }
                 if (mosque.docId.startsWith("google_")) {
                     Text("Google Maps", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Normal,
@@ -653,8 +521,6 @@ private fun CmDetailContent(
     requireGuidelines: (() -> Unit) -> Unit
 ) {
     var showEditor by rememberSaveable { mutableStateOf(false) }
-    var showReportDialog by rememberSaveable { mutableStateOf(false) }
-    var showContentReport by rememberSaveable { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val proximity = viewModel.proximityTo(detail.mosque, state.location)
     val record = detail.record
@@ -669,17 +535,12 @@ private fun CmDetailContent(
             CmHeader(
                 title = detail.mosque.name,
                 subtitle = detail.mosque.address.ifBlank {
-                    if (detail.mosque.isUserAdded) "Added by the community" else "Google Maps"
+                    "Google Maps"
                 },
                 onBack = com.example.core.analytics.AppAnalytics.trackAction("community_masjid_screen", "close_masjid_detail", viewModel::closeMosque)
             ) {
                 if (detail.isLoading) CmHeaderSpinner()
                 else IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("community_masjid_screen", "refresh_masjid_detail", viewModel::refreshDetail)) { Icon(Icons.Filled.Refresh, contentDescription = localizedUiText("Refresh")) }
-                if (state.communityConfigured) {
-                    IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("community_masjid_screen", "open_report_content", "tap"); showContentReport = true }, modifier = Modifier.testTag("cm_report_content")) {
-                        Icon(Icons.Filled.Flag, contentDescription = localizedUiText("Report content"))
-                    }
-                }
             }
         }
         item {
@@ -771,34 +632,6 @@ private fun CmDetailContent(
         }
 
         item {
-            CmSectionCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconBadge(Icons.Filled.Groups, MaterialTheme.colorScheme.primary, size = 36.dp, iconSize = 20.dp)
-                    Spacer(Modifier.width(Spacing.md))
-                    LocalizedText("Is this masjid really here?", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(Spacing.md))
-                CmVoteButtons(
-                    up = record?.upVotes ?: 0,
-                    down = record?.downVotes ?: 0,
-                    myVote = detail.myVotes.mosqueVote,
-                    enabled = canAct && !detail.isOwnMosque,
-                    upLabel = "Yes",
-                    downLabel = "Report",
-                    onUp = { viewModel.voteMosque(1, null) },
-                    onDown = { showReportDialog = true }
-                )
-                Spacer(Modifier.height(Spacing.sm))
-                LocalizedText(
-                    if (detail.isOwnMosque) "You added this masjid, so you cannot vote on it."
-                    else "It is removed from the list when ${CmTimingRules.VOTE_THRESHOLD}+ people report it and reports outnumber 👍.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        item {
             CmSectionCard(Modifier.animateContentSize()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconBadge(Icons.Filled.History, MaterialTheme.colorScheme.primary, size = 36.dp, iconSize = 20.dp)
@@ -837,8 +670,9 @@ private fun CmDetailContent(
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold
                                 )
-                                LocalizedText(
-                                    if (entry.isRevert) "Reverted by community votes" else "Set by ${entry.byRef}",
+                                Text(
+                                    if (entry.isRevert) localizedUiText("Reverted by community votes")
+                                    else localizedUiTemplate("Set by {name}", "name" to entry.byRef),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = if (entry.isRevert) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -863,10 +697,12 @@ private fun CmDetailContent(
             Row(Modifier.padding(horizontal = Spacing.xs), verticalAlignment = Alignment.Top) {
                 Icon(Icons.Filled.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp).size(16.dp))
                 Spacer(Modifier.width(Spacing.sm))
-                LocalizedText(
-                    "Timings are shared by the community and shown at once. Add and vote only when you are at the masjid " +
-                        "(within ${CmTimingRules.PRESENCE_RADIUS_METRES} m). If ${CmTimingRules.VOTE_THRESHOLD}+ people vote timings wrong " +
-                        "and they outnumber 👍, the previous timings come back.",
+                Text(
+                    localizedUiTemplate(
+                        "Timings are shared by the community and shown at once. Add and vote only when you are at the masjid (within {metres} m). If {count}+ people vote timings wrong and they outnumber 👍, the previous timings come back.",
+                        "metres" to "${CmTimingRules.PRESENCE_RADIUS_METRES}",
+                        "count" to "${CmTimingRules.VOTE_THRESHOLD}"
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -882,72 +718,6 @@ private fun CmDetailContent(
             onSubmit = { timings -> viewModel.submitTiming(timings) { ok -> if (ok) showEditor = false } },
             onDismiss = { showEditor = false }
         )
-    }
-    if (showReportDialog) {
-        CmReportDialog(
-            onReport = { reason -> showReportDialog = false; viewModel.voteMosque(-1, reason) },
-            onDismiss = { showReportDialog = false }
-        )
-    }
-    if (showContentReport) {
-        CmContentReportDialog(
-            hasTimings = record?.current != null,
-            onReport = { target, reason -> showContentReport = false; viewModel.report(target, reason) },
-            onDismiss = { showContentReport = false }
-        )
-    }
-}
-
-/** Moderation report, separate from votes: works anywhere and goes to cm_reports for review. */
-@Composable
-private fun CmContentReportDialog(hasTimings: Boolean, onReport: (target: String, reason: String) -> Unit, onDismiss: () -> Unit) {
-    var target by rememberSaveable { mutableStateOf("mosque") }
-    val reasons = listOf(
-        "wrong_info" to "Wrong information",
-        "offensive" to "Offensive or abusive",
-        "spam" to "Spam or promotion",
-        "other" to "Something else"
-    )
-    AlertDialog(
-        onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("community_masjid_screen", "dismiss_content_report", onDismiss),
-        icon = { Icon(Icons.Filled.Flag, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-        title = { LocalizedText("Report content") },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                if (hasTimings) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        FilterChip(selected = target == "mosque", onClick = { com.example.core.analytics.AppAnalytics.interaction("community_masjid_screen", "report_target_masjid", "tap"); target = "mosque" }, label = { LocalizedText("Masjid") })
-                        FilterChip(selected = target == "timing", onClick = { com.example.core.analytics.AppAnalytics.interaction("community_masjid_screen", "report_target_timings", "tap"); target = "timing" }, label = { LocalizedText("Timings") })
-                    }
-                }
-                LocalizedText("What is wrong?", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                reasons.forEachIndexed { index, (key, label) ->
-                    CmChoiceRow(
-                        label = label,
-                        shape = groupedShape(index, reasons.size, outer = 16.dp, inner = 4.dp),
-                        onClick = { com.example.core.analytics.AppAnalytics.interaction("community_masjid_screen", "submit_content_report", "tap", item = key); onReport(target, key) }
-                    )
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("community_masjid_screen", "cancel_content_report", onDismiss)) { LocalizedText("Cancel") } }
-    )
-}
-
-/** One tappable answer in a report dialog; stacked rows read as a single grouped list. */
-@Composable
-private fun CmChoiceRow(label: String, shape: androidx.compose.ui.graphics.Shape, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        shape = shape,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-    ) {
-        Row(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md), verticalAlignment = Alignment.CenterVertically) {
-            LocalizedText(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
     }
 }
 
@@ -990,30 +760,6 @@ private fun CmVoteButtons(
 }
 
 @Composable
-private fun CmReportDialog(onReport: (CmDownReason) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = com.example.core.analytics.AppAnalytics.trackAction("community_masjid_screen", "dismiss_downvote_reason", onDismiss),
-        icon = { Icon(Icons.Filled.Flag, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-        title = { LocalizedText("Report this masjid") },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                LocalizedText("What is wrong?", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                val reasons = CmDownReason.entries
-                reasons.forEachIndexed { index, reason ->
-                    CmChoiceRow(
-                        label = reason.label,
-                        shape = groupedShape(index, reasons.size, outer = 16.dp, inner = 4.dp),
-                        onClick = { com.example.core.analytics.AppAnalytics.interaction("community_masjid_screen", "submit_downvote_reason", "tap", item = reason.name); onReport(reason) }
-                    )
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("community_masjid_screen", "cancel_downvote_reason", onDismiss)) { LocalizedText("Cancel") } }
-    )
-}
-
-@Composable
 private fun CmProximityCard(proximity: CmProximity?, isLocating: Boolean, onUpdate: () -> Unit) {
     val ok = proximity?.canAct == true
     AppCard(
@@ -1032,20 +778,27 @@ private fun CmProximityCard(proximity: CmProximity?, isLocating: Boolean, onUpda
             )
             Spacer(Modifier.width(Spacing.md))
             Column(Modifier.weight(1f)) {
-                LocalizedText(
+                Text(
                     when {
-                        proximity == null -> "Location not verified yet"
-                        else -> "You are ${cmDistance(proximity.distanceMetres.toDouble())} away (±${proximity.accuracyMetres} m)"
+                        proximity == null -> localizedUiText("Location not verified yet")
+                        else -> localizedUiTemplate(
+                            "You are {distance} away (±{accuracy} m)",
+                            "distance" to cmDistance(proximity.distanceMetres.toDouble()),
+                            "accuracy" to "${proximity.accuracyMetres}"
+                        )
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                LocalizedText(
+                Text(
                     when {
-                        proximity == null -> "Update your location to add timings or vote."
-                        ok -> "You are at the masjid — you can add timings and vote."
-                        !proximity.isAccurateEnough -> "Location is not precise enough. Move to open sky and update."
-                        else -> "Go within ${CmTimingRules.PRESENCE_RADIUS_METRES} m of the masjid to add timings or vote."
+                        proximity == null -> localizedUiText("Update your location to add timings or vote.")
+                        ok -> localizedUiText("You are at the masjid — you can add timings and vote.")
+                        !proximity.isAccurateEnough -> localizedUiText("Location is not precise enough. Move to open sky and update.")
+                        else -> localizedUiTemplate(
+                            "Go within {metres} m of the masjid to add timings or vote.",
+                            "metres" to "${CmTimingRules.PRESENCE_RADIUS_METRES}"
+                        )
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1079,7 +832,12 @@ private fun CmInfoRow(label: String, value: String) {
 }
 
 @Composable
-private fun CmNoticeCard(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Filled.Info) {
+private fun CmNoticeCard(
+    text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Filled.Info,
+    // false when text is already localized, so it is not passed through word-by-word substitution again.
+    translate: Boolean = true
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1090,7 +848,8 @@ private fun CmNoticeCard(text: String, icon: androidx.compose.ui.graphics.vector
     ) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.padding(top = 1.dp).size(18.dp))
         Spacer(Modifier.width(10.dp))
-        LocalizedText(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
+        if (translate) LocalizedText(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
+        else Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
     }
 }
 
@@ -1141,7 +900,7 @@ private fun CmEmptyCard(
 }
 
 @Composable
-private fun cmDistance(metres: Double): String = cmFormatDistance(metres, LocalAppLocale.current)
+private fun cmDistance(metres: Double): String = cmFormatDistance(metres, LocalAppLocale.current, cmDeviceRegion())
 
 @Composable
 private fun cmDate(epochMs: Long?): String = cmFormatDate(epochMs, cmIs24Hour(), LocalAppLocale.current)

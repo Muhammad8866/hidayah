@@ -1,6 +1,6 @@
 package com.example.ui.screens
 
-import com.example.domain.model.DuaDatasetRepository
+import com.example.core.search.AppSearch
 
 internal enum class KalimaGroup { KALIMA, IMAN }
 
@@ -22,8 +22,6 @@ internal data class KalimaEntry(
 
 /** Traditional Arabic formulas; explanatory meanings are independently phrased. */
 internal object KalimasContent {
-    const val SOURCES = "6 Kalime: IslamInPerspective — The six Kalima (30 June 2022)\nhttps://www.islaminperspective.com/topics/fiqh/The-six-Kalima\n\nIman: Dawat-e-Islami USA — Shahadah (Faith)\nhttps://www.dawateislamiusa.org/pillars_of_islam/shahadah-faith"
-
     /** The numbered collection is a teaching arrangement, not the wording of a single hadith. */
     const val ABOUT = "6 Kalime bachpan se yaad karaye jaane wali riwayati tarteeb hai. Inke alfaaz zikr, tauheed aur tauba ke kalimaat par mushtamil hain; poori ginti wali tarteeb kisi ek hadith ke alfaaz nahin."
     const val ABOUT_ENGLISH = "The six Kalimas are a traditional teaching arrangement memorised from childhood. Their words are statements of remembrance, monotheism and repentance; the numbered collection as a whole is not the wording of one single hadith."
@@ -204,22 +202,28 @@ internal object KalimasContent {
             reference = "Hadith-e-Jibreel — Sahih Muslim 8")
     )
 
-    private val searchText: Map<String, String> = entries.associate { entry ->
-        entry.id to DuaDatasetRepository.normalizeForSearch(buildString {
-            append("${entry.title} ${entry.titleArabic} ${entry.arabic} ${entry.roman} ${entry.urdu} ${entry.english} ")
-            append("${entry.nameMeaning} ${entry.nameMeaningEnglish} ${entry.note} ${entry.noteEnglish} ${entry.reference} ")
-            entry.phrases.forEach { append("${it.urdu} ${it.english} ") }
-        })
+    /**
+     * Built once (see [AppSearch]): the title counts most, then its Arabic name, then the Roman
+     * wording, then the Arabic, meanings, notes and reference; a typed number opens that Kalima.
+     */
+    private val searchIndex = AppSearch.Ranker(entries) { entry ->
+        AppSearch.Fields(
+            title = entry.title,
+            nativeTitle = entry.titleArabic,
+            author = entry.roman,
+            other = listOf(
+                entry.arabic, entry.roman, entry.urdu, entry.english, entry.nameMeaning, entry.nameMeaningEnglish,
+                entry.note, entry.noteEnglish, entry.reference
+            ) + entry.phrases.flatMap { listOf(it.urdu, it.english) },
+            number = entry.number
+        )
     }
 
     fun byId(id: String): KalimaEntry? = entries.firstOrNull { it.id == id }
 
-    fun search(query: String, group: KalimaGroup? = null): List<KalimaEntry> {
-        val words = DuaDatasetRepository.normalizeForSearch(query).split(' ').filter(String::isNotBlank)
-        return entries.filter { entry ->
-            (group == null || entry.group == group) && words.all(searchText.getValue(entry.id)::contains)
-        }
-    }
+    /** Entries that match [query], best match first, of [group] when one is given. */
+    fun search(query: String, group: KalimaGroup? = null): List<KalimaEntry> =
+        searchIndex.search(query).filter { group == null || it.group == group }
 
     fun shareText(entry: KalimaEntry, english: Boolean): String = listOf(
         entry.title, entry.arabic, entry.roman, if (english) entry.english else entry.urdu, "— Hidayah"

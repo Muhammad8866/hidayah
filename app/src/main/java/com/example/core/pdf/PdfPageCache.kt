@@ -40,6 +40,7 @@ object PdfPageCache {
             @Deprecated("Deprecated in Java")
             override fun onLowMemory() = memory.evictAll()
 
+            @Suppress("DEPRECATION") // TRIM_MEMORY_RUNNING_LOW is still delivered below API 34.
             override fun onTrimMemory(level: Int) {
                 // The page on screen is held by its reader, so dropping the cache never blanks it.
                 when {

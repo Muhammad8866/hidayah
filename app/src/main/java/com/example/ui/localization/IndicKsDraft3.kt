@@ -73,7 +73,7 @@ internal object IndicKsDraft3 {
         "Zakat is due: 2.5% of your net zakatable wealth." to "زکایت چھ واجب الادا: تہنز خالص زکابل دولتک 2. 5%۔",
         "Payable after the lunar year" to "قمری وریہٕ پتہٕ چھ ادائیگی یوان کرنہٕ۔",
         "Above nisab by" to "نسابس پیٹھ",
-        "Short of nisab by" to "ننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننننن",
+        "Short of nisab by" to "نصابہٕ کھوتہٕ کم",
         "Use one currency for every amount. Figures are not saved. For personal cases, ask a trusted mufti." to "پرٛؠتھ رقم خٲطرٕ کٔرو اکھ کرنسی استعمال۔ اعداد چھ نہٕ محفوظ کرنہٕ یوان۔ ذٲتی معاملن خٲطرٕ کٔرو أکس بھروسہٕ مند مفتی پؠٹھ پوچھن۔",
         "Umrah" to "عمرہ",
         "Hajj" to "حج۔",

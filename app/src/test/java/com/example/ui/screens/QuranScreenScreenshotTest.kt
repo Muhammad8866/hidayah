@@ -3,6 +3,7 @@ package com.example.ui.screens
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -47,6 +48,16 @@ class QuranScreenScreenshotTest {
     }
 
     @Test
+    fun tafseerPdfLibrary() {
+        showQuran()
+        composeRule.onNodeWithTag("quran_tafseer_pdfs_card").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("quran_tafseer_pdf_list").assertExists()
+        composeRule.onNodeWithTag("quran_tafseer_pdf_di-1238").assertExists()
+        composeRule.onRoot().captureRoboImage("src/test/screenshots/quran_tafseer_pdfs.png")
+    }
+
+    @Test
     fun audioLibrary() {
         showQuran()
         composeRule.onNodeWithTag("quran_tab_audio").performClick()
@@ -59,6 +70,8 @@ class QuranScreenScreenshotTest {
         showQuran()
         composeRule.onNodeWithTag("quran_tab_audio").performClick()
         composeRule.onNodeWithTag("quran_listen_tafseer").performClick()
+        // The tafsir catalog loads off the main thread, so wait for the list before checking it.
+        composeRule.waitUntil(10_000) { composeRule.onAllNodesWithTag("tafsir_audio_search").fetchSemanticsNodes().isNotEmpty() }
         composeRule.onNodeWithTag("tafsir_audio_search").assertExists()
         composeRule.onNodeWithTag("tafsir_audio_surah_1").assertExists()
         composeRule.onRoot().captureRoboImage("src/test/screenshots/quran_tafsir.png")
@@ -69,6 +82,7 @@ class QuranScreenScreenshotTest {
         showQuran()
         composeRule.onNodeWithTag("quran_tab_audio").performClick()
         composeRule.onNodeWithTag("quran_listen_tafseer").performClick()
+        composeRule.waitUntil(10_000) { composeRule.onAllNodesWithTag("tafsir_audio_search").fetchSemanticsNodes().isNotEmpty() }
         composeRule.onNodeWithText("Para wise").performClick()
         composeRule.onNodeWithTag("tafsir_audio_para_1").assertExists()
         composeRule.onRoot().captureRoboImage("src/test/screenshots/quran_tafsir_para.png")

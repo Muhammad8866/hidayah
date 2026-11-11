@@ -115,6 +115,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core.analytics.AppAnalytics
+import com.example.core.search.AppSearch
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import com.example.naat.NaatAudioManager
 import com.example.naat.NaatAudioState
 import com.example.naat.NaatCatalog
@@ -159,13 +162,12 @@ private fun NaatTrack.collection() = if (category == ARABIC_NASHEED) ARABIC_NASH
 private fun NaatTrack.khawan() = naatKhawans.firstOrNull { it.name == collection() }
 
 /**
- * Roman Urdu is spelled many ways (Madina, Madinay, Medine), so search compares
- * consonants word by word: lower-case, drop vowels, y and h, and collapse doubled letters.
+ * What the search box reads for one naat: its title, the reciter, and its category as written and
+ * in the app's language ([localize]). Roman Urdu is spelled many ways (Madina, Madinay, Medine;
+ * Mustafa, Mustapha); the shared engine folds those spellings together.
  */
-private fun spellingKeys(text: String): List<String> =
-    // Locale.ROOT: a Turkish device would otherwise lower-case "I" to a dotless "ı" and miss matches.
-    text.lowercase(Locale.ROOT).split(Regex("[\\s-]+")).filter(String::isNotBlank)
-        .map { it.replace(Regex("[aeiouyh'’()]"), "").replace(Regex("(.)\\1+"), "$1") }
+internal fun naatSearchFields(track: NaatTrack, localize: (String) -> String = { it }): AppSearch.Fields =
+    AppSearch.Fields(title = track.title, author = track.performer, other = listOf(track.category, localize(track.category)).distinct())
 
 private fun formatSize(bytes: Long): String = when {
     bytes <= 0 -> ""
@@ -216,15 +218,19 @@ fun NaatScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         val categories = collection.map(NaatTrack::category).distinct()
         listOf(ALL) + (if (categories.size > 1) categories else emptyList()) + FAVOURITES + DOWNLOADED
     }
-    val shown = remember(collection, filter, query, state.downloaded, state.favorites) {
-        val words = spellingKeys(query)
-        collection.filter { track ->
+    // Built once per reciter and language, so a keystroke only searches it.
+    val naatSearch = remember(collection, language) {
+        AppSearch.Ranker(collection) { naatSearchFields(it) { text -> localizeUiText(text, language) } }
+    }
+    val shown = remember(naatSearch, filter, query, state.downloaded, state.favorites) {
+        // Best match first; the chosen filter then narrows the matches.
+        naatSearch.search(query).filter { track ->
             when (filter) {
                 ALL -> true
                 DOWNLOADED -> track.id in state.downloaded
                 FAVOURITES -> track.id in state.favorites
                 else -> track.category == filter
-            } && spellingKeys(track.title).let { title -> words.all { word -> title.any { it.startsWith(word) } } }
+            }
         }
     }
     val pending = shown.filter { it.id !in state.downloaded && it.id !in state.downloading }
@@ -273,7 +279,7 @@ fun NaatScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             }
             item(key = "reciters") {
                 Row(
-                    Modifier.fillMaxWidth().horizontalScroll(com.example.core.analytics.rememberAnalyticsScrollState("naat_screen")),
+                    Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     naatKhawans.forEach { khawan ->
@@ -292,11 +298,11 @@ fun NaatScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 }
             }
             item(key = "search") {
-                AppSearchField(query, { query = it }, "Search naat", Modifier.testTag("naat_search"))
+                AppSearchField(query, { query = it }, "Search naat", Modifier.testTag("naat_search").tourTarget("naatazan_naat_search"))
             }
             item(key = "filters") {
                 Row(
-                    Modifier.fillMaxWidth().horizontalScroll(com.example.core.analytics.rememberAnalyticsScrollState("naat_screen")),
+                    Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     filters.forEach { name ->
@@ -311,7 +317,7 @@ fun NaatScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                             label = { LocalizedText(name) },
                             leadingIcon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) } },
                             shape = CircleShape,
-                            modifier = Modifier.testTag("naat_filter_${name.lowercase()}")
+                            modifier = Modifier.testTag("naat_filter_${name.lowercase()}").tourTarget("naatazan_naat_filters")
                         )
                     }
                 }
@@ -364,12 +370,6 @@ fun NaatScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                     onDelete = { confirm = NaatConfirm.Delete(listOf(track)) }
                 )
             }
-            item(key = "footer") {
-                LocalizedText("Audio: alhajowaisrazaqadri.com and Internet Archive • Catalog: GitHub. Downloaded files stay on this device.",
-                    modifier = Modifier.padding(top = 8.dp, start = 4.dp, end = 4.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
         }
 
         AnimatedVisibility(
@@ -388,7 +388,7 @@ fun NaatScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     if (showNowPlaying && activeTrack != null) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
-            onDismissRequest = { showNowPlaying = false },
+            onDismissRequest = { AppAnalytics.interaction("naat_screen", "dismiss_now_playing", "dismiss"); showNowPlaying = false },
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
@@ -404,7 +404,7 @@ fun NaatScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 private fun ContinueCard(track: NaatTrack, positionMs: Int, onResume: () -> Unit) {
     HeroSurface(
-        modifier = Modifier.fillMaxWidth().testTag("naat_continue"),
+        modifier = Modifier.fillMaxWidth().testTag("naat_continue").tourTarget("naatazan_naat_continue"),
         onClick = onResume,
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp)
     ) {
@@ -442,7 +442,7 @@ private fun KhawanCard(khawan: NaatKhawan, count: Int, offline: Int, selected: B
         selected = selected,
         onClick = onClick,
         interactionSource = interaction,
-        modifier = Modifier.width(168.dp).pressScale(interaction).testTag("naat_khawan_${khawan.initials.lowercase()}"),
+        modifier = Modifier.width(168.dp).pressScale(interaction).testTag("naat_khawan_${khawan.initials.lowercase()}").tourTarget("naatazan_naat_reciters"),
         shape = MaterialTheme.shapes.large,
         color = if (selected) accent.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
         border = BorderStroke(if (selected) 2.dp else 1.dp,
@@ -502,7 +502,7 @@ private fun ActionBar(
                     shown.firstOrNull()?.let { NaatAudioManager.play(it, shown) }
                 },
                 enabled = shown.isNotEmpty(),
-                modifier = Modifier.heightIn(min = 48.dp).testTag("naat_play_all")
+                modifier = Modifier.heightIn(min = 48.dp).testTag("naat_play_all").tourTarget("naatazan_naat_play_all")
             ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
@@ -515,7 +515,7 @@ private fun ActionBar(
                     shown.randomOrNull()?.let { NaatAudioManager.play(it, shown) }
                 },
                 enabled = shown.size > 1,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(48.dp).tourTarget("naatazan_naat_shuffle_all")
             ) {
                 Icon(Icons.Default.Shuffle, contentDescription = localizeUiText("Shuffle", language))
             }
@@ -523,7 +523,7 @@ private fun ActionBar(
             when {
                 downloadingHere > 0 -> FilledTonalButton(
                     onClick = AppAnalytics.trackAction("naat_screen", "stop_downloads", NaatAudioManager::cancelDownloads),
-                    modifier = Modifier.heightIn(min = 48.dp)
+                    modifier = Modifier.heightIn(min = 48.dp).tourTarget("naatazan_naat_stop_downloads")
                 ) {
                     Icon(Icons.Default.Stop, contentDescription = null)
                     Spacer(Modifier.width(4.dp))
@@ -531,13 +531,13 @@ private fun ActionBar(
                 }
                 isDownloadedFilter && offline.isNotEmpty() -> FilledTonalIconButton(
                     onClick = { AppAnalytics.interaction("naat_screen", "delete_downloads", "tap"); onConfirm(NaatConfirm.Delete(offline)) },
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(48.dp).tourTarget("naatazan_naat_delete_all")
                 ) {
                     Icon(Icons.Default.DeleteOutline, contentDescription = localizeUiText("Delete all", language))
                 }
                 pending.isNotEmpty() -> FilledTonalIconButton(
                     onClick = { AppAnalytics.interaction("naat_screen", "download_all", "tap"); onConfirm(NaatConfirm.DownloadMany(pending)) },
-                    modifier = Modifier.size(48.dp).testTag("naat_download_all")
+                    modifier = Modifier.size(48.dp).testTag("naat_download_all").tourTarget("naatazan_naat_download_all")
                 ) {
                     Icon(Icons.Default.DownloadForOffline, contentDescription = localizeUiText("Download all", language))
                 }
@@ -578,7 +578,7 @@ private fun RecentRow(recent: List<NaatTrack>, state: NaatAudioState, onPlay: (N
             LocalizedText("Recently played", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.semantics { heading() })
         }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.testTag("naat_recent")) {
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.testTag("naat_recent").tourTarget("naatazan_naat_recent")) {
             items(recent, key = { it.id }) { track ->
                 val active = state.activeId == track.id
                 AppCard(
@@ -621,7 +621,7 @@ private fun TrackRow(
     val isFavourite = track.id in state.favorites
     val tapPlay = { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); onPlay() }
     AppCard(
-        modifier = Modifier.fillMaxWidth().testTag("naat_${track.id}"),
+        modifier = Modifier.fillMaxWidth().testTag("naat_${track.id}").tourTarget("naatazan_naat_track"),
         onClick = AppAnalytics.trackAction("naat_screen", "play_naat", tapPlay),
         shape = MaterialTheme.shapes.large,
         containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.surface,
@@ -681,6 +681,7 @@ private fun FavouriteButton(isFavourite: Boolean, title: String, tag: String, on
             onToggle()
         },
         modifier = Modifier.testTag(tag)
+            .tourTarget(if (tag == "naat_now_playing_favourite") "naatazan_np_favourite" else "naatazan_naat_favourite")
     ) {
         Icon(
             if (isFavourite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -692,9 +693,15 @@ private fun FavouriteButton(isFavourite: Boolean, title: String, tag: String, on
 
 /** Download state for one naat: download, progress, retry after a failure, or delete once saved. */
 @Composable
-private fun DownloadButton(track: NaatTrack, state: NaatAudioState, onDownload: () -> Unit, onDelete: () -> Unit) {
+private fun DownloadButton(
+    track: NaatTrack,
+    state: NaatAudioState,
+    onDownload: () -> Unit,
+    onDelete: () -> Unit,
+    tourKey: String = "naatazan_naat_download"
+) {
     val language = LocalAppLanguage.current
-    when {
+    Box(Modifier.tourTarget(tourKey)) { when {
         track.id in state.downloading -> Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
             val percent = state.progress[track.id]
             if (percent == null || percent <= 0) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.5.dp)
@@ -717,7 +724,7 @@ private fun DownloadButton(track: NaatTrack, state: NaatAudioState, onDownload: 
             Icon(Icons.Default.Download, contentDescription = "${localizeUiText("Download", language)} ${track.title}",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-    }
+    } }
 }
 
 @Composable
@@ -744,7 +751,7 @@ private fun MiniPlayer(track: NaatTrack, state: NaatAudioState, onExpand: () -> 
     val fraction = if (position.durationMs > 0) (position.positionMs.toFloat() / position.durationMs).coerceIn(0f, 1f) else 0f
     Surface(
         modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp)
-            .testTag("naat_player"),
+            .testTag("naat_player").tourTarget("naatazan_naat_mini_player"),
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 10.dp,
@@ -766,11 +773,13 @@ private fun MiniPlayer(track: NaatTrack, state: NaatAudioState, onExpand: () -> 
                         color = if (state.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                PlayPauseButton(state, size = 48)
-                IconButton(onClick = AppAnalytics.trackAction("naat_screen", "player_next", NaatAudioManager::next), enabled = state.hasNext) {
+                PlayPauseButton(state, size = 48, tourKey = "naatazan_naat_mini_play")
+                IconButton(onClick = AppAnalytics.trackAction("naat_screen", "player_next", NaatAudioManager::next), enabled = state.hasNext,
+                    modifier = Modifier.tourTarget("naatazan_naat_mini_next")) {
                     Icon(Icons.Default.SkipNext, contentDescription = localizeUiText("Next", language))
                 }
-                IconButton(onClick = AppAnalytics.trackAction("naat_screen", "close_player", NaatAudioManager::stop)) {
+                IconButton(onClick = AppAnalytics.trackAction("naat_screen", "close_player", NaatAudioManager::stop),
+                    modifier = Modifier.tourTarget("naatazan_naat_mini_close")) {
                     Icon(Icons.Default.Close, contentDescription = localizeUiText("Close player", language),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -813,11 +822,11 @@ private fun ArtworkTile(track: NaatTrack, state: NaatAudioState, modifier: Modif
 }
 
 @Composable
-private fun PlayPauseButton(state: NaatAudioState, size: Int) {
+private fun PlayPauseButton(state: NaatAudioState, size: Int, tourKey: String) {
     val language = LocalAppLanguage.current
     FilledIconButton(
         onClick = AppAnalytics.trackAction("naat_screen", "player_play_pause", NaatAudioManager::togglePlayPause),
-        modifier = Modifier.size(size.dp)
+        modifier = Modifier.size(size.dp).tourTarget(tourKey)
     ) {
         if (state.buffering) CircularProgressIndicator(Modifier.size((size * 0.42f).dp), strokeWidth = 2.5.dp,
             color = MaterialTheme.colorScheme.onPrimary)
@@ -830,6 +839,7 @@ private fun PlayPauseButton(state: NaatAudioState, size: Int) {
 /** Full player: artwork, title, seek bar with times, and every playback control. */
 @Composable
 private fun NowPlaying(track: NaatTrack, state: NaatAudioState, onDelete: () -> Unit) {
+    TourScreen("naatazan_now_playing")
     val language = LocalAppLanguage.current
     val position by NaatAudioManager.position.collectAsStateWithLifecycle()
     var dragging by remember { mutableStateOf<Float?>(null) }
@@ -839,7 +849,7 @@ private fun NowPlaying(track: NaatTrack, state: NaatAudioState, onDelete: () -> 
             .testTag("naat_now_playing"),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        ArtworkTile(track, state, Modifier.widthIn(max = 260.dp).fillMaxWidth().aspectRatio(1f), corner = 28, large = true)
+        ArtworkTile(track, state, Modifier.widthIn(max = 260.dp).fillMaxWidth().aspectRatio(1f).tourTarget("naatazan_np_artwork"), corner = 28, large = true)
         Spacer(Modifier.height(20.dp))
         Text(track.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis)
@@ -854,8 +864,8 @@ private fun NowPlaying(track: NaatTrack, state: NaatAudioState, onDelete: () -> 
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             FavouriteButton(track.id in state.favorites, track.title, "naat_now_playing_favourite") { NaatAudioManager.toggleFavorite(track.id) }
-            DownloadButton(track, state, onDownload = { NaatAudioManager.download(track) }, onDelete = onDelete)
-            PlaybackSpeedButton(state.speed, NaatAudioManager::setSpeed, color = MaterialTheme.colorScheme.primary)
+            DownloadButton(track, state, onDownload = { NaatAudioManager.download(track) }, onDelete = onDelete, tourKey = "naatazan_np_download")
+            PlaybackSpeedButton(state.speed, NaatAudioManager::setSpeed, modifier = Modifier.tourTarget("naatazan_np_speed"), color = MaterialTheme.colorScheme.primary)
         }
         // Seek bar and transport controls keep the left-to-right order used by media players everywhere.
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -869,7 +879,7 @@ private fun NowPlaying(track: NaatTrack, state: NaatAudioState, onDelete: () -> 
                         dragging = null
                     },
                     enabled = position.durationMs > 0,
-                    modifier = Modifier.fillMaxWidth().testTag("naat_seek")
+                    modifier = Modifier.fillMaxWidth().testTag("naat_seek").tourTarget("naatazan_np_seek")
                 )
                 Row(Modifier.fillMaxWidth()) {
                     Text(formatTime(dragging?.let { (it * duration).toInt() } ?: position.positionMs),
@@ -880,21 +890,23 @@ private fun NowPlaying(track: NaatTrack, state: NaatAudioState, onDelete: () -> 
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    ToggleIcon(Icons.Default.Shuffle, state.shuffle, localizeUiText("Shuffle", language), NaatAudioManager::toggleShuffle)
+                    ToggleIcon(Icons.Default.Shuffle, state.shuffle, localizeUiText("Shuffle", language), NaatAudioManager::toggleShuffle,
+                        Modifier.tourTarget("naatazan_np_shuffle"))
                     IconButton(onClick = AppAnalytics.trackAction("naat_screen", "player_previous", NaatAudioManager::previous),
-                        modifier = Modifier.size(56.dp)) {
+                        modifier = Modifier.size(56.dp).tourTarget("naatazan_np_previous")) {
                         Icon(Icons.Default.SkipPrevious, contentDescription = localizeUiText("Previous", language), modifier = Modifier.size(34.dp))
                     }
-                    PlayPauseButton(state, size = 72)
+                    PlayPauseButton(state, size = 72, tourKey = "naatazan_np_play")
                     IconButton(onClick = AppAnalytics.trackAction("naat_screen", "player_next", NaatAudioManager::next),
-                        enabled = state.hasNext, modifier = Modifier.size(56.dp)) {
+                        enabled = state.hasNext, modifier = Modifier.size(56.dp).tourTarget("naatazan_np_next")) {
                         Icon(Icons.Default.SkipNext, contentDescription = localizeUiText("Next", language), modifier = Modifier.size(34.dp))
                     }
                     ToggleIcon(
                         if (state.repeat == NaatRepeat.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
                         state.repeat != NaatRepeat.OFF,
                         localizeUiText("Repeat", language),
-                        NaatAudioManager::cycleRepeat
+                        NaatAudioManager::cycleRepeat,
+                        Modifier.tourTarget("naatazan_np_repeat")
                     )
                 }
             }
@@ -903,9 +915,10 @@ private fun NowPlaying(track: NaatTrack, state: NaatAudioState, onDelete: () -> 
 }
 
 @Composable
-private fun ToggleIcon(icon: ImageVector, on: Boolean, label: String, onClick: () -> Unit) {
+private fun ToggleIcon(icon: ImageVector, on: Boolean, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     IconButton(
         onClick = onClick,
+        modifier = modifier,
         colors = if (on) IconButtonDefaults.iconButtonColors(
             containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
             contentColor = MaterialTheme.colorScheme.primary

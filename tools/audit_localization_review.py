@@ -35,7 +35,10 @@ def registered_rows(code):
 
 def export(output):
     output.mkdir(parents=True,exist_ok=True)
-    source=w.read(w.SOURCE,{})['duas']; languages=pending_languages()
+    source=w.read(w.SOURCE,{}).get('duas')
+    if not source:
+        raise SystemExit(f'{w.SOURCE.relative_to(w.ROOT).as_posix()} has no dua rows (the committed file is empty); nothing to export.')
+    languages=pending_languages()
     summaries=[]; hashes={}
     for code in languages:
         rows,paths=registered_rows(code)

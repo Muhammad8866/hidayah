@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import com.example.ui.tour.tourTarget
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -154,7 +155,7 @@ internal fun HomeSuggestionsSection(suggestions: List<HomeSuggestion>, onOpen: (
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Spacing.screen)
-            .testTag("home_suggestions"),
+            .testTag("home_suggestions").tourTarget("home_for_you"),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         HomeSectionTitle("For you now")

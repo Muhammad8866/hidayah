@@ -9,6 +9,10 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -74,10 +78,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.core.search.AppSearch
 import com.example.domain.model.Ayah
 import com.example.domain.model.Dua
+import com.example.domain.model.DuaDatasetRepository
 import com.example.quran.HifzQuranTextRepository
 import com.example.ui.components.AppCard
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import com.example.ui.components.AppSearchField
 import com.example.ui.components.HeroSurface
 import com.example.ui.components.IconBadge
@@ -168,6 +176,7 @@ fun RecitationCollectionScreen(onBack: () -> Unit, modifier: Modifier = Modifier
         onDispose { audio.onPassageFinished = null }
     }
     var query by rememberSaveable { mutableStateOf("") }
+    com.example.core.analytics.AnalyticsSearch("recitation_collection_screen", query)
     var savedOnly by rememberSaveable { mutableStateOf(false) }
     var category by rememberSaveable { mutableStateOf<String?>(null) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -175,6 +184,7 @@ fun RecitationCollectionScreen(onBack: () -> Unit, modifier: Modifier = Modifier
     // Completed items fold into a slim row; these are the ones the reader opened again.
     var reopened by rememberSaveable { mutableStateOf(setOf<String>()) }
     val listState = rememberLazyListState()
+    com.example.core.analytics.AnalyticsScroll("recitation_collection_screen", listState)
     val scope = rememberCoroutineScope()
     var verses by remember { mutableStateOf<Map<Int, List<Ayah>>>(emptyMap()) }
     var error by remember { mutableStateOf(false) }
@@ -192,15 +202,19 @@ fun RecitationCollectionScreen(onBack: () -> Unit, modifier: Modifier = Modifier
     LaunchedEffect(query, savedOnly, category) { audio.stop(); speech.stop(); recorded.stop() }
     fun versesOf(passage: RecitationPassage) =
         verses[passage.surah].orEmpty().filter { it.ayahNumber in passage.first..passage.last }
-    fun matches(id: String, text: String) = (!savedOnly || id in stored.favorites) && recitationMatches(query, text)
     val tabPassages = tabPassagesOf(tab)
-    val tabDuas = tabDuasOf(tab)
-    val passages = tabPassages.filter {
-        matches(it.id, "${it.title} ${it.reference} " + versesOf(it).joinToString(" ") { verse -> verse.arabicText })
+    // Each collection is made searchable once (again when its verses load or the language changes),
+    // so typing only searches. Results come best match first; saved and category filters narrow them.
+    val passageSearch = remember(tab, verses, language) {
+        AppSearch.Ranker(tabPassagesOf(tab)) { passage ->
+            recitationPassageFields(passage, versesOf(passage).map(Ayah::arabicText), localizeUiText(passage.title, language))
+        }
     }
-    val duas = tabDuas.filter {
-        (tab != 2 || category == null || it.category == category) &&
-            matches(it.id, "${it.title} ${it.category} ${it.arabicText} ${it.transliteration} ${it.englishTranslation} ${it.urduTranslation} ${it.sourceReference}")
+    val duaSearch = remember(tab) { AppSearch.Ranker(tabDuasOf(tab)) { DuaDatasetRepository.searchFields(it) } }
+    fun kept(id: String) = !savedOnly || id in stored.favorites
+    val passages = passageSearch.search(query).filter { kept(it.id) }
+    val duas = duaSearch.search(query).filter {
+        (tab != 2 || category == null || it.category == category) && kept(it.id)
     }
     val tabEntries = tabEntriesOf(tab)
     val completed = tabEntries.count { countFor(it.first, it.second) == it.second }
@@ -245,13 +259,13 @@ fun RecitationCollectionScreen(onBack: () -> Unit, modifier: Modifier = Modifier
         verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
         item(key = "header") {
             ScreenHeader("Manzil / Ruqyah / Wazaif", subtitle = "Quranic recitations & daily remembrance", onBack = onBack) {
-                IconButton(onClick = { showSettings = true }, modifier = Modifier.testTag("collection_settings")) {
+                IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "open_settings"); showSettings = true }, modifier = Modifier.testTag("collection_settings").tourTarget("recitation_settings")) {
                     Icon(Icons.Default.Tune, contentDescription = localizeUiText("Reading options", language))
                 }
             }
         }
         item(key = "collections") {
-            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).tourTarget("recitation_collections"), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 recitationTabs.forEachIndexed { index, info ->
                     val entries = remember(index) { tabEntriesOf(index) }
                     val done = entries.count { countFor(it.first, it.second) == it.second }
@@ -271,32 +285,36 @@ fun RecitationCollectionScreen(onBack: () -> Unit, modifier: Modifier = Modifier
         }
         item(key = "tools") {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                AppSearchField(query, { query = it }, "Search collection", Modifier.testTag("collection_search"))
+                AppSearchField(query, { query = it }, "Search collection", Modifier.testTag("collection_search").tourTarget("recitation_search"))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     item {
-                        FilterChip(savedOnly, { savedOnly = !savedOnly }, label = { LocalizedText("Favourites") },
+                        FilterChip(savedOnly, { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "favourites_filter", "toggle"); savedOnly = !savedOnly }, label = { LocalizedText("Favourites") },
                             leadingIcon = { Icon(if (savedOnly) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, Modifier.size(16.dp)) },
-                            shape = CircleShape, modifier = Modifier.testTag("collection_favourites_filter"))
+                            shape = CircleShape, modifier = Modifier.testTag("collection_favourites_filter").tourTarget("recitation_favourites_filter"))
                     }
                     item {
                         FilterChip(settings.fontStep > 0, {
+                            com.example.core.analytics.AppAnalytics.setting("recitation_large_text", (settings.fontStep == 0).toString())
                             store.updateSettings { it.copy(fontStep = if (it.fontStep > 0) 0 else 2) }
-                        }, label = { LocalizedText("Large text") }, shape = CircleShape)
+                        }, label = { LocalizedText("Large text") }, shape = CircleShape,
+                            modifier = Modifier.tourTarget("recitation_large_text"))
                     }
                     if (tab != 0) item {
                         FilterChip(settings.showMeaning, {
+                            com.example.core.analytics.AppAnalytics.setting("recitation_show_meaning", (!settings.showMeaning).toString())
                             store.updateSettings { it.copy(showMeaning = !it.showMeaning) }
-                        }, label = { LocalizedText("Translation") }, shape = CircleShape)
+                        }, label = { LocalizedText("Translation") }, shape = CircleShape,
+                            modifier = Modifier.tourTarget("recitation_translation_chip"))
                     }
                 }
-                if (tab == 2) LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                if (tab == 2) LazyRow(Modifier.tourTarget("recitation_categories"), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     item {
-                        FilterChip(category == null, { category = null }, label = { LocalizedText("All") },
+                        FilterChip(category == null, { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "category", "select", item = "all"); category = null }, label = { LocalizedText("All") },
                             leadingIcon = if (category == null) ({ Icon(Icons.Default.Check, null, Modifier.size(16.dp)) }) else null,
                             shape = CircleShape)
                     }
                     items(RecitationCollection.wazaifCategories, key = { it }) { name ->
-                        FilterChip(category == name, { category = if (category == name) null else name },
+                        FilterChip(category == name, { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "category", "select", item = name); category = if (category == name) null else name },
                             label = { LocalizedText(name) },
                             leadingIcon = if (category == name) ({ Icon(Icons.Default.Check, null, Modifier.size(16.dp)) }) else null,
                             shape = CircleShape, modifier = Modifier.testTag("collection_category_$name"))
@@ -306,7 +324,7 @@ fun RecitationCollectionScreen(onBack: () -> Unit, modifier: Modifier = Modifier
         }
         if (showPlayer) stickyHeader(key = "player") {
             Surface(Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.background) {
-                RecitationPlayerBar(audio, passages, Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                RecitationPlayerBar(audio, passages, Modifier.fillMaxWidth().padding(vertical = 4.dp).tourTarget("recitation_player_bar"))
             }
         }
         if (showLoading) item(key = "loading") {
@@ -355,14 +373,14 @@ fun RecitationCollectionScreen(onBack: () -> Unit, modifier: Modifier = Modifier
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                         OutlinedButton(onClick = { speech.stop(); audio.play(passage); store.markRead(tab, passage.id) },
-                            modifier = Modifier.heightIn(min = 48.dp).testTag("collection_audio_${passage.id}"),
+                            modifier = Modifier.heightIn(min = 48.dp).testTag("collection_audio_${passage.id}").tourTarget("recitation_listen"),
                             contentPadding = PaddingValues(horizontal = 16.dp)) {
                             Icon(if (active && playback.playing) Icons.Default.Pause else Icons.Default.PlayArrow, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
                             LocalizedText(if (active && playback.playing) "Pause" else "Listen", maxLines = 1)
                         }
                         // Only passages without a bundled copy stream; the chip appears for those while offline.
-                        if (recitationPlaybackUris(passage).any { it.startsWith("http") }) NeedsInternetChip()
+                        if (recitationPlaybackUris(passage).any { it.startsWith("http") }) Box(Modifier.tourTarget("recitation_needs_internet")) { NeedsInternetChip() }
                         Spacer(Modifier.weight(1f))
                         MarkReadButton(passage.id, count, 1, accent) { setCount(passage.id, it, 1) }
                     }
@@ -374,7 +392,7 @@ fun RecitationCollectionScreen(onBack: () -> Unit, modifier: Modifier = Modifier
             val count = countFor(dua.id, target)
             val done = count >= target
             if (done && dua.id !in reopened) {
-                CompletedRow(dua.id, null, dua.title, dua.sourceReference, accent, Modifier.animateItem()) {
+                CompletedRow(dua.id, null, dua.displayTitle(language), dua.sourceReference, accent, Modifier.animateItem()) {
                     reopened = reopened + dua.id
                 }
             } else DuaReadingCard(
@@ -387,41 +405,33 @@ fun RecitationCollectionScreen(onBack: () -> Unit, modifier: Modifier = Modifier
                 audioContent = {
                     if (ManzilRuqyahAudioCatalog.hasDuaRecording(dua.id)) RecordedDuaControls(dua.id, recorded) {
                         speech.stop(); audio.stop(); store.markRead(tab, dua.id)
-                    } else DuaAudioControls(dua.id, dua.arabicText, speech)
+                    } else DuaAudioControls(dua.id, dua.arabicText, speech, Modifier.tourTarget("recitation_dua_voice"))
                 }
             )
         }
-        item(key = "footer") {
-            Column(Modifier.fillMaxWidth().padding(top = Spacing.sm), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                LocalizedText("Arabic Quran text: Tanzil, Simple v1.1. Dua references are shown on each card.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (tab == 0) TextButton(onClick = { openExternalUrl(context, RecitationCollection.MANZIL_SOURCE) }) {
-                    LocalizedText("Manzil collection source")
-                }
-            }
-        }
     }
 
-    if (confirmReset) AlertDialog(onDismissRequest = { confirmReset = false },
+    if (confirmReset) AlertDialog(onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "dismiss_reset_all", "dismiss"); confirmReset = false },
         icon = { Icon(Icons.Default.RestartAlt, contentDescription = null) },
         title = { LocalizedText("Reset progress for this tab?") },
         text = { LocalizedText("This clears the counts of every item in this tab.") },
         confirmButton = {
-            TextButton(onClick = { store.resetAll(tabEntries.map { it.first }); reopened = emptySet(); confirmReset = false },
+            TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "confirm_reset_all"); store.resetAll(tabEntries.map { it.first }); reopened = emptySet(); confirmReset = false },
                 modifier = Modifier.testTag("collection_reset_confirm")) {
                 LocalizedText("Reset all", color = MaterialTheme.colorScheme.error)
             }
         },
-        dismissButton = { TextButton(onClick = { confirmReset = false }) { LocalizedText("Cancel") } })
+        dismissButton = { TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "cancel_reset_all"); confirmReset = false }) { LocalizedText("Cancel") } })
 
-    if (showSettings) ModalBottomSheet(onDismissRequest = { showSettings = false }) {
+    if (showSettings) ModalBottomSheet(onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "dismiss_settings", "dismiss"); showSettings = false }) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            TourScreen("recitation_settings")
             LocalizedText("Reading options", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = Spacing.sm).semantics { heading() })
             SheetSection("Text size")
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                FilledTonalIconButton(onClick = { store.updateSettings { it.copy(fontStep = (it.fontStep - 1).coerceIn(0, 3)) } },
+            Row(Modifier.tourTarget("recitation_settings_text_size"), verticalAlignment = Alignment.CenterVertically) {
+                FilledTonalIconButton(onClick = { com.example.core.analytics.AppAnalytics.setting("recitation_font_step", "smaller"); store.updateSettings { it.copy(fontStep = (it.fontStep - 1).coerceIn(0, 3)) } },
                     enabled = settings.fontStep > 0) {
                     Icon(Icons.Default.Remove, contentDescription = localizeUiText("Smaller text", language))
                 }
@@ -433,7 +443,7 @@ fun RecitationCollectionScreen(onBack: () -> Unit, modifier: Modifier = Modifier
                                 else MaterialTheme.colorScheme.outlineVariant))
                     }
                 }
-                FilledTonalIconButton(onClick = { store.updateSettings { it.copy(fontStep = (it.fontStep + 1).coerceIn(0, 3)) } },
+                FilledTonalIconButton(onClick = { com.example.core.analytics.AppAnalytics.setting("recitation_font_step", "larger"); store.updateSettings { it.copy(fontStep = (it.fontStep + 1).coerceIn(0, 3)) } },
                     enabled = settings.fontStep < 3) {
                     Icon(Icons.Default.Add, contentDescription = localizeUiText("Larger text", language))
                 }
@@ -445,12 +455,12 @@ fun RecitationCollectionScreen(onBack: () -> Unit, modifier: Modifier = Modifier
                     style = TextStyle(fontSize = arabicSize.sp, lineHeight = arabicLine.sp, textDirection = TextDirection.Rtl))
             }
             SheetSection("Display")
-            SettingSwitch("Translation", settings.showMeaning) { on -> store.updateSettings { it.copy(showMeaning = on) } }
-            SettingSwitch("Transliteration", settings.showTransliteration) { on -> store.updateSettings { it.copy(showTransliteration = on) } }
-            SettingSwitch("Keep screen on", settings.keepScreenOn) { on -> store.updateSettings { it.copy(keepScreenOn = on) } }
+            SettingSwitch("Translation", settings.showMeaning, tourKey = "recitation_settings_translation") { on -> store.updateSettings { it.copy(showMeaning = on) } }
+            SettingSwitch("Transliteration", settings.showTransliteration, tourKey = "recitation_settings_transliteration") { on -> store.updateSettings { it.copy(showTransliteration = on) } }
+            SettingSwitch("Keep screen on", settings.keepScreenOn, tourKey = "recitation_settings_screen_on") { on -> store.updateSettings { it.copy(keepScreenOn = on) } }
             HorizontalDivider(Modifier.padding(vertical = Spacing.xs), color = MaterialTheme.colorScheme.outlineVariant)
-            SettingSwitch("Daily reset", settings.dailyReset, "Counts start fresh every day") { on -> store.updateSettings { it.copy(dailyReset = on) } }
-            SettingSwitch("Vibration on count", settings.haptics) { on -> store.updateSettings { it.copy(haptics = on) } }
+            SettingSwitch("Daily reset", settings.dailyReset, "Counts start fresh every day", tourKey = "recitation_settings_daily_reset") { on -> store.updateSettings { it.copy(dailyReset = on) } }
+            SettingSwitch("Vibration on count", settings.haptics, tourKey = "recitation_settings_vibration") { on -> store.updateSettings { it.copy(haptics = on) } }
         }
     }
 }
@@ -462,7 +472,8 @@ private fun CollectionTile(info: RecitationTab, selected: Boolean, done: Int, to
     val finished = total > 0 && done == total
     Surface(
         modifier = modifier.clip(MaterialTheme.shapes.large)
-            .selectable(selected = selected, role = Role.Tab, onClick = onClick),
+            .selectable(selected = selected, role = Role.Tab,
+                onClick = com.example.core.analytics.AppAnalytics.trackItemAction("recitation_collection_screen", "tab", info.title, onClick)),
         shape = MaterialTheme.shapes.large,
         color = if (selected) tint.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
         border = BorderStroke(if (selected) 1.5.dp else 1.dp,
@@ -491,13 +502,13 @@ private fun CollectionTile(info: RecitationTab, selected: Boolean, done: Int, to
 private fun CollectionHero(info: RecitationTab, completed: Int, total: Int, streak: Int, canContinue: Boolean,
                            canReset: Boolean, onContinue: () -> Unit, onReset: () -> Unit) {
     val allDone = total > 0 && completed == total
-    HeroSurface(Modifier.fillMaxWidth().testTag("collection_progress")) {
+    HeroSurface(Modifier.fillMaxWidth().testTag("collection_progress").tourTarget("recitation_progress")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             LocalizedText(info.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
                 color = Color.White, modifier = Modifier.weight(1f).semantics { heading() })
-            if (streak > 0) TonalPill("$streak  " + localizeUiText("Day streak", LocalAppLanguage.current),
+            if (streak > 0) Box(Modifier.tourTarget("recitation_streak")) { TonalPill("$streak  " + localizeUiText("Day streak", LocalAppLanguage.current),
                 icon = Icons.Default.LocalFireDepartment,
-                containerColor = GoldAccent.copy(alpha = 0.22f), contentColor = GoldAccent)
+                containerColor = GoldAccent.copy(alpha = 0.22f), contentColor = GoldAccent) }
         }
         Spacer(Modifier.height(4.dp))
         LocalizedText(info.blurb, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.78f))
@@ -521,14 +532,14 @@ private fun CollectionHero(info: RecitationTab, completed: Int, total: Int, stre
         if (allDone) LocalizedText("All done for today. May Allah accept it.", style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold, color = GoldAccent)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (canContinue) Button(onClick = onContinue, modifier = Modifier.heightIn(min = 48.dp),
+            if (canContinue) Button(onClick = com.example.core.analytics.AppAnalytics.trackAction("recitation_collection_screen", "continue_reading", onContinue), modifier = Modifier.heightIn(min = 48.dp).tourTarget("recitation_continue"),
                 colors = ButtonDefaults.buttonColors(containerColor = GoldAccent, contentColor = Color(0xFF0F382C))) {
                 Icon(Icons.AutoMirrored.Filled.MenuBook, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 LocalizedText("Continue reading", fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.weight(1f))
-            if (canReset) TextButton(onClick = onReset, modifier = Modifier.testTag("collection_reset_all"),
+            if (canReset) TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("recitation_collection_screen", "open_reset_all", onReset), modifier = Modifier.testTag("collection_reset_all").tourTarget("recitation_reset_all"),
                 colors = ButtonDefaults.textButtonColors(contentColor = Color.White.copy(alpha = 0.85f))) {
                 Icon(Icons.Default.RestartAlt, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
@@ -545,8 +556,9 @@ private fun CompletedRow(id: String, number: Int?, title: String, reference: Str
     val language = LocalAppLanguage.current
     val tint = accentTint(accent)
     Surface(
-        modifier = modifier.fillMaxWidth().testTag("recitation_$id").clip(MaterialTheme.shapes.large)
-            .clickable(onClickLabel = localizeUiText(EXPAND_LABEL, language), role = Role.Button, onClick = onExpand),
+        modifier = modifier.fillMaxWidth().testTag("recitation_$id").tourTarget("recitation_completed_row").clip(MaterialTheme.shapes.large)
+            .clickable(onClickLabel = localizeUiText(EXPAND_LABEL, language), role = Role.Button,
+                onClick = { com.example.core.analytics.AppAnalytics.content("recitation_collection", id); onExpand() }),
         shape = MaterialTheme.shapes.large,
         color = tint.copy(alpha = 0.07f),
         border = BorderStroke(1.dp, tint.copy(alpha = 0.22f))
@@ -597,21 +609,22 @@ private fun CardHeader(id: String, number: Int?, title: String, reference: Strin
             if (reference.isNotBlank()) Text(reference, style = MaterialTheme.typography.labelMedium, color = tint,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
-        if (onCollapse != null) IconButton(onClick = onCollapse) {
+        if (onCollapse != null) IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("recitation_collection_screen", "collapse", onCollapse), modifier = Modifier.tourTarget("recitation_collapse")) {
             Icon(Icons.Default.CheckCircle, contentDescription = localizeUiText(COLLAPSE_LABEL, language), tint = tint)
         }
-        IconToggleButton(saved, { onSave() }, Modifier.testTag("collection_favourite_$id")) {
+        IconToggleButton(saved, { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "favourite", "toggle", item = id); onSave() }, Modifier.testTag("collection_favourite_$id").tourTarget("recitation_favourite")) {
             Icon(if (saved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = localizeUiText(if (saved) "Remove from favourites" else "Add to favourites", language),
                 tint = if (saved) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Box {
-            IconButton(onClick = { menu = true }) {
+            IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "open_item_menu"); menu = true }, modifier = Modifier.tourTarget("recitation_item_menu")) {
                 Icon(Icons.Default.MoreVert, contentDescription = localizeUiText(MORE_LABEL, language))
             }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenu(expanded = menu, onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "dismiss_item_menu", "dismiss"); menu = false }) {
                 DropdownMenuItem(text = { LocalizedText("Copy") }, leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
                     modifier = Modifier.testTag("collection_copy_$id"), onClick = {
+                        com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "copy", item = id);
                         menu = false
                         context.getSystemService(ClipboardManager::class.java)
                             ?.setPrimaryClip(ClipData.newPlainText(title, shareText()))
@@ -619,12 +632,13 @@ private fun CardHeader(id: String, number: Int?, title: String, reference: Strin
                         if (Build.VERSION.SDK_INT < 33) Toast.makeText(context, localizeUiText("Copied", language), Toast.LENGTH_SHORT).show()
                     })
                 DropdownMenuItem(text = { LocalizedText("Share") }, leadingIcon = { Icon(Icons.Default.Share, null) }, onClick = {
+                    com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "share", item = id);
                     menu = false
-                    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, shareText())
+                    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, com.example.core.share.AppShareLink.withLink(context, shareText()))
                     runCatching { context.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 })
                 DropdownMenuItem(text = { LocalizedText("Reset") }, leadingIcon = { Icon(Icons.Default.RestartAlt, null) },
-                    enabled = count > 0, onClick = { menu = false; onReset() })
+                    enabled = count > 0, onClick = { com.example.core.analytics.AppAnalytics.interaction("recitation_collection_screen", "reset_item", item = id); menu = false; onReset() })
             }
         }
     }
@@ -634,12 +648,15 @@ private fun CardHeader(id: String, number: Int?, title: String, reference: Strin
  * The passage as one continuous mushaf-style paragraph with ornate ayah numbers. Tapping an ayah plays
  * from it; the ayah being recited is highlighted.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MushafText(verses: List<Ayah>, playingAyah: Int?, fontSp: Int, lineSp: Int, onPlayAyah: (Int) -> Unit) {
     val highlight = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
     val markColor = accentTint(Color(0xFFA9812A))
+    val ranges = HashMap<Int, IntRange>()
     val text = buildAnnotatedString {
         verses.forEachIndexed { index, verse ->
+            ranges[verse.ayahNumber] = length until length + verse.arabicText.length
             withLink(LinkAnnotation.Clickable("ayah_${verse.ayahNumber}",
                 linkInteractionListener = LinkInteractionListener { onPlayAyah(verse.ayahNumber) })) {
                 withStyle(if (verse.ayahNumber == playingAyah) SpanStyle(background = highlight) else SpanStyle()) {
@@ -651,9 +668,21 @@ private fun MushafText(verses: List<Ayah>, playingAyah: Int?, fontSp: Int, lineS
             if (index < verses.lastIndex) append(" ")
         }
     }
+    // Long passages run past the screen: keep the lines of the ayah being recited in view.
+    val requester = remember { BringIntoViewRequester() }
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    LaunchedEffect(playingAyah, layout) {
+        val result = layout ?: return@LaunchedEffect
+        val range = ranges[playingAyah ?: return@LaunchedEffect] ?: return@LaunchedEffect
+        if (range.isEmpty() || range.last >= result.layoutInput.text.length) return@LaunchedEffect
+        val top = result.getLineTop(result.getLineForOffset(range.first))
+        val bottom = result.getLineBottom(result.getLineForOffset(range.last))
+        requester.bringIntoView(Rect(0f, top, result.size.width.toFloat(), bottom))
+    }
     Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f),
-        modifier = Modifier.fillMaxWidth()) {
-        Text(text, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().tourTarget("recitation_mushaf_text")) {
+        Text(text, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp).bringIntoViewRequester(requester),
+            onTextLayout = { layout = it },
             color = MaterialTheme.colorScheme.onSurface, fontFamily = ArabicFontFamily,
             style = TextStyle(fontSize = fontSp.sp, lineHeight = lineSp.sp, textDirection = TextDirection.Rtl,
                 textAlign = TextAlign.Justify))
@@ -665,8 +694,13 @@ private fun MushafText(verses: List<Ayah>, playingAyah: Int?, fontSp: Int, lineS
 private fun MarkReadButton(id: String, count: Int, target: Int, accent: Color, onCount: (Int) -> Unit) {
     val done = count >= target
     val tint = accentTint(accent)
-    Button(onClick = { if (count < target) onCount(count + 1) }, enabled = !done,
-        modifier = Modifier.heightIn(min = 48.dp).testTag("collection_count_$id"),
+    Button(onClick = {
+        if (count < target) {
+            if (count + 1 == target) com.example.core.analytics.AppAnalytics.milestone("recitation_collection", "target_reached", id)
+            onCount(count + 1)
+        }
+    }, enabled = !done,
+        modifier = Modifier.heightIn(min = 48.dp).testTag("collection_count_$id").tourTarget("recitation_mark_read"),
         colors = ButtonDefaults.buttonColors(containerColor = tint, contentColor = MaterialTheme.colorScheme.surface),
         contentPadding = PaddingValues(horizontal = 16.dp)) {
         Icon(if (done) Icons.Default.CheckCircle else Icons.Default.Check, null, Modifier.size(18.dp))
@@ -684,16 +718,16 @@ private fun DuaReadingCard(dua: Dua, target: Int, count: Int, accent: Color, lan
     val done = count >= target
     val tint = accentTint(accent)
     val source = "${dua.sourceCollection} • ${dua.sourceReference}"
-    val meaning = if (!showMeaning) "" else if (language == "ur") dua.urduTranslation else dua.englishTranslation
+    val meaning = if (!showMeaning) "" else dua.displayMeaning(language).text
     val transliteration = if (showTransliteration) dua.transliteration else ""
-    val shareText = { recitationShareText(localizeUiText(dua.title, language), source, dua.arabicText, transliteration, meaning) }
+    val shareText = { recitationShareText(dua.displayTitle(language), source, dua.arabicText, transliteration, meaning) }
     AppCard(modifier.fillMaxWidth().testTag("recitation_${dua.id}"), contentPadding = PaddingValues(0.dp)) {
         Column(Modifier.padding(Spacing.lg).animateContentSize(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-            CardHeader(dua.id, null, dua.title, source, accent, saved, onSave, count, onReset = { onCount(0) },
+            CardHeader(dua.id, null, dua.displayTitle(language), source, accent, saved, onSave, count, onReset = { onCount(0) },
                 shareText = shareText, onCollapse = onCollapse)
             if (dua.context.isNotBlank()) LocalizedText(dua.context, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Surface(shape = MaterialTheme.shapes.medium, color = tint.copy(alpha = 0.08f), modifier = Modifier.fillMaxWidth()) {
+            Surface(shape = MaterialTheme.shapes.medium, color = tint.copy(alpha = 0.08f), modifier = Modifier.fillMaxWidth().tourTarget("recitation_dua_arabic")) {
                 Text(dua.arabicText, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                     fontFamily = ArabicFontFamily, color = MaterialTheme.colorScheme.onSurface,
                     style = TextStyle(fontSize = fontSp.sp, lineHeight = lineSp.sp, textDirection = TextDirection.Rtl))
@@ -713,8 +747,13 @@ private fun DuaReadingCard(dua: Dua, target: Int, count: Int, accent: Color, lan
 private fun DhikrCounter(id: String, count: Int, target: Int, tint: Color, onCount: (Int) -> Unit) {
     val done = count >= target
     Surface(
-        onClick = { if (count < target) onCount(count + 1) }, enabled = !done,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).testTag("collection_count_$id"),
+        onClick = {
+        if (count < target) {
+            if (count + 1 == target) com.example.core.analytics.AppAnalytics.milestone("recitation_collection", "target_reached", id)
+            onCount(count + 1)
+        }
+    }, enabled = !done,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).testTag("collection_count_$id").tourTarget("recitation_dhikr_counter"),
         shape = MaterialTheme.shapes.large,
         color = if (done) tint.copy(alpha = 0.16f) else tint.copy(alpha = 0.10f),
         border = BorderStroke(1.dp, tint.copy(alpha = 0.3f))
@@ -743,8 +782,9 @@ private fun SheetSection(title: String) {
 }
 
 @Composable
-private fun SettingSwitch(label: String, checked: Boolean, hint: String? = null, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+private fun SettingSwitch(label: String, checked: Boolean, hint: String? = null, tourKey: String = "",
+                          onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).then(if (tourKey.isEmpty()) Modifier else Modifier.tourTarget(tourKey)), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             LocalizedText(label, style = MaterialTheme.typography.bodyLarge)
             if (hint != null) LocalizedText(hint, style = MaterialTheme.typography.bodySmall,

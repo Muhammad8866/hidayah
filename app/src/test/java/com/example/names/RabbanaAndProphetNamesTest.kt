@@ -16,7 +16,9 @@ class RabbanaAndProphetNamesTest {
         assertEquals(40, duas.size)
         assertEquals((1..40).toList(), duas.map { it.number })
         assertEquals(40, duas.map { it.arabic }.toSet().size)
-        assertTrue(duas.all { "رَبَّنَا" in it.arabic })
+        // The Quranic text writes shadda before fatha; compare in canonical (NFC) mark order.
+        val rabbana = java.text.Normalizer.normalize("رَبَّنَا", java.text.Normalizer.Form.NFC)
+        assertTrue(duas.all { rabbana in java.text.Normalizer.normalize(it.arabic, java.text.Normalizer.Form.NFC) })
         assertTrue(duas.all { dua ->
             listOf(dua.arabic, dua.transliteration, dua.reference, dua.english, dua.urdu, dua.hindi, dua.hinglish)
                 .all(String::isNotBlank)
@@ -50,20 +52,27 @@ class RabbanaAndProphetNamesTest {
         }
     }
 
-    @Test fun booksCatalogCoversAllFourBooksFromTheirSources() {
+    @Test fun booksCatalogHoldsOnlyLibraryBooks() {
+        val works = IslamicBooksCatalog.works
         val books = IslamicBooksCatalog.books
-        assertEquals(
-            setOf(IslamicBooksCatalog.BAHAR, IslamicBooksCatalog.ANWAR, IslamicBooksCatalog.SHAWAHID, IslamicBooksCatalog.MAARIJ),
-            books.map { it.collectionId }.toSet()
-        )
+        // Bahar-e-Shariat leads the classical shelf; every other work sits on the Muslimah shelf.
+        assertEquals(IslamicBooksCatalog.BAHAR, works.first().id)
+        assertEquals(listOf(IslamicBooksCatalog.BAHAR), works.filter { it.shelf == IslamicBooksCatalog.Shelf.CLASSICAL }.map { it.id })
+        assertTrue(works.drop(1).isNotEmpty() && works.drop(1).all { it.shelf == IslamicBooksCatalog.Shelf.MUSLIMAH })
+        assertEquals(books.toSet(), works.flatMap { it.books }.toSet())
+
+        val bahar = works.first()
+        assertEquals(setOf("ur", "hi"), bahar.languages.toSet())
+        assertEquals((1885..1890).map { "di-$it" }, bahar.editions("ur").map { it.id })
+        assertEquals(listOf("di-8807", "di-8796"), bahar.editions("hi").map { it.id })
+
         assertEquals(books.size, books.map { it.id }.toSet().size)
         assertTrue(books.none { book -> HadithCatalog.books.any { it.id == book.id } })
         books.forEach { book ->
+            assertTrue(book.id, book.id.startsWith("di-"))
             assertEquals(listOf(book.downloadUrl), book.downloadUrls)
-            assertTrue(book.downloadUrl, book.downloadUrl.startsWith("https://data2.dawateislami.net/") ||
-                book.downloadUrl.startsWith("https://archive.org/download/"))
+            assertTrue(book.downloadUrl, book.downloadUrl.startsWith("https://data2.dawateislami.net/"))
             assertTrue(book.downloadUrl.endsWith(".pdf") && ' ' !in book.downloadUrl)
         }
-        assertEquals(setOf("ur", "hi", "en"), books.filter { it.collectionId == IslamicBooksCatalog.BAHAR }.map { it.languageCode }.toSet())
     }
 }

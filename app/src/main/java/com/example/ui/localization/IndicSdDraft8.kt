@@ -69,7 +69,7 @@ internal object IndicSdDraft8 {
         "Taraweeh" to "تراویھ",
         "I'tikaf" to "مان تہ آہیان",
         "What is the meal that breaks the fast at sunset called?" to "غروب آفتاب تی روزو رکڻ واری کاڌی کی ڪہڙو چئبو آھی؟",
-        "Tahajjud" to "تاہجججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججججج",
+        "Tahajjud" to "تهجد",
         "Sadaqat al-Fitr" to "صدقۃ الفطر",
         "Staying in the masjid for worship in the last ten days of Ramadan is called?" to "رمضان جی آخری ڊینھن ڏینھن ۾ عبادت لاء مسجد ۾ رہڻ کی سڏیو ویندو آھی؟",
         "Which charity must be given before the Eid al-Fitr prayer?" to "عید الفطر جی نماز کان اڳ ڪہڙو خیرات ضرور ڏنی وڃی؟",

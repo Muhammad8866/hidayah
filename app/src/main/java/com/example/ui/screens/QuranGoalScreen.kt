@@ -2,6 +2,8 @@
 
 package com.example.ui.screens
 
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.localizeUiTemplate
 import androidx.compose.foundation.background
@@ -51,6 +53,7 @@ private enum class LogDay(val label: String, val offset: Long) { TODAY("Today", 
 @Composable
 internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifier: Modifier) {
     com.example.core.analytics.AnalyticsScreen("quran_goal_screen")
+    TourScreen("dailytools_quran_goal")
 
     val context = LocalContext.current
     val store = remember { quranGoalStore(context) }
@@ -84,18 +87,21 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
     val dateFormat = remember(locale) { DateTimeFormatter.ofPattern("d MMM yyyy", locale) }
 
     fun log(delta: Int) {
+        val streakBefore = store.currentStreak(today)
         if (store.log(logDate, delta, today)) {
             com.example.core.analytics.AppAnalytics.milestone("quran_goal", "khatm_completed")
             celebrate = true
         }
         revision++
+        val streakAfter = store.currentStreak(today)
+        if (streakAfter > streakBefore) com.example.core.analytics.AppAnalytics.streak("quran_goal", streakAfter)
     }
 
     ToolScreen(DailyTool.QURAN_GOAL, onBack, modifier) { accent ->
         // Today at a glance.
         item(key = "hero") {
             HeroCard(accent) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.tourTarget("dailytools_goal_today"), verticalAlignment = Alignment.CenterVertically) {
                     ProgressRing(pages.toFloat() / target, accent, size = 118.dp, stroke = 11.dp) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("$pages", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -124,14 +130,14 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FlowRow(Modifier.tourTarget("dailytools_goal_streak"), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             GoalPill(Icons.Default.LocalFireDepartment, "${localizedUiText("Day streak")}: $streak", accent)
                             if (best > 0) GoalPill(Icons.Default.EmojiEvents, "${localizedUiText("Best")}: $best", accent)
                         }
                     }
                 }
                 Spacer(Modifier.height(14.dp))
-                Button(onClick = com.example.core.analytics.AppAnalytics.trackAction("quran_goal_screen", "open_quran_reader", onOpenQuran), modifier = Modifier.fillMaxWidth().testTag("quran_goal_open_reader")) {
+                Button(onClick = com.example.core.analytics.AppAnalytics.trackAction("quran_goal_screen", "open_quran_reader", onOpenQuran), modifier = Modifier.fillMaxWidth().testTag("quran_goal_open_reader").tourTarget("dailytools_goal_open_reader")) {
                     Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(
@@ -147,7 +153,7 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
             ToolCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f).padding(end = 8.dp)) { SectionTitle("Log your reading") }
-                    SingleChoiceSegmentedButtonRow {
+                    SingleChoiceSegmentedButtonRow(Modifier.tourTarget("dailytools_goal_log_day")) {
                         LogDay.entries.forEachIndexed { index, day ->
                             SegmentedButton(
                                 selected = logDay == day,
@@ -158,7 +164,7 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                         }
                     }
                 }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().tourTarget("dailytools_goal_log_pages"), verticalAlignment = Alignment.CenterVertically) {
                     FilledTonalIconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "remove_page", "tap"); log(-1) }, enabled = logPages > 0, modifier = Modifier.size(52.dp).testTag("quran_remove_page")) {
                         Icon(Icons.Default.Remove, contentDescription = localizedUiText("Decrease"))
                     }
@@ -170,13 +176,13 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                         Icon(Icons.Default.Add, contentDescription = localizedUiText("Increase"))
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.tourTarget("dailytools_goal_quick_add"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     QuickAdd("+2", Modifier.weight(1f)) { log(2) }
                     QuickAdd("+5", Modifier.weight(1f)) { log(5) }
                     QuickAdd(localizedUiText("½ Para"), Modifier.weight(1f)) { log(PARA_PAGES / 2) }
                     QuickAdd(localizedUiText("1 Para"), Modifier.weight(1f)) { log(PARA_PAGES) }
                 }
-                OutlinedButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "open_custom_pages", "tap"); customPages = true }, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "open_custom_pages", "tap"); customPages = true }, modifier = Modifier.fillMaxWidth().tourTarget("dailytools_goal_custom_pages")) {
                     Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     LocalizedText("Enter number of pages", maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -187,7 +193,7 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
         // Current khatm.
         item(key = "khatm") {
             ToolCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.tourTarget("dailytools_goal_khatm"), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         LocalizedText("Khatm progress", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text(
@@ -198,22 +204,22 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                     }
                     Text("${position * 100 / MADANI_PAGES}%", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = accent)
                 }
-                ParaTrack(position, accent)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.fillMaxWidth().tourTarget("dailytools_goal_para_track")) { ParaTrack(position, accent) }
+                Row(Modifier.tourTarget("dailytools_goal_khatm_stats"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MiniStat("${MADANI_PAGES - position}", "Pages left", Modifier.weight(1f))
                     MiniStat("${30 - position / PARA_PAGES}", "Paras left", Modifier.weight(1f))
                     MiniStat("$completed", "Khatms completed", Modifier.weight(1f))
                 }
                 if (forecast != null) {
-                    GoalNote(Icons.Default.Schedule, "${localizedUiText("At your current pace, this khatm ends on")} ${forecast.format(dateFormat)}", accent)
+                    Box(Modifier.tourTarget("dailytools_goal_forecast")) { GoalNote(Icons.Default.Schedule, "${localizedUiText("At your current pace, this khatm ends on")} ${forecast.format(dateFormat)}", accent) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "open_edit_position", "tap"); editPosition = true }, modifier = Modifier.weight(1f)) {
+                    FilledTonalButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "open_edit_position", "tap"); editPosition = true }, modifier = Modifier.weight(1f).tourTarget("dailytools_goal_set_position")) {
                         Icon(Icons.Default.EditLocationAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         LocalizedText("Set position", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    OutlinedButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "open_reset_khatm", "tap"); confirmReset = true }, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "open_reset_khatm", "tap"); confirmReset = true }, modifier = Modifier.weight(1f).tourTarget("dailytools_goal_new_khatm")) {
                         Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         LocalizedText("Start new khatm", maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -226,7 +232,7 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
         item(key = "goal") {
             ToolCard {
                 SectionTitle("Your goal")
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().tourTarget("dailytools_goal_mode")) {
                     QuranGoalMode.entries.forEachIndexed { index, option ->
                         SegmentedButton(
                             selected = mode == option,
@@ -242,11 +248,11 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                     }
                 }
                 if (mode == QuranGoalMode.PAGES) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.tourTarget("dailytools_goal_daily_stepper"), verticalAlignment = Alignment.CenterVertically) {
                         LocalizedText("Daily goal", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                         Stepper(target, onDecrement = { store.dailyGoal = target - 1; revision++ }, onIncrement = { store.dailyGoal = target + 1; revision++ }, minimum = 1)
                     }
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(Modifier.tourTarget("dailytools_goal_presets"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(1, 2, 4, 10, 20).forEach { preset ->
                             FilterChip(
                                 selected = target == preset,
@@ -266,7 +272,7 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                         onClick = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "open_finish_date_picker", "tap"); pickDate = true },
                         shape = RoundedCornerShape(14.dp),
                         color = accent.copy(alpha = 0.10f),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().tourTarget("dailytools_goal_finish_date")
                     ) {
                         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Event, contentDescription = null, tint = accent)
@@ -278,7 +284,7 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                             Icon(Icons.Default.Edit, contentDescription = localizedUiText("Change date"), tint = accent)
                         }
                     }
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(Modifier.tourTarget("dailytools_goal_finish_presets"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(7 to "1 week", 30 to "30 days", 60 to "2 months", 90 to "3 months", 365 to "1 year").forEach { (days, label) ->
                             FilterChip(
                                 selected = finishBy == today.plusDays(days - 1L),
@@ -304,8 +310,8 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
         item(key = "history") {
             ToolCard {
                 SectionTitle("Last 5 weeks")
-                ReadingHeatmap(today, accent) { day -> store.pagesOn(day) to store.targetOn(day, today) }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.fillMaxWidth().tourTarget("dailytools_goal_heatmap")) { ReadingHeatmap(today, accent) { day -> store.pagesOn(day) to store.targetOn(day, today) } }
+                Row(Modifier.tourTarget("dailytools_goal_history_stats"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MiniStat("${stats.weekPages}", "This week", Modifier.weight(1f))
                     MiniStat("${stats.monthPages}", "30 days", Modifier.weight(1f))
                     MiniStat("${stats.activeDays}/30", "Active days", Modifier.weight(1f))
@@ -316,7 +322,7 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
         if (khatmDates.isNotEmpty()) {
             item(key = "khatms") {
                 ToolCard {
-                    SectionTitle("Completed khatms")
+                    Box(Modifier.tourTarget("dailytools_goal_completed")) { SectionTitle("Completed khatms") }
                     khatmDates.asReversed().forEachIndexed { index, date ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Verified, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(20.dp))
@@ -344,16 +350,16 @@ internal fun QuranGoalScreen(onBack: () -> Unit, onOpenQuran: () -> Unit, modifi
                     Switch(
                         checked = autoLog,
                         onCheckedChange = { com.example.core.analytics.AppAnalytics.interaction("quran_goal_screen", "toggle_reader_auto_log", "toggle"); store.readerAutoLog = it; revision++ },
-                        modifier = Modifier.testTag("quran_reader_auto")
+                        modifier = Modifier.testTag("quran_reader_auto").tourTarget("dailytools_goal_auto_log")
                     )
                 }
             }
         }
 
         item(key = "hadith") {
-            InfoNote("The most beloved deeds to Allah are those done regularly, even if they are few. (Sahih al-Bukhari 6464, Sahih Muslim 783)")
+            Box(Modifier.tourTarget("dailytools_goal_hadith")) { InfoNote("The most beloved deeds to Allah are those done regularly, even if they are few. (Sahih al-Bukhari 6464, Sahih Muslim 783)") }
         }
-        item(key = "note") { InfoNote("Page counts follow the 604-page Madani mushaf; other editions differ.") }
+        item(key = "note") { Box(Modifier.tourTarget("dailytools_goal_mushaf_note")) { InfoNote("Page counts follow the 604-page Madani mushaf; other editions differ.") } }
     }
 
     if (customPages) {

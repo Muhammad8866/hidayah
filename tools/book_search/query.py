@@ -1,7 +1,9 @@
 """Runs queries against a built index the same way the app does (BookSearchIndex.kt).
 
-    python tools/book_search/query.py <book-search.db> "safar me namaz" [asset prefix, e.g. en-]
-    python tools/book_search/query.py <book-search.db> --check
+    python tools/book_search/query.py <book-search-core.db> "safar me namaz" [asset prefix, e.g. en-]
+    python tools/book_search/query.py <book-search-core.db> --check
+
+The page text is read from the book-search-bodies-<version>.bin that `build` wrote beside the core.
 
 `--check` runs every line of eval_queries.tsv and reports the ones whose expected text is not in
 the first results; run it after changing concepts.txt or the ranking, before uploading an index.
@@ -81,6 +83,18 @@ def parse(db, query):
     return unique
 
 
+BODIES = {}
+
+
+def page_text(db, at: int, length: int) -> str:
+    """A page's text from the bodies file beside the core, as the app fetches it by byte range."""
+    if db not in BODIES:
+        core = Path(db.execute("PRAGMA database_list").fetchone()[2])
+        name = db.execute("SELECT value FROM meta WHERE key = 'bodies'").fetchone()[0]
+        BODIES[db] = (core.parent / name).read_bytes()
+    return zlib.decompress(BODIES[db][at:at + length]).decode("utf-8")
+
+
 def search(db, query: str, prefix: str = "", limit: int = 40):
     """Returns (labels of what was understood, [(asset, page, is heading, text)])."""
     parts = parse(db, query)
@@ -113,9 +127,9 @@ def search(db, query: str, prefix: str = "", limit: int = 40):
         if per_book[book_of[doc]] >= per_book_limit:
             continue
         per_book[book_of[doc]] += 1
-        page, heading, body = db.execute("SELECT page, heading, body FROM doc WHERE id = ?", (doc,)).fetchone()
-        results.append((assets[book_of[doc]], page, heading is not None,
-                        heading or zlib.decompress(body).decode("utf-8")))
+        page, heading, at, length = db.execute(
+            "SELECT page, heading, body_at, body_len FROM doc WHERE id = ?", (doc,)).fetchone()
+        results.append((assets[book_of[doc]], page, heading is not None, heading or page_text(db, at, length)))
         if len(results) >= limit:
             break
     return understood, results

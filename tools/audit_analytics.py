@@ -14,16 +14,30 @@ events = {'media': 'media_action', 'mediaState': 'media_state', 'playbackState':
           'milestone': 'feature_milestone', 'prayerAlert': 'prayer_alert', 'widget': 'widget_event',
           'launch': 'app_launch'}
 generated = re.compile(r'_(tap|back|dismiss|refresh|toggle|change_complete|search_submit)_\d+$')
+constant = re.compile(r'\b(?:const\s+)?val\s+([A-Z][A-Z0-9_]*)\s*(?::\s*String\s*)?=\s*"([a-z0-9_]+)"')
+conditional = re.compile(r'\b(?:Analytics(Screen|Search|Scroll|ReaderSession)|rememberAnalytics(ScrollState|LazyListState))'
+                         r'\(\s*if\s*\([^()]*(?:\([^()]*\)[^()]*)*\)\s*"([a-z0-9_]+)"\s*else\s*"([a-z0-9_]+)"')
 for path in sorted(p for d in ('main', 'play') for p in (root / 'app/src' / d / 'java').rglob('*.kt')):
     if 'core/analytics' in path.as_posix(): continue
     source = path.read_text(encoding='utf-8')
+    # Screen ids passed through a file constant (const val SCREEN = "x"): inline the literal on the
+    # same line so the patterns below see it; line numbers are unchanged.
+    constants = dict(constant.findall(source))
+    if constants:
+        source = re.sub(r'\([ \t]*(' + '|'.join(map(re.escape, constants)) + r')\b(?=[ \t]*[,)])',
+                        lambda m: '("' + constants[m[1]] + '"', source)
     def record(match, event, screen, component='', action=''):
         rows.append((path.relative_to(root).as_posix(), source.count('\n',0,match.start())+1, screen, event, component, action))
     for match in ui.finditer(source):
         record(match, 'ui_interaction', match[2], match[3], match[4] or 'tap')
+    kinds = {'Screen':'screen_view','Search':'search_usage','Scroll':'scroll_progress','ReaderSession':'reader_session'}
     for match in observers.finditer(source):
         kind = match[1] or 'Scroll'
-        record(match, {'Screen':'screen_view','Search':'search_usage','Scroll':'scroll_progress','ReaderSession':'reader_session'}[kind], match[3])
+        record(match, kinds[kind], match[3])
+    # AnalyticsScreen(if (...) "a" else "b") records both names.
+    for match in conditional.finditer(source):
+        for name in (match[3], match[4]):
+            record(match, kinds[match[1] or 'Scroll'], name)
     for match in domain.finditer(source):
         record(match, events[match[1]], match[2], action=match[3] or '')
 rows.sort()

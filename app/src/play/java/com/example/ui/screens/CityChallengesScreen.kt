@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -253,7 +254,7 @@ fun CityChallengesScreen(onBack: () -> Unit, uiState: MainUiState?, modifier: Mo
                         initial = p,
                         suggestedName = store.suggestedName(context),
                         fallbackLatLon = uiState?.selectedCity?.let { it.latitude to it.longitude },
-                        onCancel = if (p != null) ({ editing = false }) else null,
+                        onCancel = if (p != null) ({ com.example.core.analytics.AppAnalytics.interaction(SCREEN, "cancel_edit_setup", "tap"); editing = false }) else null,
                         onSave = { newProfile ->
                             val old = profile
                             if (old != null && old.cityId != newProfile.cityId) {
@@ -312,7 +313,7 @@ fun CityChallengesScreen(onBack: () -> Unit, uiState: MainUiState?, modifier: Mo
                         val place = listOf(p.areaName, p.cityName).filter { it.isNotBlank() }.joinToString(", ")
                         val text = "$invite\n📍 $place"
                         runCatching {
-                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), null))
+                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, com.example.core.share.AppShareLink.withLink(context, text)), null))
                         }
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -645,7 +646,7 @@ private fun NextGoalHint(accent: Color, board: CcBoard?, scores: CcScores) {
     }
     Surface(shape = RoundedCornerShape(50), color = accent.copy(alpha = 0.1f), modifier = Modifier.padding(top = 4.dp)) {
         Row(Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.TrendingUp, null, tint = accent, modifier = Modifier.size(14.dp))
+            Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = accent, modifier = Modifier.size(14.dp))
             Spacer(Modifier.width(6.dp))
             Text(text, style = MaterialTheme.typography.labelMedium, color = accent)
         }
@@ -872,7 +873,7 @@ private fun BoardCard(accent: Color, profile: CcProfile, board: CcBoard) {
                 ) { LocalizedText(label) }
             }
         }
-        Row(Modifier.horizontalScroll(com.example.core.analytics.rememberAnalyticsScrollState(SCREEN)), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
                 selected = goal == null, onClick = { com.example.core.analytics.AppAnalytics.interaction(SCREEN, "filter_all_points", "tap"); goalName = null },
                 label = { LocalizedText("All points") }, leadingIcon = { Icon(Icons.Default.Star, null, Modifier.size(16.dp)) }

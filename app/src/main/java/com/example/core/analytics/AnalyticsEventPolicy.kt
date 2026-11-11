@@ -12,7 +12,7 @@ internal object AnalyticsEventPolicy {
         "app_session_end", "media_action", "media_state", "download_state", "search_usage",
         "scroll_progress", "permission_result", "settings_change", "request_result",
         "content_select", "feature_milestone", "prayer_alert", "widget_event", "app_launch",
-        "reader_session")
+        "reader_session", "media_load")
     private val labels = setOf("screen", "screen_name", "screen_class", "feature", "component",
         "action", "result", "permission", "setting", "error_code", "item", "option", "source")
     private val numbers = setOf("duration_ms", "value", "milestone", "status_code")
@@ -24,6 +24,14 @@ internal object AnalyticsEventPolicy {
         "home_widget", "location_mode", "exact_alarms")
     private val propertyValue = Regex("[a-z][a-z0-9_]{0,35}")
     private val separators = Regex("[^a-z0-9]+")
+
+    /** Fixed onboarding funnel steps; Firebase builds the funnel from these in order. */
+    val onboardingSteps = listOf("language_chosen", "location_set", "notifications_answered",
+        "first_prayer_times", "tour_finished")
+
+    /** Streaks report only when they cross a fixed bucket, so no raw day count leaves the device. */
+    private val streakBuckets = listOf(3, 7, 14, 30, 100)
+    fun streakBucket(days: Int): String? = if (days in streakBuckets) "d$days" else null
 
     fun accepts(event: String, parameters: Map<String, Any>): Boolean =
         event in events && parameters.size <= 25 && parameters.all { (key, value) ->

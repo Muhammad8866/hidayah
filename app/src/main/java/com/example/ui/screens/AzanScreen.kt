@@ -1,5 +1,8 @@
 package com.example.ui.screens
 
+import com.example.ui.localization.localizeUiTemplate
+import com.example.core.search.AppSearch
+import com.example.ui.tour.tourTarget
 import com.example.ui.components.AppSearchField
 import com.example.ui.components.EmptyState
 import com.example.ui.components.IconBadge
@@ -87,6 +90,16 @@ private fun AzanTrack.details(): String = listOfNotNull(
 
 private fun AzanTrack.fullName(): String = if (muezzin == region) title else "$title • $muezzin"
 
+/**
+ * What the search box reads for one azan: its title, the muezzin and the place, plus "Fajr" for a
+ * Fajr azan. Place names stay as written, as the filter chips show them.
+ */
+internal fun azanSearchFields(track: AzanTrack): AppSearch.Fields = AppSearch.Fields(
+    title = track.title,
+    author = track.muezzin,
+    other = listOfNotNull(track.region, FAJR.takeIf { track.fajr })
+)
+
 /** Azans from around the world: listen, keep offline, and use one as the prayer alert tone. */
 @Composable
 fun AzanScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
@@ -107,16 +120,17 @@ fun AzanScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 
     com.example.core.analytics.AnalyticsScroll("azan_screen", listState)
     val filters = remember(tracks) { listOf(ALL, FAJR, DOWNLOADED) + tracks.map(AzanTrack::region).distinct() }
-    val shown = remember(tracks, filter, query, state.downloaded) {
-        // Locale.ROOT: a Turkish device would otherwise lower-case "I" to a dotless "ı" and miss matches.
-        val words = query.lowercase(Locale.ROOT).split(' ').filter(String::isNotBlank)
-        tracks.filter { track ->
+    // Built once for the catalogue, so a keystroke only searches it.
+    val azanSearch = remember(tracks) { AppSearch.Ranker(tracks, ::azanSearchFields) }
+    val shown = remember(azanSearch, filter, query, state.downloaded) {
+        // Best match first; the chosen filter then narrows the matches.
+        azanSearch.search(query).filter { track ->
             when (filter) {
                 ALL -> true
                 FAJR -> track.fajr
                 DOWNLOADED -> track.id in state.downloaded
                 else -> track.region == filter
-            } && "${track.title} ${track.muezzin} ${track.region}".lowercase(Locale.ROOT).let { text -> words.all(text::contains) }
+            }
         }
     }
 
@@ -131,7 +145,7 @@ fun AzanScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         item {
             ScreenHeader(
                 title = "Azan of the world",
-                subtitle = "${tracks.size} ${localizeUiText("azans", language)} • ${state.downloaded.size} ${localizeUiText("offline", language)}",
+                subtitle = localizeUiTemplate("{count} azans • {offline} offline", language, mapOf("count" to tracks.size.toString(), "offline" to state.downloaded.size.toString())),
                 localizeSubtitle = false,
                 onBack = onBack
             )
@@ -144,10 +158,10 @@ fun AzanScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             )
         }
         item {
-            AppSearchField(query, { query = it }, "Search azan, muezzin or country", Modifier.testTag("azan_search"))
+            AppSearchField(query, { query = it }, "Search azan, muezzin or country", Modifier.testTag("azan_search").tourTarget("naatazan_azan_search"))
         }
         item {
-            Row(Modifier.horizontalScroll(com.example.core.analytics.rememberAnalyticsScrollState("azan_screen")), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 filters.forEach { name ->
                     FilterChip(
                         selected = name == filter,
@@ -157,7 +171,7 @@ fun AzanScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                         leadingIcon = if (name == DOWNLOADED) {
                             { Icon(Icons.Default.OfflinePin, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
                         } else null,
-                        modifier = Modifier.testTag("azan_filter_${name.lowercase()}")
+                        modifier = Modifier.testTag("azan_filter_${name.lowercase()}").tourTarget("naatazan_azan_filters")
                     )
                 }
             }
@@ -173,19 +187,13 @@ fun AzanScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         itemsIndexed(shown, key = { _, track -> track.id }) { index, track ->
             AzanRow(number = index + 1, track = track, state = state)
         }
-        item {
-            LocalizedText("Audio: Internet Archive. Downloaded files stay on this device.",
-                modifier = Modifier.padding(top = 8.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
     }
 }
 
 @Composable
 private fun AlertToneCard(fajr: AzanTrack?, other: AzanTrack?, alertsEnabled: Boolean) {
     Surface(
-        modifier = Modifier.fillMaxWidth().testTag("azan_alert_card"),
+        modifier = Modifier.fillMaxWidth().testTag("azan_alert_card").tourTarget("naatazan_azan_alert_card"),
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.secondaryContainer
     ) {
@@ -223,7 +231,8 @@ private fun AlertToneRow(prayers: String, track: AzanTrack?, onClear: () -> Unit
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        if (track != null) IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("azan_screen", "clear_azan_alert", onClear)) {
+        if (track != null) IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("azan_screen", "clear_azan_alert", onClear),
+            modifier = Modifier.tourTarget("naatazan_azan_clear_tone")) {
             Icon(Icons.Default.Close, contentDescription = localizeUiText("Use default notification sound", language),
                 tint = MaterialTheme.colorScheme.onSecondaryContainer)
         }
@@ -238,7 +247,7 @@ private fun AzanRow(number: Int, track: AzanTrack, state: AzanAudioState) {
     val isDownloading = track.id in state.downloading
     val isAlert = track.id == state.fajrAlertId || track.id == state.otherAlertId
     Surface(
-        modifier = Modifier.fillMaxWidth().testTag("azan_${track.id}"),
+        modifier = Modifier.fillMaxWidth().testTag("azan_${track.id}").tourTarget("naatazan_azan_track"),
         shape = MaterialTheme.shapes.large,
         color = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
         border = BorderStroke(
@@ -284,7 +293,7 @@ private fun AzanRow(number: Int, track: AzanTrack, state: AzanAudioState) {
                 onClick = { com.example.core.analytics.AppAnalytics.interaction("azan_screen", "toggle_azan_alert", "tap", item = track.id);
                     if (isAlert) AzanAudioManager.clearAlert(track.fajr) else AzanAudioManager.setAsAlert(track)
                 },
-                modifier = Modifier.testTag("azan_alert_${track.id}")
+                modifier = Modifier.testTag("azan_alert_${track.id}").tourTarget("naatazan_azan_bell")
             ) {
                 Icon(
                     if (isAlert) Icons.Default.NotificationsActive else Icons.Outlined.NotificationsNone,
@@ -293,7 +302,7 @@ private fun AzanRow(number: Int, track: AzanTrack, state: AzanAudioState) {
                 )
             }
             when {
-                isDownloading -> Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                isDownloading -> Box(Modifier.size(48.dp).tourTarget("naatazan_azan_download"), contentAlignment = Alignment.Center) {
                     val percent = state.progress[track.id]
                     if (percent == null || percent <= 0) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.5.dp)
                     else {
@@ -301,12 +310,14 @@ private fun AzanRow(number: Int, track: AzanTrack, state: AzanAudioState) {
                         Text("$percent", style = MaterialTheme.typography.labelSmall)
                     }
                 }
-                isDownloaded -> IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("azan_screen", "delete_azan_download", "tap", item = track.id); AzanAudioManager.delete(track) }) {
+                isDownloaded -> IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("azan_screen", "delete_azan_download", "tap", item = track.id); AzanAudioManager.delete(track) },
+                    modifier = Modifier.tourTarget("naatazan_azan_delete")) {
                     Icon(Icons.Default.DeleteOutline,
                         contentDescription = "${localizeUiText("Delete offline audio", language)} ${track.title}",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                else -> IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("azan_screen", "download_azan", "tap", item = track.id); AzanAudioManager.download(track) }) {
+                else -> IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("azan_screen", "download_azan", "tap", item = track.id); AzanAudioManager.download(track) },
+                    modifier = Modifier.tourTarget("naatazan_azan_download")) {
                     Icon(Icons.Default.Download, contentDescription = "${localizeUiText("Download", language)} ${track.title}")
                 }
             }

@@ -58,9 +58,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.example.core.search.AppSearch
+import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.isRtlAppLanguage
 import com.example.ui.localization.localizeUiText
 import com.example.viewmodel.AppLanguage
+
+/**
+ * The language picker's search: a typed code ("ur", "hi") picks that language first, then the best
+ * matches of the native and English names ("urdu", "اردو", "हिंदी", "malayalm"). A blank query
+ * keeps [languages] in their order.
+ */
+internal class LanguageSearch(private val languages: List<AppLanguage>) {
+    private val ranker = AppSearch.Ranker(languages) { AppSearch.Fields(title = it.nativeName, other = listOf(it.code)) }
+
+    fun search(query: String): List<AppLanguage> {
+        val code = query.trim()
+        val exact = languages.filter { it.code.equals(code, ignoreCase = true) }
+        val found = ranker.search(query)
+        return if (exact.isEmpty()) found else (exact + found).distinct()
+    }
+}
 
 /**
  * Shown once on a fresh install, before anything else, so the whole app opens in the user's own
@@ -80,13 +98,8 @@ fun LanguageSelectionScreen(
     val languages = remember(detectedLanguageCode) {
         AppLanguage.supported.sortedByDescending { it.code == detectedLanguageCode }
     }
-    val visibleLanguages = remember(languages, query) {
-        val needle = query.trim()
-        if (needle.isEmpty()) languages
-        else languages.filter {
-            it.nativeName.contains(needle, ignoreCase = true) || it.code.equals(needle, ignoreCase = true)
-        }
-    }
+    val languageSearch = remember(languages) { LanguageSearch(languages) }
+    val visibleLanguages = remember(languageSearch, query) { languageSearch.search(query) }
     val layoutDirection = if (isRtlAppLanguage(selectedCode)) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
@@ -196,7 +209,7 @@ fun LanguageSelectionScreen(
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         if (language.reviewPending) {
-                                            Text(
+                                            LocalizedText(
                                                 "Machine-translated — review pending",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -211,6 +224,7 @@ fun LanguageSelectionScreen(
                     Button(
                         onClick = {
                             com.example.core.analytics.AppAnalytics.setting("app_language", selectedCode)
+                            com.example.core.analytics.AppAnalytics.onboarding("language_chosen")
                             onLanguageChosen(selectedCode)
                         },
                         shape = CircleShape,

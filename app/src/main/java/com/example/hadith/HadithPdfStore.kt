@@ -15,8 +15,12 @@ import android.system.OsConstants
 import com.example.core.net.Connectivity
 import com.example.core.net.FastNet
 import com.example.core.net.RangeFile
+import com.example.core.logging.SafeLogger
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -32,12 +36,6 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import com.example.core.pdf.PdfPageCache
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
-import com.tom_roush.pdfbox.pdmodel.PDDocument
-import com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionGoTo
-import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.destination.PDPageDestination
-import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -51,15 +49,19 @@ import java.util.concurrent.TimeUnit
  */
 object HadithPdfStore {
     private const val PREFS = "hadith_pdf_reader"
-    private const val MAX_ATTEMPTS = 3
+    private const val REMOVED_EDITIONS_PURGED = "removed_non_dawateislami_editions_v1"
+    // Few, short tries per source: a dead mirror must hand over to the next source within seconds.
+    private const val MAX_ATTEMPTS = 2
     private lateinit var appContext: Context
     private val client = FastNet.client.newBuilder()
-        .connectTimeout(20, TimeUnit.SECONDS)
-        .readTimeout(45, TimeUnit.SECONDS)
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .build()
     private val fileLocks = ConcurrentHashMap<String, Mutex>()
     private val outlineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** Chapter-index downloads, one per book, owned by the store so no screen can cancel them. */
+    private val chapterTasks = SharedTasks<List<HadithChapter>>(outlineScope) { !Connectivity.isMetered() }
 
     private val _progress = MutableStateFlow<Map<String, Float>>(emptyMap())
     val progress: StateFlow<Map<String, Float>> = _progress.asStateFlow()
@@ -73,6 +75,45 @@ object HadithPdfStore {
             PDFBoxResourceLoader.init(appContext)
             PdfPageCache.init(appContext)
         }
+    }
+
+    /**
+     * Deletes, once, the saved PDFs and reading state of editions removed from the library, which no
+     * screen lists any more. Only the exact removed ids are touched. Returns false when already done.
+     */
+    internal fun purgeRemovedEditions(
+        context: Context,
+        removed: List<Pair<String, String>> = HadithCatalog.removedEditions
+    ): Boolean {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(REMOVED_EDITIONS_PURGED, false)) return false
+        val folders = listOf(File(context.filesDir, "hadith_pdfs"), File(context.cacheDir, "hadith_pdfs"))
+        val edit = prefs.edit()
+        removed.forEach { (language, id) ->
+            folders.forEach { folder ->
+                val pdf = File(folder, "${language}_$id.pdf")
+                listOf("", ".part", ".verified", ".outline").forEach { File(pdf.path + it).delete() }
+            }
+            File(context.cacheDir, "pdf_ranges/$id").deleteRecursively()
+            edit.remove("last_$id").remove("opened_$id").remove("bookmarks_$id")
+        }
+        edit.putBoolean(REMOVED_EDITIONS_PURGED, true).commit()
+        return true
+    }
+
+    /** Opens the first of [urls] that works; cancellation stops at once, otherwise the last error is thrown. */
+    internal fun <T> fromFirstSource(urls: List<String>, open: (String) -> T): T {
+        var failure: Exception? = null
+        for (url in urls) {
+            try {
+                return open(url)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                failure = error
+            }
+        }
+        throw failure ?: IOException("No source")
     }
 
     /** Bumped whenever a reading position or bookmark changes, so library screens can refresh. */
@@ -138,6 +179,7 @@ object HadithPdfStore {
 
     suspend fun open(book: HadithBook): Result<Document> = pdfResult {
         withContext(Dispatchers.IO) {
+            streamBesideChapterDownload(book)?.let { return@withContext it }
             lockFor(book).withLock {
                 Documents.existing(book.id)?.let { return@withLock it }
                 val saved = savedFile(book)
@@ -151,10 +193,65 @@ object HadithPdfStore {
                     Build.VERSION.SDK_INT >= 26 -> {
                         try { Documents.stream(book) }
                         catch (cancelled: CancellationException) { throw cancelled }
-                        catch (_: Exception) { fetch(book, cached); Documents.open(book, cached) }
+                        catch (error: Exception) {
+                            logStreamFailure(book, error)
+                            fetch(book, cached); Documents.open(book, cached)
+                        }
                     }
                     else -> { fetch(book, cached); Documents.open(book, cached) }
                 }
+            }
+        }
+    }
+
+    /**
+     * A chapter-index download holds the book's lock until the whole file is in, which can take
+     * minutes. Reading streams from ranges meanwhile instead of waiting for it; if that fails, the
+     * caller waits for the lock and then opens the finished file.
+     */
+    private fun streamBesideChapterDownload(book: HadithBook): Document? {
+        if (Build.VERSION.SDK_INT < 26) return null
+        if (!chapterTasks.isRunning(book.id) || !Connectivity.isOnline.value) return null
+        // One side stream per book at a time, so two quick opens cannot both register a renderer.
+        synchronized(sideStreamLocks.computeIfAbsent(book.id) { Any() }) {
+            Documents.existing(book.id)?.let { return it }
+            return try { Documents.stream(book) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) { logStreamFailure(book, error); null }
+        }
+    }
+
+    private val sideStreamLocks = ConcurrentHashMap<String, Any>()
+
+    /** Says why a book fell back to a full download: the error type only, never an address or user data. */
+    private fun logStreamFailure(book: HadithBook, error: Exception) = SafeLogger.w(
+        "HadithPdfStore",
+        "Online stream of ${book.id} failed; opening the full file instead: " +
+            "${error.javaClass.simpleName}: ${error.message.orEmpty().take(200)}" +
+            (error.cause?.let { " (cause ${it.javaClass.simpleName})" } ?: "")
+    )
+
+    private val prefetching = ConcurrentHashMap.newKeySet<String>()
+
+    /**
+     * Warms the header and the cross-reference table at the end of an online-only book, so Read
+     * opens fast on a slow source; costs about 2 MB per book. Fire-and-forget: it never fails,
+     * reports no progress and leaves a book that is saved, cached or already open alone.
+     */
+    fun prefetch(book: HadithBook) {
+        if (!::appContext.isInitialized || Build.VERSION.SDK_INT < 26 || !Connectivity.isOnline.value) return
+        if (!prefetching.add(book.id)) return
+        outlineScope.launch {
+            try {
+                // The checks read and write marker files too, so a disk error is caught with the rest.
+                runCatching {
+                    if (Documents.existing(book.id) != null || isDownloaded(book) || isVerifiedPdf(cachedFile(book))) return@launch
+                    // Same address and folder as Documents.stream, so the reader reuses these blocks.
+                    RangeFile(book.downloadUrls.first(), File(appContext.cacheDir, "pdf_ranges/${book.id}"))
+                        .prepare(readAhead = false)
+                }
+            } finally {
+                prefetching.remove(book.id)
             }
         }
     }
@@ -164,13 +261,17 @@ object HadithPdfStore {
 
     fun release(book: HadithBook, document: Document) { Documents.release(book.id, document) }
 
-    /** Bookmarks need the full PDF; fetch them only when the reader asks for the index. */
+    /**
+     * Bookmarks need the full PDF; fetch them only when the reader asks for the index. The download
+     * runs in the store's scope, once per book, and opening the index again waits for the same
+     * download. On Wi-Fi closing the index leaves it running; on mobile data it stops with the index.
+     */
     suspend fun loadChapters(book: HadithBook, document: Document): Result<Unit> = pdfResult {
         if (document.chapters.isEmpty()) {
-            withContext(Dispatchers.IO) {
-                val file = localFile(book)
-                document.chapterState.value = Documents.chapters(file).ifEmpty { book.chapters }
+            val chapters = chapterTasks.awaitShared(book.id) {
+                Documents.chapters(localFile(book)).ifEmpty { book.chapters }
             }
+            document.chapterState.value = chapters
         }
     }
 
@@ -385,9 +486,16 @@ object HadithPdfStore {
             }
         }
 
+        /**
+         * Reads pages straight from the network. The mirror answers a range in about a second while
+         * the publisher's server can take 15 seconds or more, so the sources are tried in order.
+         */
         @android.annotation.TargetApi(26)
-        fun stream(book: HadithBook): Document {
-            val range = RangeFile(book.downloadUrl, File(appContext.cacheDir, "pdf_ranges/${book.id}"))
+        fun stream(book: HadithBook): Document = fromFirstSource(book.downloadUrls) { url -> stream(book, url) }
+
+        @android.annotation.TargetApi(26)
+        private fun stream(book: HadithBook, url: String): Document {
+            val range = RangeFile(url, File(appContext.cacheDir, "pdf_ranges/${book.id}"))
             val length = range.prepare()
             val thread = HandlerThread("pdf-range-${book.id}").apply { start() }
             var descriptor: ParcelFileDescriptor? = null
@@ -429,51 +537,69 @@ object HadithPdfStore {
 
         /**
          * Parsing a large PDF for its bookmarks takes seconds, so the result is kept beside the
-         * file and reused for as long as the file's size is unchanged.
+         * file and reused for as long as the file's size is unchanged; a failed parse is not kept.
          */
-        private fun savedOutline(file: File): List<HadithChapter> {
-            val saved = outlineFile(file)
-            runCatching {
-                val json = JSONObject(saved.readText())
-                if (json.getLong("size") == file.length()) {
-                    val items = json.getJSONArray("chapters")
-                    return List(items.length()) { index ->
-                        items.getJSONObject(index).let { HadithChapter(it.getString("title"), it.getInt("page")) }
-                    }
-                }
-            }
-            return extractOutline(file).also { chapters ->
-                runCatching {
-                    val items = JSONArray()
-                    chapters.forEach { items.put(JSONObject().put("title", it.title).put("page", it.page)) }
-                    saved.writeText(JSONObject().put("size", file.length()).put("chapters", items).toString())
-                }
-            }
-        }
-
-        private fun extractOutline(file: File): List<HadithChapter> = runCatching {
-            PDDocument.load(file).use { pdf ->
-                val result = mutableListOf<HadithChapter>()
-                fun visit(first: PDOutlineItem?, depth: Int) {
-                    var item = first
-                    while (item != null) {
-                        val destination = item.destination ?: (item.action as? PDActionGoTo)?.destination
-                        val page = (destination as? PDPageDestination)?.retrievePageNumber()?.plus(1)
-                        val title = item.title?.trim().orEmpty()
-                        if (page != null && page > 0 && title.isNotBlank()) {
-                            result += HadithChapter("${"  ".repeat(depth)}$title", page)
-                        }
-                        visit(item.firstChild, depth + 1)
-                        item = item.nextSibling
-                    }
-                }
-                visit(pdf.documentCatalog.documentOutline?.firstChild, 0)
-                result.distinctBy { it.title to it.page }
-            }
-        }.getOrDefault(emptyList())
+        private fun savedOutline(file: File): List<HadithChapter> =
+            PdfOutline.cached(file, outlineFile(file), File(appContext.cacheDir, "pdfbox_scratch"))
 
         fun close(id: String) {
             open.remove(id)?.second?.close()
         }
     }
+}
+
+/**
+ * One running task per key. A second request while it runs gets the same task, and a caller that
+ * stops waiting does not cancel it, because the task belongs to [scope] rather than to the caller.
+ * A finished, failed or cancelled task is forgotten, so the next request starts afresh.
+ *
+ * Callers of [awaitShared] are counted: when the last one stops waiting, [keepWithoutWaiters] is
+ * asked at that moment, and a false answer (mobile data) cancels the task so no unseen download
+ * keeps spending the user's data.
+ */
+internal class SharedTasks<T>(
+    private val scope: CoroutineScope,
+    private val keepWithoutWaiters: () -> Boolean = { true }
+) {
+    private val running = ConcurrentHashMap<String, Deferred<T>>()
+    private val lock = Any()
+    private val waiting = HashMap<Deferred<T>, Int>()
+
+    /** Waits for the shared task of [key]; the last waiter to leave may cancel it, see the class note. */
+    suspend fun awaitShared(key: String, block: suspend () -> T): T {
+        // Counted under the lock together with the lookup, so a task is never cancelled under a new waiter.
+        val task = synchronized(lock) { run(key, block).also { waiting[it] = (waiting[it] ?: 0) + 1 } }
+        try {
+            return task.await()
+        } finally {
+            synchronized(lock) {
+                val left = (waiting[task] ?: 1) - 1
+                if (left > 0) {
+                    waiting[task] = left
+                } else {
+                    waiting.remove(task)
+                    if (!task.isCompleted && !runCatching(keepWithoutWaiters).getOrDefault(false)) task.cancel()
+                }
+            }
+        }
+    }
+
+    fun run(key: String, block: suspend () -> T): Deferred<T> {
+        while (true) {
+            // Not isActive: a task registered but not yet started is still the one to share. A cancelled
+            // task may still be finishing a blocking read, but it will never deliver, so start a new one.
+            running[key]?.let { current ->
+                if (!current.isCompleted && !current.isCancelled) return current else running.remove(key, current)
+            }
+            val task = scope.async(start = CoroutineStart.LAZY) { block() }
+            if (running.putIfAbsent(key, task) == null) {
+                task.invokeOnCompletion { running.remove(key, task) }
+                task.start()
+                return task
+            }
+            task.cancel()
+        }
+    }
+
+    fun isRunning(key: String): Boolean = running[key]?.isCompleted == false
 }

@@ -43,6 +43,7 @@ class TafsirAudioService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        com.example.core.analytics.AppAnalytics.wake(this, "tafsir_audio_service", intent?.action ?: "start")
         when (intent?.action) {
             ACTION_TOGGLE -> TafsirAudioManager.toggle()
             ACTION_NEXT -> TafsirAudioManager.next()
@@ -50,9 +51,15 @@ class TafsirAudioService : Service() {
             ACTION_STOP -> { TafsirAudioManager.stop(); return START_NOT_STICKY }
         }
         val notification = buildNotification(this)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-        } else startForeground(ID, notification)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+            } else startForeground(ID, notification)
+        } catch (_: RuntimeException) {
+            // The system refused a background start; leave rather than crash the app.
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
         // Restarted after the process died, or a stale notification tap: nothing is loaded, so
         // leave instead of showing an empty player.
         if (TafsirAudioManager.state.value.playingId == null) {
@@ -72,7 +79,11 @@ class TafsirAudioService : Service() {
         private const val ACTION_STOP = "com.example.quran.TAFSIR_STOP"
 
         fun start(context: Context) {
-            ContextCompat.startForegroundService(context, Intent(context, TafsirAudioService::class.java))
+            try {
+                ContextCompat.startForegroundService(context, Intent(context, TafsirAudioService::class.java))
+            } catch (_: RuntimeException) {
+                // Android 12+ refuses some background starts; playback keeps running in-process.
+            }
         }
 
         fun update(context: Context?) {
@@ -102,14 +113,14 @@ class TafsirAudioService : Service() {
             val open = PendingIntent.getActivity(context, 0,
                 Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            val title = track?.let { if (it.surah > 0) "${it.surah}. ${QuranAudioManager.surahName(it.surah)}" else localizeUiText(it.title, language) }
+            val title = track?.let { localizeUiText(if (it.surah > 0) "${it.surah}. ${localizeUiText(QuranAudioManager.surahName(it.surah), language)}" else it.title, language) }
                 ?: localizeUiText("Tafseer", language)
             val collection = localizeUiText(track?.collection ?: "Tafseer", language)
             session?.publish(state.isPlaying, title, collection)
             return NotificationCompat.Builder(context, CHANNEL)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(title)
-                .setContentText("$collection • Dawat-e-Islami")
+                .setContentText(collection)
                 .setContentIntent(open)
                 .setOngoing(state.isPlaying)
                 .setOnlyAlertOnce(true)

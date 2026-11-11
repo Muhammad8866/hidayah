@@ -3,6 +3,7 @@
 package com.example.ui.screens
 
 import android.Manifest
+import com.example.ui.tour.tourTarget
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -66,6 +67,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.domain.model.AdhkarDatasetRepository
 import com.example.domain.model.PrayerType
 import com.example.domain.model.PredefinedLocations
+import com.example.domain.model.CityLocation
+import com.example.core.search.AppSearch
 import com.example.prayer.AstronomicalPrayerCalculator
 import com.example.ui.components.AppCard
 import com.example.ui.components.AppSearchField
@@ -129,6 +132,16 @@ internal data class HomeActions(
     val onDismissPrayerAlertPrompt: () -> Unit = {}
 )
 
+/**
+ * The city picker's list made searchable: a city by its name, its state or country, and the
+ * label as the app shows it in [localize]'s language ("Mecca", "medina", "दिल्ली" all find theirs).
+ */
+internal fun citySearch(cities: List<CityLocation>, localize: (String) -> String = { it }): AppSearch.Ranker<CityLocation> =
+    AppSearch.Ranker(cities) { city ->
+        val label = "${city.name}, ${city.stateOrCountry}"
+        AppSearch.Fields(title = city.name, other = listOf(city.stateOrCountry, localize(label)).distinct())
+    }
+
 @Composable
 fun HomeScreen(
     uiState: MainUiState,
@@ -155,6 +168,8 @@ fun HomeScreen(
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
+        com.example.core.analytics.AppAnalytics.permission("notifications", granted)
+        com.example.core.analytics.AppAnalytics.onboarding("notifications_answered")
         if (!granted && notificationPermissionPermanentlyDenied(context)) openAppNotificationSettings(context)
         // When denied this reports why alerts stayed off.
         viewModel.setNotificationsEnabled(true)
@@ -234,13 +249,9 @@ fun HomeScreen(
     if (showCityPicker) {
         // Typing filters the long city list; the dialog is also the only route to device location.
         var cityQuery by rememberSaveable { mutableStateOf("") }
-        val matchingCities = remember(cityQuery) {
-            val needle = cityQuery.trim()
-            if (needle.isEmpty()) PredefinedLocations.CITIES
-            else PredefinedLocations.CITIES.filter {
-                it.name.contains(needle, ignoreCase = true) || it.stateOrCountry.contains(needle, ignoreCase = true)
-            }
-        }
+        val cityRanker = remember(language) { citySearch(PredefinedLocations.CITIES) { localizeUiText(it, language) } }
+        val matchingCities = remember(cityRanker, cityQuery) { cityRanker.search(cityQuery) }
+        com.example.core.analytics.AnalyticsSearch("home_screen", cityQuery)
         AlertDialog(
             onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("home_screen", "dismiss_city_picker", "dismiss"); showCityPicker = false },
             title = { LocalizedText("Choose your city") },
@@ -361,6 +372,24 @@ internal fun HomeContent(
             }
         }
 
+        // The error card above already explains missing times, so no second "unavailable" state here.
+        val showTimes = !hasError && uiState.rawPrayerTimes != null
+        // All of today's times sit right under the current/next prayer card.
+        if (showTimes) {
+            item(key = "other_times") { OtherIslamicTimesCard(uiState) }
+            item(key = "schedule") {
+                val appContext = LocalContext.current.applicationContext
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    val prefs = com.example.prayer.PrayerSettingsStore.prefs(appContext)
+                    if (!prefs.getBoolean("analytics_first_prayer_times_sent", false)) {
+                        prefs.edit().putBoolean("analytics_first_prayer_times_sent", true).apply()
+                        com.example.core.analytics.AppAnalytics.onboarding("first_prayer_times")
+                    }
+                }
+                PrayerScheduleCard(uiState, onOpenPrayerDetails = actions.onOpenPrayerDetails, nowMillis = now)
+            }
+        }
+
         if (showPrayerAlertPrompt) {
             item(key = "prayer_alert_prompt") {
                 PrayerAlertPromptCard(
@@ -375,14 +404,8 @@ internal fun HomeContent(
             item(key = "suggestions") { HomeSuggestionsSection(suggestions, openSuggestion) }
         }
 
-        // Every shortcut sits right under the next prayer, so nothing is hidden behind a tap.
+        // Every shortcut sits right under the prayer times, so nothing is hidden behind a tap.
         item(key = "quick_actions") { QuickActionsSection(uiState, actions) }
-
-        // The error card above already explains missing times, so no second "unavailable" state here.
-        val showTimes = !hasError && uiState.rawPrayerTimes != null
-        if (showTimes) {
-            item(key = "schedule") { PrayerScheduleCard(uiState, onOpenPrayerDetails = actions.onOpenPrayerDetails, nowMillis = now) }
-        }
 
         item(key = "progress") {
             TodayProgressSection(
@@ -393,8 +416,20 @@ internal fun HomeContent(
             )
         }
 
-        if (showTimes) {
-            item(key = "other_times") { OtherIslamicTimesCard(uiState) }
+        item(key = "share_app") {
+            val context = LocalContext.current
+            val shareMessage = localizedUiText("Read the Quran, duas and prayer times in one app:")
+            OutlinedButton(
+                onClick = {
+                    com.example.core.analytics.AppAnalytics.interaction("home_screen", "share_app", "tap")
+                    com.example.core.share.AppShareLink.shareApp(context, shareMessage)
+                },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("home_share_app").tourTarget("home_share_app")
+            ) {
+                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                LocalizedText("Share app")
+            }
         }
     }
 }
@@ -449,6 +484,7 @@ private fun HomeHeader(uiState: MainUiState, onFixLocation: () -> Unit) {
         // Hijri and Gregorian dates share one quiet strip under the greeting.
         Column(
             modifier = Modifier
+                .tourTarget("home_dates")
                 .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
                 .padding(horizontal = Spacing.md, vertical = Spacing.sm),
@@ -524,7 +560,7 @@ private fun LocationChip(uiState: MainUiState, onClick: () -> Unit, modifier: Mo
                 onClick = com.example.core.analytics.AppAnalytics.trackAction("home_screen", "location_chip", onClick)
             )
             .padding(horizontal = 14.dp, vertical = 6.dp)
-            .testTag("city_selector_button"),
+            .testTag("city_selector_button").tourTarget("home_location_chip"),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -569,7 +605,7 @@ private fun TodayProgressSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag("today_progress"),
+            .testTag("today_progress").tourTarget("home_today_progress"),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         HomeSectionTitle("Today's progress", Modifier.padding(horizontal = Spacing.screen))
@@ -655,7 +691,7 @@ private fun ProgressRing(habit: HabitProgress, modifier: Modifier = Modifier) {
             .clickable(role = Role.Button, onClick = com.example.core.analytics.AppAnalytics.trackItemAction("home_screen", "open_progress_ring", habit.tag, habit.onClick))
             .padding(horizontal = 4.dp, vertical = 12.dp)
             .semantics(mergeDescendants = true) { contentDescription = a11yLabel }
-            .testTag(habit.tag),
+            .testTag(habit.tag).tourTarget("home_${habit.tag}"),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -735,7 +771,7 @@ private fun ProgressRow(
             .heightIn(min = 72.dp)
             .padding(horizontal = 12.dp, vertical = 10.dp)
             .semantics(mergeDescendants = true) { contentDescription = a11yLabel }
-            .testTag(tag),
+            .testTag(tag).tourTarget("home_$tag"),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconBadge(
@@ -848,7 +884,7 @@ private fun QuickActionsSection(uiState: MainUiState, actions: HomeActions) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Spacing.screen)
-            .testTag("quick_actions"),
+            .testTag("quick_actions").tourTarget("home_quick_access"),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         HomeSectionTitle("Quick access")
@@ -905,7 +941,7 @@ private fun ContinueQuranCard(shortcut: HomeShortcut) {
         },
         modifier = Modifier
             .fillMaxWidth()
-            .testTag(shortcut.tag),
+            .testTag(shortcut.tag).tourTarget("home_continue_quran"),
         containerColor = MaterialTheme.colorScheme.primaryContainer,
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         outlined = false,
@@ -961,7 +997,7 @@ private fun QuickActionGridTile(shortcut: HomeShortcut, modifier: Modifier = Mod
             )
             .heightIn(min = 84.dp)
             .padding(horizontal = 2.dp, vertical = 10.dp)
-            .testTag(shortcut.tag),
+            .testTag(shortcut.tag).tourTarget("home_${shortcut.tag}"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -988,7 +1024,7 @@ private fun QuickActionTile(shortcut: HomeShortcut, modifier: Modifier = Modifie
         },
         modifier = modifier
             .heightIn(min = 72.dp)
-            .testTag(shortcut.tag),
+            .testTag(shortcut.tag).tourTarget("home_${shortcut.tag}"),
         shape = MaterialTheme.shapes.medium,
         contentPadding = PaddingValues(horizontal = Spacing.md, vertical = 10.dp),
         verticalArrangement = Arrangement.Center
@@ -1139,7 +1175,7 @@ private fun PrayerAlertPromptCard(onEnable: () -> Unit, onDismiss: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Spacing.screen)
-            .testTag("prayer_alert_prompt"),
+            .testTag("prayer_alert_prompt").tourTarget("home_alert_prompt"),
         contentPadding = PaddingValues(start = 14.dp, top = Spacing.md, end = Spacing.sm, bottom = Spacing.xs)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1170,7 +1206,7 @@ private fun PrayerAlertPromptCard(onEnable: () -> Unit, onDismiss: () -> Unit) {
                 modifier = Modifier
                     .padding(vertical = 4.dp)
                     .heightIn(min = 40.dp)
-                    .testTag("prayer_alert_prompt_enable")
+                    .testTag("prayer_alert_prompt_enable").tourTarget("home_alert_enable")
             ) {
                 LocalizedText("Turn on alerts")
             }

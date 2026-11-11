@@ -57,7 +57,7 @@ internal object IndicNeDraft1 {
         "Witr" to "विटर",
         "Today" to "आज",
         "All five prayers prayed. Alhamdulillah!" to "सबै पाँचवटा प्रार्थनाहरू प्रार्थना गरियो। अल्हमदुलिल्लाह!",
-        "Tap ✓ or ✗ to log each prayer." to "प्रत्येक प्रार्थना लग गर्न Â वा Â थिच्नुहोस्।",
+        "Tap ✓ or ✗ to log each prayer." to "प्रत्येक प्रार्थना लग गर्न ✓ वा ✗ थिच्नुहोस्।",
         "Muslimah mode: today is marked as excused from salah." to "मुस्लिम मोडः आज सलाहबाट माफ गरिएको रूपमा चिह्नित गरिएको छ।",
         "Today's salah" to "आजको सलाह",
         "This week" to "यो हप्ता",

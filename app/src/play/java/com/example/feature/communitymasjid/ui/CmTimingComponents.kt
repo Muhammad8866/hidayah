@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import com.example.ui.localization.localizedUiText
+import com.example.ui.localization.localizedUiTemplate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -91,11 +92,26 @@ internal fun cmFormatDate(epochMs: Long?, is24h: Boolean = false, locale: Locale
     return SimpleDateFormat(pattern, locale).format(Date(epochMs))
 }
 
+/**
+ * Where the user actually is: the mobile network / SIM country, else the phone's region. The
+ * language setting (e.g. English (US)) often says nothing about the country.
+ */
+@Composable
+internal fun cmDeviceRegion(): String {
+    val context = LocalContext.current
+    return remember(context) {
+        val tm = context.getSystemService(android.content.Context.TELEPHONY_SERVICE) as? android.telephony.TelephonyManager
+        listOf(runCatching { tm?.networkCountryIso }.getOrNull(), runCatching { tm?.simCountryIso }.getOrNull(),
+            android.content.res.Resources.getSystem().configuration.locales[0]?.country)
+            .firstOrNull { !it.isNullOrBlank() }.orEmpty()
+    }
+}
+
 private val cmImperialRegions = setOf("US", "GB", "LR", "MM")
 
 /** Metres/kilometres, or feet/miles in the few regions that use them on the road. */
-internal fun cmFormatDistance(metres: Double, locale: Locale): String {
-    if (locale.country.uppercase(Locale.ROOT) in cmImperialRegions) {
+internal fun cmFormatDistance(metres: Double, locale: Locale, region: String = locale.country): String {
+    if (region.uppercase(Locale.ROOT) in cmImperialRegions) {
         val miles = metres / 1609.344
         return if (miles < 0.1) "%d ft".format(locale, (metres * 3.28084).roundToInt())
         else "%.1f mi".format(locale, miles)
@@ -226,7 +242,7 @@ internal fun CmSuggestDialog(
     }
 
     AlertDialog(
-        onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("cm_timing_components", "dismiss_timings_editor", "dismiss"); if (!isSubmitting) onDismiss() },
+        onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("community_masjid_screen", "dismiss_timings_editor", "dismiss"); if (!isSubmitting) onDismiss() },
         icon = { Icon(Icons.Filled.EditCalendar, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
         title = { LocalizedText("Update Timings", fontWeight = FontWeight.Bold) },
         text = {
@@ -241,8 +257,8 @@ internal fun CmSuggestDialog(
                 ) {
                     Icon(Icons.Filled.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 1.dp).size(16.dp))
                     Spacer(Modifier.width(8.dp))
-                    LocalizedText(
-                        "New timings are shown to everyone right away. If ${CmTimingRules.VOTE_THRESHOLD}+ people at the masjid vote them wrong, the previous timings come back.",
+                    Text(
+                        localizedUiTemplate("New timings are shown to everyone right away. If {count}+ people at the masjid vote them wrong, the previous timings come back.", "count" to "${CmTimingRules.VOTE_THRESHOLD}"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -263,10 +279,10 @@ internal fun CmSuggestDialog(
                             Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 48.dp)
-                                .toggleable(value = included[prayer] == true, role = Role.Switch, onValueChange = { included[prayer] = it }),
+                                .toggleable(value = included[prayer] == true, role = Role.Switch, onValueChange = { com.example.core.analytics.AppAnalytics.interaction("community_masjid_screen", "include_prayer", "toggle", item = prayer.name); included[prayer] = it }),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            LocalizedText("Include ${prayer.label}", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            Text(localizedUiTemplate("Include {prayer}", "prayer" to localizedUiText(prayer.label)), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                             Spacer(Modifier.width(8.dp))
                             Switch(checked = included[prayer] == true, onCheckedChange = null)
                         }
@@ -275,12 +291,12 @@ internal fun CmSuggestDialog(
                     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
                         LocalizedText(prayer.label, Modifier.weight(1f).padding(end = 6.dp), fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         if (prayer.hasAzan) {
-                            CmTimeButton(azan[prayer]) { com.example.core.analytics.AppAnalytics.interaction("cm_timing_components", "pick_azan_time", "tap"); pick(azan[prayer]) { azan[prayer] = it } }
+                            CmTimeButton(azan[prayer]) { com.example.core.analytics.AppAnalytics.interaction("community_masjid_screen", "pick_azan_time", "tap"); pick(azan[prayer]) { azan[prayer] = it } }
                         } else {
                             Text("—", Modifier.width(92.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                         }
                         Spacer(Modifier.width(6.dp))
-                        CmTimeButton(jamaat[prayer]) { com.example.core.analytics.AppAnalytics.interaction("cm_timing_components", "pick_jamaat_time", "tap"); pick(jamaat[prayer] ?: azan[prayer]) { jamaat[prayer] = it } }
+                        CmTimeButton(jamaat[prayer]) { com.example.core.analytics.AppAnalytics.interaction("community_masjid_screen", "pick_jamaat_time", "tap"); pick(jamaat[prayer] ?: azan[prayer]) { jamaat[prayer] = it } }
                     }
                 }
                 // Problems sit in one tinted block so they read as "fix these before submitting".
@@ -295,7 +311,8 @@ internal fun CmSuggestDialog(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         problems.forEach {
-                            LocalizedText("• $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+                            // Each problem is already translated by CmTimingRules.validate.
+                            Text("• " + it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
                         }
                     }
                 }
@@ -304,7 +321,7 @@ internal fun CmSuggestDialog(
         confirmButton = {
             Button(
                 enabled = !isSubmitting,
-                onClick = { com.example.core.analytics.AppAnalytics.interaction("cm_timing_components", "submit_timings", "tap");
+                onClick = { com.example.core.analytics.AppAnalytics.interaction("community_masjid_screen", "submit_timings", "tap");
                     attempted = true
                     if (built != null && problems.isEmpty()) onSubmit(built)
                 }

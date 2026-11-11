@@ -16,7 +16,7 @@
 <body>
 <main>
 <h1>Hidayah Privacy Policy</h1>
-<p class="muted">App: Hidayah (package com.aistudio.deencompanion.quranj) &middot; Effective date: 13 October 2026</p>
+<p class="muted">App: Hidayah (package com.aistudio.deencompanion.quranj) &middot; Effective date: 6 November 2026</p>
 
 <h2>1. Scope, construction and application of this notice</h2>
 <p>This Privacy Policy constitutes the disclosure of information-processing practices applicable to Hidayah, a Quran, prayer-times and Islamic learning application maintained by Muhammad Garana. References herein to the &ldquo;Application&rdquo; encompass its installed Android software, locally bundled resources and those network-dependent functions described below; references to &ldquo;we&rdquo;, &ldquo;us&rdquo; and &ldquo;our&rdquo; identify the application's developer. References to &ldquo;you&rdquo; identify the individual using the Application, irrespective of whether an anonymous community identity has been established.</p>
@@ -36,7 +36,7 @@
 <p>The operational purposes of these measurements are to understand feature use, identify unsuccessful interactions and downloads, assess navigation and reader behavior, and determine where application reliability or performance requires improvement. Events concerning religious learning or prayer-related features can indicate which features a person uses, even though the underlying private entries and excluded values are not transmitted in our custom events.</p>
 
 <h2>4. Content identifiers, setting properties and feature outcomes</h2>
-<p>When built-in content is opened or played, the Application may report its fixed catalog identifier. Examples include the surah or para number, Quran edition, book collection, naat reciter, azan recording and dua category. Books obtained through the open World Library are identified in custom measurement only as &ldquo;World Library&rdquo;, rather than through their individual titles or download addresses.</p>
+<p>When built-in content is opened or played, the Application may report its fixed catalog identifier. Examples include the surah or para number, Quran edition, book collection, naat reciter, azan recording and dua category. Books from the Islamic Books library are identified in custom measurement only as &ldquo;World Library&rdquo;, rather than through their individual titles or download addresses.</p>
 <p>Configuration information includes the selected app language, prayer calculation method, Asr method, high-latitude rule, Hijri calendar, madhhab and Quran reader mode. Properties also describe whether prayer alerts or an azan alert are enabled, whether the home-screen widget is present, whether exact alarms are available, and whether location is supplied through GPS or a manually selected city. The location-source property identifies a mode; it does not contain the actual city or coordinates.</p>
 <p>Selected configuration values are retained as Analytics user properties so that usage reports can be grouped according to those settings. The properties use predefined options rather than arbitrary text entered by a user. A property describing madhhab or prayer preferences may nevertheless convey information about religious practice, and its exclusion of direct contact information does not remove that implication.</p>
 <p>Feature milestones can identify completion of a Quran khatm, Hifz Coach session, tasbeeh round, dhikr, quiz round or zakat calculation, or that a masjid timing, vote or City Challenge join was saved. These milestone events omit the private counts, financial amounts, prayer statuses and other excluded details. A reading-session event describes reader-open duration and page-turn quantity, rather than the identity of individual pages.</p>
@@ -77,11 +77,13 @@
 <h2>11. Requested downloads and independent content hosts</h2>
 <p>Some Quran data, recordings, PDFs, books and rate information are obtained through direct connections from your device to third-party hosts. A host can receive your IP address and the technical request information necessary to return the requested resource. This remains the case where the downloaded file is subsequently retained and read offline.</p>
 <ul>
-<li>GitHub, including github.com and raw.githubusercontent.com, supplies Quran PDFs, word-by-word audio, hadith PDFs and naats.</li>
+<li>GitHub, including github.com, raw.githubusercontent.com and release-assets.githubusercontent.com, supplies Quran PDFs, word-by-word audio, hadith PDFs and naats. It also supplies the preview text of the book pages listed in search results inside the books: the Application requests the byte ranges of a published file that hold those pages, which can also cover neighbouring pages fetched in the same request. Search inside the books runs on the device, so the words searched are not sent, although the requested ranges show GitHub which pages were listed.</li>
 <li>Quran.com, QuranCDN, EveryAyah, QuranicAudio and AlQuran Cloud supply Quran data and recitation resources.</li>
-<li>Dawat-e-Islami, Internet Archive, Google Drive and Emaan Library host books and hadith PDFs.</li>
+<li>Dawat-e-Islami hosts the books of the Islamic Books library; Dawat-e-Islami, Google Drive and Emaan Library host hadith PDFs.</li>
+<li>Internet Archive hosts azan and naat recordings.</li>
 <li>jsDelivr CDN and currency-api.pages.dev supply currency and metal-rate resources used by the Zakat calculator.</li>
 </ul>
+<p>The Quran Arabic text used for search, quizzes and some guides is the Tanzil Quran Text (Simple, Version 1.1), Copyright (C) 2007-2026 Tanzil Project, licensed under Creative Commons Attribution 3.0 and reproduced without change. Updates: <a href="https://tanzil.net">tanzil.net</a>.</p>
 <p>Provider processing is governed by the destination service's own practices. Our omission of resource URLs from custom Analytics events does not prevent the resource host from receiving the address requested by your device. Opening an external link or another application similarly places the subsequent interaction within the receiving service's environment.</p>
 
 <h2>12. Device storage, backup and restored installations</h2>

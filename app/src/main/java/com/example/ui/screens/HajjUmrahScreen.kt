@@ -2,6 +2,8 @@
 
 package com.example.ui.screens
 
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import android.content.SharedPreferences
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -37,6 +39,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.ProvenanceCard
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizedUiText
 import com.example.ui.localization.LocalAppLanguage
@@ -61,6 +64,7 @@ private fun countKey(journey: String, stepId: String) = "hajj_count_${journey}_$
 @Composable
 internal fun HajjUmrahScreen(onBack: () -> Unit, modifier: Modifier) {
     com.example.core.analytics.AnalyticsScreen("hajj_umrah_screen")
+    TourScreen("guides_hajj_umrah")
 
     val prefs = rememberToolPrefs()
     var tab by rememberSaveable {
@@ -70,13 +74,13 @@ internal fun HajjUmrahScreen(onBack: () -> Unit, modifier: Modifier) {
 
     ToolScreen(DailyTool.HAJJ_UMRAH, onBack, modifier) { accent ->
         item(key = "tabs") {
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().tourTarget("guides_hajj_tabs")) {
                 HajjTab.entries.forEachIndexed { index, option ->
                     SegmentedButton(
                         selected = tab == option,
                         onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "select_hajj_tab", "tap", item = option.name); tab = option; prefs.edit().putString(KEY_TAB, option.name).apply() },
                         shape = SegmentedButtonDefaults.itemShape(index, HajjTab.entries.size),
-                        modifier = Modifier.testTag("hajj_tab_${option.name.lowercase()}")
+                        modifier = Modifier.testTag("hajj_tab_${option.name.lowercase()}").tourTarget("guides_hajj_tab_${option.name.lowercase()}")
                     ) { LocalizedText(option.label, maxLines = 1) }
                 }
             }
@@ -214,7 +218,7 @@ private fun JourneyHero(
                     "⁦$completed / ${steps.size}⁩ ${localizedUiText("steps done")}",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.testTag("hajj_progress")
+                    modifier = Modifier.testTag("hajj_progress").tourTarget("guides_hajj_progress")
                 )
                 if (next != null) {
                     val language = LocalAppLanguage.current
@@ -248,7 +252,7 @@ private fun JourneyHero(
             modifier = Modifier.padding(top = 10.dp)
         )
         if (completed > 0) {
-            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("hajj_umrah_screen", "open_reset_journey", onReset), contentPadding = PaddingValues(horizontal = 0.dp)) {
+            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("hajj_umrah_screen", "open_reset_journey", onReset), contentPadding = PaddingValues(horizontal = 0.dp), modifier = Modifier.tourTarget("guides_hajj_start_again")) {
                 Icon(Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
                 LocalizedText("Start again")
@@ -280,7 +284,7 @@ private fun StepCard(
     )
     val chevron by animateFloatAsState(if (isExpanded) 180f else 0f, label = "chevron")
     Card(
-        modifier = Modifier.fillMaxWidth().testTag("hajj_step_${step.id}"),
+        modifier = Modifier.fillMaxWidth().testTag("hajj_step_${step.id}").tourTarget("guides_hajj_step_card"),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = if (isDone) SuccessGreen.copy(alpha = 0.06f) else MaterialTheme.colorScheme.surface
@@ -338,7 +342,7 @@ private fun StepCard(
                     }
                     step.dua?.let { DuaBlock(it, accent) }
                     if (isDone) {
-                        OutlinedButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("hajj_umrah_screen", "toggle_step_done", onToggleDone), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("hajj_umrah_screen", "toggle_step_done", onToggleDone), modifier = Modifier.fillMaxWidth().tourTarget("guides_hajj_step_undone")) {
                             Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             LocalizedText("Mark as not done")
@@ -346,7 +350,7 @@ private fun StepCard(
                     } else {
                         Button(
                             onClick = com.example.core.analytics.AppAnalytics.trackAction("hajj_umrah_screen", "toggle_step_done", onToggleDone),
-                            modifier = Modifier.fillMaxWidth().testTag("hajj_done_${step.id}"),
+                            modifier = Modifier.fillMaxWidth().testTag("hajj_done_${step.id}").tourTarget("guides_hajj_step_done"),
                             colors = ButtonDefaults.buttonColors(containerColor = accent)
                         ) {
                             Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -395,7 +399,7 @@ private fun DuaBlock(dua: RiteDua, accent: Color) {
         shape = RoundedCornerShape(16.dp),
         color = accent.copy(alpha = 0.07f),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.2f)),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().tourTarget("guides_hajj_dua")
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -457,7 +461,7 @@ private fun RoundCounter(
         shape = MaterialTheme.shapes.large,
         color = accent.copy(alpha = 0.06f),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.16f)),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().tourTarget("guides_hajj_round_counter")
     ) {
         Column(
             Modifier.padding(16.dp),
@@ -512,13 +516,13 @@ private fun RoundCounter(
             )
             // The middle button takes the space that is left, so the row also fits narrow phones.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                FilledTonalIconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "round_undo", "tap"); update(count - 1) }, enabled = count > 0, modifier = Modifier.size(52.dp)) {
+                FilledTonalIconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "round_undo", "tap"); update(count - 1) }, enabled = count > 0, modifier = Modifier.size(52.dp).tourTarget("guides_hajj_round_undo")) {
                     Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = localizedUiText("Undo"))
                 }
                 if (finished && canMarkDone) {
                     Button(
                         onClick = com.example.core.analytics.AppAnalytics.trackAction("hajj_umrah_screen", "mark_rounds_done", onMarkDone),
-                        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp).tourTarget("guides_hajj_round_mark_done"),
                         colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -534,7 +538,7 @@ private fun RoundCounter(
                             )
                         },
                         enabled = !finished,
-                        modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("hajj_counter_add"),
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("hajj_counter_add").tourTarget("guides_hajj_round_add"),
                         colors = ButtonDefaults.buttonColors(containerColor = accent)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -542,7 +546,7 @@ private fun RoundCounter(
                         LocalizedText(kind.countLabel)
                     }
                 }
-                FilledTonalIconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "round_reset", "tap"); confirmCounterReset = true }, enabled = count > 0, modifier = Modifier.size(52.dp)) {
+                FilledTonalIconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "round_reset", "tap"); confirmCounterReset = true }, enabled = count > 0, modifier = Modifier.size(52.dp).tourTarget("guides_hajj_round_reset")) {
                     Icon(Icons.Default.Replay, contentDescription = localizedUiText("Reset"))
                 }
             }
@@ -554,7 +558,10 @@ private fun RoundCounter(
         }
     }
     if (confirmCounterReset) {
-        ResetCounterDialog(onConfirm = { update(0); confirmCounterReset = false }, onDismiss = { confirmCounterReset = false })
+        ResetCounterDialog(
+            onConfirm = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "confirm_round_reset", "tap"); update(0); confirmCounterReset = false },
+            onDismiss = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "dismiss_round_reset", "dismiss"); confirmCounterReset = false }
+        )
     }
 }
 
@@ -564,7 +571,7 @@ private fun RoundCounter(
 private fun HajjTypePicker(selected: HajjType, accent: Color, onSelect: (HajjType) -> Unit) {
     ToolCard {
         SectionTitle("Type of Hajj")
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().tourTarget("guides_hajj_type")) {
             HajjType.entries.forEachIndexed { index, type ->
                 SegmentedButton(
                     selected = selected == type,
@@ -609,7 +616,8 @@ private fun CollapsibleCard(
                 .fillMaxWidth()
                 .clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "toggle_guide_card", "tap", item = testTag); expanded = !expanded }
                 .padding(16.dp)
-                .testTag(testTag),
+                .testTag(testTag)
+                .tourTarget(if (testTag == "hajj_prep") "guides_hajj_prep" else "guides_hajj_section"),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconBadge(icon, accent, 40.dp)
@@ -643,7 +651,7 @@ private fun PreparationCard(prefs: SharedPreferences, accent: Color) {
     CollapsibleCard(
         icon = Icons.Default.Checklist,
         title = "Preparation checklist",
-        summary = "⁦$readyCount / $total⁩ ${localizedUiText("ready")}",
+        summary = localizedUiTemplate("⁦{done} / {total}⁩ ready", "done" to readyCount, "total" to total),
         accent = accent,
         initiallyExpanded = true,
         testTag = "hajj_prep"
@@ -663,6 +671,7 @@ private fun PreparationCard(prefs: SharedPreferences, accent: Color) {
                 Row(
                     Modifier
                         .fillMaxWidth()
+                        .tourTarget("guides_hajj_prep_item")
                         .clickable(role = Role.Button) { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "toggle_preparation_item", "tap");
                             ready = if (checked) ready - item.id else ready + item.id
                             prefs.edit().putStringSet(KEY_PREP, ready).apply()
@@ -769,7 +778,7 @@ private fun StepJumpRow(
                     { Icon(Icons.Default.Check, contentDescription = localizedUiText("Done"), tint = SuccessGreen, modifier = Modifier.size(16.dp)) }
                 } else null,
                 colors = FilterChipDefaults.filterChipColors(selectedContainerColor = accent.copy(alpha = 0.18f)),
-                modifier = Modifier.heightIn(min = 40.dp).testTag("hajj_jump_${step.id}")
+                modifier = Modifier.heightIn(min = 40.dp).testTag("hajj_jump_${step.id}").tourTarget("guides_hajj_jump")
             )
         }
     }
@@ -816,7 +825,7 @@ private fun QuickCounterCard(prefs: SharedPreferences, accent: Color) {
 
     ToolCard {
         SectionTitle("Tawaf and Sa'i counter")
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().tourTarget("guides_hajj_quick_kind")) {
             kinds.forEachIndexed { index, option ->
                 SegmentedButton(
                     selected = kind == option,
@@ -858,6 +867,7 @@ private fun QuickCounterCard(prefs: SharedPreferences, accent: Color) {
                 }
                 .semantics { contentDescription = padLabel }
                 .testTag("hajj_quick_pad")
+                .tourTarget("guides_hajj_quick_pad")
         ) {
             Column(
                 Modifier.padding(20.dp),
@@ -901,7 +911,7 @@ private fun QuickCounterCard(prefs: SharedPreferences, accent: Color) {
             OutlinedButton(
                 onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "quick_undo", "tap"); update(count - 1) },
                 enabled = count > 0,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp)
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).tourTarget("guides_hajj_quick_undo")
             ) {
                 Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
@@ -910,7 +920,7 @@ private fun QuickCounterCard(prefs: SharedPreferences, accent: Color) {
             OutlinedButton(
                 onClick = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "quick_reset", "tap"); confirmReset = true },
                 enabled = count > 0,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp)
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp).tourTarget("guides_hajj_quick_reset")
             ) {
                 Icon(Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
@@ -929,6 +939,9 @@ private fun QuickCounterCard(prefs: SharedPreferences, accent: Color) {
         )
     }
     if (confirmReset) {
-        ResetCounterDialog(onConfirm = { update(0); confirmReset = false }, onDismiss = { confirmReset = false })
+        ResetCounterDialog(
+            onConfirm = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "confirm_quick_reset", "tap"); update(0); confirmReset = false },
+            onDismiss = { com.example.core.analytics.AppAnalytics.interaction("hajj_umrah_screen", "dismiss_quick_reset", "dismiss"); confirmReset = false }
+        )
     }
 }

@@ -9,9 +9,9 @@ import subprocess
 tracks = json.loads(Path("app/src/main/assets/quran_tafsir_sirat_ul_jinan.json").read_text(encoding="utf-8"))
 assert len(tracks) == 115, len(tracks)
 assert {track["surah"] for track in tracks} == set(range(1, 115))
-assert len({track["url"] for track in tracks if track["url"]}) == 114
+assert len({track["url"] for track in tracks if track["url"]}) == 115
 assert len([track for track in tracks if track["surah"] == 2]) == 2
-assert [track for track in tracks if track["surah"] == 83][0]["page"] == "https://www.youtube.com/watch?v=zzwqw_82zHk"
+assert [track for track in tracks if track["surah"] == 83][0]["page"] == "https://www.dawateislami.net/medialibrary/39149"
 
 
 def check(track):
@@ -30,5 +30,5 @@ for surah, status in results:
         print(f"Surah {surah}: {status}")
 
 good = sum(status.startswith("200 audio/") for _, status in results)
-print(f"{good}/114 MP3 recordings reachable; Surah 83 uses the official video link")
-assert good == 114
+print(f"{good}/115 MP3 recordings reachable")
+assert good == 115

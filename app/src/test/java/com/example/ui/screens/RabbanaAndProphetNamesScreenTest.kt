@@ -69,7 +69,8 @@ class RabbanaAndProphetNamesScreenTest {
         composeRule.onNodeWithTag("prophet_name_63").assertIsDisplayed()
     }
 
-    @Test fun islamicBooksLibraryListsAllFourBooks() {
+    /** The merged library opens on its featured shelf, Bahar-e-Shariat first. */
+    @Test fun islamicBooksLibraryShowsBaharEShariat() {
         show(language = "hi") { IslamicBooksScreen(onBack = {}) }
         composeRule.onNodeWithTag("hadith_collection_bahar_e_shariat").assertIsDisplayed()
         composeRule.onRoot().captureRoboImage("build/outputs/roborazzi/islamic_books.png")

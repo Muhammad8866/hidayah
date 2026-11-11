@@ -46,6 +46,7 @@ class NaatAudioService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        com.example.core.analytics.AppAnalytics.wake(this, "naat_audio_service", intent?.action ?: "start")
         when (intent?.action) {
             ACTION_TOGGLE -> NaatAudioManager.togglePlayPause()
             ACTION_NEXT -> NaatAudioManager.next()
@@ -57,9 +58,15 @@ class NaatAudioService : Service() {
             }
         }
         val notification = buildNotification(this)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-        } else startForeground(ID, notification)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+            } else startForeground(ID, notification)
+        } catch (_: RuntimeException) {
+            // The system refused a background start; leave rather than crash the app.
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
         if (NaatAudioManager.state.value.activeId == null) {
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf(startId)
@@ -77,7 +84,11 @@ class NaatAudioService : Service() {
         @Volatile private var session: MediaSession? = null
 
         fun start(context: Context) {
-            ContextCompat.startForegroundService(context, Intent(context, NaatAudioService::class.java))
+            try {
+                ContextCompat.startForegroundService(context, Intent(context, NaatAudioService::class.java))
+            } catch (_: RuntimeException) {
+                // Android 12+ refuses some background starts; playback keeps running in-process.
+            }
         }
 
         fun update(context: Context) {

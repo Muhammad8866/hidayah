@@ -57,7 +57,7 @@ internal object IndicDoiDraft1 {
         "Witr" to "विटर",
         "Today" to "अज्ज",
         "All five prayers prayed. Alhamdulillah!" to "पंजें नमाज़ें दी नमाज़ कीती। अल्हमदुलिल्लाह!",
-        "Tap ✓ or ✗ to log each prayer." to "हर इक प्रार्थना गी दर्ज करने आस्तै Â जां Â दबाओ।",
+        "Tap ✓ or ✗ to log each prayer." to "हर इक प्रार्थना गी दर्ज करने आस्तै ✓ जां ✗ दबाओ।",
         "Muslimah mode: today is marked as excused from salah." to "मुस्लिम मोडः अज्ज गी नमाज़ थमां माफ कीते जाने दे रूपै च चिह्नित कीता जंदा ऐ।",
         "Today's salah" to "अज्ज दी नमाज़",
         "This week" to "इस हफ्ते",

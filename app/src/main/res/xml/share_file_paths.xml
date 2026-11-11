@@ -4,4 +4,5 @@
     <cache-path name="quran_pdfs_cache" path="quran_pdfs/" />
     <files-path name="hadith_pdfs" path="hadith_pdfs/" />
     <cache-path name="hadith_pdfs_cache" path="hadith_pdfs/" />
+    <cache-path name="status_cards" path="status_cards/" />
 </paths>

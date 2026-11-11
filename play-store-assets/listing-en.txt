@@ -1,0 +1,49 @@
+SHORT DESCRIPTION (max 80 chars)
+Quran, prayer times, Azan, Qibla, Duas & nearby masjid Jamaat timings
+
+FULL DESCRIPTION (max 4000 chars)
+Hidayah is a complete Muslim app for daily worship: accurate prayer times with Azan alerts, the Holy Quran with audio and translation, Qibla direction, Duas and Adhkar, a Tasbeeh counter, the Islamic (Hijri) calendar, and nearby masjids with Azan and Jamaat timings.
+
+PRAYER TIMES & AZAN
+• Accurate Namaz times for Fajr, Dhuhr, Asr, Maghrib and Isha for your city
+• Azan notifications and alarms for every Salah
+• Sehri and Iftar times, Ishraq, Chasht and Zawal
+• Hanafi and Shafi Asr, many calculation methods
+• Prayer tracker and Qaza namaz tracker
+
+HOLY QURAN
+• Read the full Quran (Al Quran Kareem) in clear Arabic script
+• Quran audio recitation, ayah by ayah
+• Translation and Tafseer
+• Para (Juz) and Surah wise reading, bookmarks and last read
+• Khatm tracker to complete the Quran
+
+NEARBY MASJID & JAMAAT TIMINGS
+• Find masjids near me on Google Maps
+• Azan and Jamaat times for each masjid, shared by people who pray there
+• Directions to the mosque in one tap
+
+QIBLA COMPASS
+• Qibla direction finder that points to the Kaaba in Makkah
+
+DUAS, ADHKAR & TASBEEH
+• Morning and evening Adhkar, daily Duas and Masnoon Duas
+• 40 Rabbana Duas, Ayatul Kursi, 6 Kalimas
+• Digital Tasbeeh counter for Zikr
+• 99 Names of Allah (Asma ul Husna) and 99 Names of the Prophet ﷺ
+
+ISLAMIC CALENDAR & MORE
+• Hijri calendar with Islamic dates and events
+• Ramadan timetable, Eid and Islamic festivals
+• Zakat calculator
+• Hajj and Umrah guide
+• Naat and Islamic audio
+• Baby names with meanings
+
+PRIVATE & LIGHT
+• Works offline for prayer times, Quran text and Duas
+• No sign-up needed
+• Available in 50+ languages including English, Hindi, Urdu, Arabic, Bengali and Roman Urdu (Hinglish)
+• Also: Hadith, Noorani Qaidah, Islamic books library and Jumu'ah Khutbah guide
+
+Download Hidayah: Quran & Prayer Times — your daily companion for Salah, Quran and Duas.

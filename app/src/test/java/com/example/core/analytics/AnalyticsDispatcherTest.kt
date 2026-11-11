@@ -83,5 +83,33 @@ class AnalyticsDispatcherTest {
         AnalyticsDispatcher(propertySink = { _, _ -> error("backend unavailable") }) { _, _ -> }
             .property(true, "app_language", "ur")
     }
-}
 
+    @Test fun `streaks report only fixed buckets`() {
+        assertEquals("d3", AnalyticsEventPolicy.streakBucket(3))
+        assertEquals("d100", AnalyticsEventPolicy.streakBucket(100))
+        for (days in listOf(-1, 0, 1, 2, 4, 8, 31, 99, 101, Int.MAX_VALUE, Int.MIN_VALUE)) {
+            assertNull(AnalyticsEventPolicy.streakBucket(days))
+        }
+    }
+
+    @Test fun `onboarding steps are valid milestone tokens`() {
+        for (step in AnalyticsEventPolicy.onboardingSteps) {
+            assertTrue(AnalyticsEventPolicy.accepts("feature_milestone",
+                mapOf("feature" to "onboarding", "action" to step)))
+        }
+        assertFalse(AnalyticsEventPolicy.onboardingSteps.contains("Language Chosen"))
+    }
+
+    @Test fun `audio load event keeps duration numeric and rejects text duration`() {
+        assertTrue(AnalyticsEventPolicy.accepts("media_load",
+            mapOf("feature" to "quran_audio", "result" to "ready", "duration_ms" to 420L)))
+        assertFalse(AnalyticsEventPolicy.accepts("media_load",
+            mapOf("feature" to "quran_audio", "result" to "ready", "duration_ms" to "420")))
+        assertFalse(AnalyticsEventPolicy.accepts("media_load", mapOf("url" to "https://cdn.example/a.mp3")))
+    }
+
+    @Test fun `unknown user properties are rejected`() {
+        assertFalse(AnalyticsEventPolicy.acceptsUserProperty("app_theme", "dark"))
+        assertFalse(AnalyticsEventPolicy.acceptsUserProperty("city", "delhi"))
+    }
+}

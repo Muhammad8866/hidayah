@@ -30,8 +30,9 @@ class HifzCoachFlowTest {
     @Test
     fun `practice works without microphone and advances after review`() {
         startFreshPassage()
-        composeRule.onNodeWithTag("hifz_test_me").performClick()
-        composeRule.onNodeWithTag("hifz_reveal").performClick()
+        // The cards are taller than the test screen, so each button is scrolled into view before it is tapped.
+        composeRule.onNodeWithTag("hifz_test_me").performScrollTo().performClick()
+        composeRule.onNodeWithTag("hifz_reveal").performScrollTo().performClick()
         composeRule.onNodeWithTag("hifz_grade_good").performScrollTo().performClick()
         composeRule.onNodeWithText("Ayah 2 of 5").assertExists()
     }
@@ -39,8 +40,8 @@ class HifzCoachFlowTest {
     @Test
     fun `forgotten ayah comes back once at the end of the session`() {
         startFreshPassage()
-        composeRule.onNodeWithTag("hifz_test_me").performClick()
-        composeRule.onNodeWithTag("hifz_reveal").performClick()
+        composeRule.onNodeWithTag("hifz_test_me").performScrollTo().performClick()
+        composeRule.onNodeWithTag("hifz_reveal").performScrollTo().performClick()
         composeRule.onNodeWithTag("hifz_grade_forgot").performScrollTo().performClick()
         composeRule.onNodeWithText("Ayah 2 of 6").assertExists()
     }

@@ -15,7 +15,7 @@ object FestivalCautions {
     private val cautions = mapOf(
         "new_year" to listOf(FestivalCaution(
             "Muharram ko sog ka mahina samajh kar nikah, safar ya khushi ke jaiz kaam manhoos na samjhein.",
-            "Dawat-e-Islami: The month of Safar is not accursed; Quran 9:36",
+            "The month of Safar is not accursed; Quran 9:36",
             "Do not treat Muharram as a month of mourning, or consider nikah, travel or other permissible happy occasions unlucky in it.")),
         "ashura" to listOf(
             FestivalCaution(
@@ -30,7 +30,7 @@ object FestivalCautions {
                 "Sahih Bukhari 1294; Fatawa Razawiyya, vol. 24")),
         "mawlid" to listOf(FestivalCaution(
             "Milad ki mehfil ya juloos mein gaane-bajane, be-pardagi, namaz chhorne aur fuzool-kharchi se bachein.",
-            "Dawat-e-Islami: Blessings of Celebrating the Blessed Birthday of the Holy Prophet",
+            "Blessings of Celebrating the Blessed Birthday of the Holy Prophet",
             "In Milad gatherings or processions, avoid music, immodesty, missing prayers and extravagance.")),
         "gyarhvi" to listOf(FestivalCaution(
             "Niyaz Allah ke naam par karein; Ghaus-e-Azam ko Allah ke barabar ya mustaqil madadgar na samjhein. Kisi khaas tareekh ko farz na samjhein.",
@@ -39,7 +39,7 @@ object FestivalCautions {
             "Quran 1:5; the Ahl-e-Sunnat practice of esaal-e-sawab")),
         "rajab_start" to listOf(FestivalCaution(
             "Rajab ke kisi khaas roze ya namaz ko farz ya lazmi Sunnat na batayein.",
-            "Dawat-e-Islami: Rajab Ka Mahena Kesy Guzarain",
+            "Rajab Ka Mahena Kesy Guzarain",
             "Do not present any particular fast or prayer of Rajab as fard or a binding Sunnah.")),
         "miraj" to listOf(FestivalCaution(
             "27 Rajab ko Me'raj ki qat'i tareekh ya kisi khaas namaz/roze ko lazmi Sunnat na samjhein.",
@@ -48,7 +48,7 @@ object FestivalCautions {
             "Quran 17:1; the date and the narrations about specific deeds are disputed")),
         "baraat" to listOf(FestivalCaution(
             "Patakhe, aatish-bazi, logon ko takleef aur halwe ko zaruri rasm samajhne se bachein.",
-            "Dawat-e-Islami: Aaqa Ka Mahina; Fatawa Razawiyya",
+            "Aaqa Ka Mahina; Fatawa Razawiyya",
             "Avoid firecrackers, fireworks, troubling people, and treating halwa as a necessary custom.")),
         "ramadan" to listOf(FestivalCaution(
             "Roze mein jhoot, gheebat, jhagra aur namaz ki kotahi se bachein.",

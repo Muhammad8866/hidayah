@@ -55,7 +55,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Mosque
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.WavingHand
@@ -116,7 +116,7 @@ class FeatureTourStep(
 val featureTourSteps = listOf(
     FeatureTourStep(AppDestination.HOME, Icons.Filled.WavingHand),
     FeatureTourStep(AppDestination.HOME, Icons.Filled.AccessTime),
-    FeatureTourStep(AppDestination.QURAN, Icons.Filled.MenuBook),
+    FeatureTourStep(AppDestination.QURAN, Icons.AutoMirrored.Filled.MenuBook),
     FeatureTourStep(AppDestination.DUAS, Icons.Filled.Favorite),
     FeatureTourStep(AppDestination.COMMUNITY_MASJID, Icons.Filled.Mosque),
     FeatureTourStep(AppDestination.MORE, Icons.Filled.CheckCircle, MoreTourSection.DAILY_FIRST),
@@ -317,7 +317,7 @@ private fun TourCard(index: Int, copy: FeatureTourCopy, onNext: () -> Unit, onSk
                 }
                 Spacer(Modifier.weight(1f))
                 Button(
-                    onClick = { com.example.core.analytics.AppAnalytics.interaction("feature_tour", "next", item = "step_$index"); onNext() },
+                    onClick = { com.example.core.analytics.AppAnalytics.interaction("feature_tour", "next", item = "step_$index"); if (isLast) com.example.core.analytics.AppAnalytics.onboarding("tour_finished"); onNext() },
                     shape = CircleShape,
                     modifier = Modifier.heightIn(min = 50.dp).testTag("feature_tour_next")
                 ) {

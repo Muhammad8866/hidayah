@@ -80,7 +80,7 @@ class CmFirebaseDataSource(private val context: Context) {
         val block: com.example.feature.communitymasjid.domain.CmSearchPolicy.Block? = null
     )
 
-    suspend fun reserveNearbySearch(location: CmUserLocation, nowMs: Long): SearchReservation {
+    suspend fun reserveNearbySearch(location: CmUserLocation, nowMs: Long, hasResults: Boolean = true): SearchReservation {
         val uid = ensureUid()
         val ref = firestore.collection("cm_search_quotas").document(uid)
         return firestore.runTransaction { tx ->
@@ -92,7 +92,7 @@ class CmFirebaseDataSource(private val context: Context) {
                 latitude = old.getDouble("latitude") ?: 0.0,
                 longitude = old.getDouble("longitude") ?: 0.0
             ) else null
-            val block = com.example.feature.communitymasjid.domain.CmSearchPolicy.blocked(nowMs, location, budget)
+            val block = com.example.feature.communitymasjid.domain.CmSearchPolicy.blocked(nowMs, location, budget, hasResults)
             if (block != null && budget != null) SearchReservation(budget, block) else {
                 val next = com.example.feature.communitymasjid.domain.CmSearchPolicy.next(nowMs, location, budget)
                 tx.set(ref, mapOf("day" to next.day, "count" to next.count,

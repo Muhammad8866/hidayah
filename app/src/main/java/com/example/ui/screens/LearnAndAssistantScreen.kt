@@ -1,4 +1,5 @@
 package com.example.ui.screens
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.LocalizedPhraseText
 import com.example.ui.localization.localizedUiText
@@ -13,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -36,6 +38,8 @@ import com.example.ui.components.ProvenanceCard
 import com.example.ui.components.Spacing
 import com.example.viewmodel.MainUiState
 import com.example.viewmodel.MainViewModel
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -45,6 +49,7 @@ fun LearnAndAssistantScreen(
     modifier: Modifier = Modifier
 ) {
     com.example.core.analytics.AnalyticsScreen("learn_and_assistant_screen")
+    TourScreen("learn_lessons")
 
     var selectedLessonForSheet by remember { mutableStateOf<MicroLesson?>(null) }
     val focusManager = LocalFocusManager.current
@@ -65,7 +70,7 @@ fun LearnAndAssistantScreen(
             ) {
                 item {
                     Row(
-                        modifier = Modifier.padding(bottom = Spacing.xs),
+                        modifier = Modifier.padding(bottom = Spacing.xs).tourTarget("learn_lessons_header"),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconBadge(icon = Icons.Default.School, accent = MaterialTheme.colorScheme.primary)
@@ -87,7 +92,7 @@ fun LearnAndAssistantScreen(
 
                 // Lessons come from the ViewModel; a spinner, not a blank page, while they arrive.
                 if (uiState.microLessons.isEmpty()) {
-                    item(key = "lessons_loading") { com.example.ui.components.LoadingState() }
+                    item(key = "lessons_loading") { Box(Modifier.tourTarget("learn_lessons_loading")) { com.example.ui.components.LoadingState() } }
                 }
                 items(uiState.microLessons.size, key = { i -> uiState.microLessons[i].id }) { i ->
                     val lesson = uiState.microLessons[i]
@@ -98,6 +103,7 @@ fun LearnAndAssistantScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("lesson_card_${lesson.id}")
+                            .tourTarget("learn_lessons_card")
                     ) {
                         Column {
                             Row(
@@ -108,7 +114,7 @@ fun LearnAndAssistantScreen(
                                 Surface(
                                     color = MaterialTheme.colorScheme.primaryContainer,
                                     shape = RoundedCornerShape(50),
-                                    modifier = Modifier.weight(1f, fill = false)
+                                    modifier = Modifier.weight(1f, fill = false).tourTarget("learn_lessons_category")
                                 ) {
                                     LocalizedText(
                                         text = lesson.category,
@@ -128,7 +134,8 @@ fun LearnAndAssistantScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 LocalizedText(
-                                    text = "${lesson.durationMinutes} min read",
+                                    modifier = Modifier.tourTarget("learn_lessons_time"),
+                                    text = localizedUiTemplate("{minutes} min read", "minutes" to lesson.durationMinutes),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1
@@ -158,6 +165,7 @@ fun LearnAndAssistantScreen(
                             Spacer(modifier = Modifier.height(10.dp))
                             LocalizedText(
                                 text = "Read Lesson & Sources →",
+                                modifier = Modifier.tourTarget("learn_lessons_open"),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.primary
@@ -243,7 +251,7 @@ fun LearnAndAssistantScreen(
 
                     Spacer(modifier = Modifier.height(Spacing.section))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.MenuBook, contentDescription = null,
+                        Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         LocalizedText(

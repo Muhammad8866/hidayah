@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
 import android.content.Intent
+import com.example.ui.tour.tourTarget
+import com.example.ui.tour.TourScreen
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
@@ -19,10 +21,11 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Bookmarks
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -54,6 +57,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.core.share.StatusCard
+import com.example.core.share.StatusCardShare
 import com.example.quran.FullQuranCatalog
 import com.example.quran.QuranTranslationCatalog
 import com.example.quran.QuranTranslationRepository
@@ -70,6 +75,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 
 /** Entry card in the Mushaf library for reading the Quran with a translation of its meanings. */
 @Composable
@@ -78,7 +84,7 @@ internal fun TranslationReaderCard(open: () -> Unit) {
     val (lastSurah, lastAyah) = remember { QuranTranslationRepository.lastRead(context) }
     Surface(
         onClick = com.example.core.analytics.AppAnalytics.trackItemAction("quran_pdf_library", "open_translation_reader", "translation", open),
-        modifier = Modifier.fillMaxWidth().testTag("quran_translation_card"),
+        modifier = Modifier.fillMaxWidth().testTag("quran_translation_card").tourTarget("quran_translation"),
         color = QuranGreen, shape = RoundedCornerShape(16.dp)
     ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -93,7 +99,7 @@ internal fun TranslationReaderCard(open: () -> Unit) {
                     color = Color.White.copy(alpha = .8f), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp)
                 )
             }
-            Icon(Icons.Default.ChevronRight, null, tint = QuranGoldLight)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = QuranGoldLight)
         }
     }
 }
@@ -104,6 +110,7 @@ private enum class Sheet { SURAH, TEXT, AUDIO, SETTINGS, BOOKMARKS }
 @Composable
 internal fun QuranTranslationScreen(modifier: Modifier = Modifier, close: () -> Unit) {
     com.example.core.analytics.AnalyticsScreen("quran_translation")
+    TourScreen("quran_translation_reader")
     val context = LocalContext.current
     val language = LocalAppLanguage.current
     val initial = remember { QuranTranslationRepository.lastRead(context) }
@@ -122,7 +129,9 @@ internal fun QuranTranslationScreen(modifier: Modifier = Modifier, close: () -> 
     var sheet by rememberSaveable { mutableStateOf<Sheet?>(null) }
     val audioState by TranslationAudioPlayer.state.collectAsState()
     val listState = rememberLazyListState()
+    com.example.core.analytics.AnalyticsScroll("quran_translation", listState)
     val clipboard = LocalClipboardManager.current
+    val cardScope = rememberCoroutineScope()
     val surah = FullQuranCatalog.surahs[surahNumber - 1]
     val translation = QuranTranslationCatalog.byId(translationId)
     val audio = QuranTranslationCatalog.audioById(audioId) ?: QuranTranslationCatalog.audio.first()
@@ -169,7 +178,11 @@ internal fun QuranTranslationScreen(modifier: Modifier = Modifier, close: () -> 
     // Keep the verse being spoken in view.
     LaunchedEffect(audioState.ayah) {
         val ayah = audioState.ayah ?: return@LaunchedEffect
-        if (audioState.surah == surahNumber) listState.animateScrollToItem(headerItems + ayah - 1)
+        if (audioState.surah != surahNumber) return@LaunchedEffect
+        val target = headerItems + ayah - 1
+        val layout = listState.layoutInfo
+        val fullyVisible = layout.visibleItemsInfo.any { it.index == target && it.offset >= 0 && it.offset + it.size <= layout.viewportEndOffset }
+        if (!fullyVisible) listState.animateScrollToItem(target)
     }
     // Carry on into the next surah when the current one finishes.
     LaunchedEffect(audioState.finishedSurah) {
@@ -186,12 +199,12 @@ internal fun QuranTranslationScreen(modifier: Modifier = Modifier, close: () -> 
             surah = surah,
             translationLabel = "${localizedUiText(translation.language)} · ${translation.translator}",
             audioLabel = "${localizedUiText(audio.language)} · ${audio.voice}",
-            back = ::leave,
-            pickSurah = { sheet = Sheet.SURAH },
-            pickText = { sheet = Sheet.TEXT },
-            pickAudio = { sheet = Sheet.AUDIO },
-            openBookmarks = { sheet = Sheet.BOOKMARKS },
-            openSettings = { sheet = Sheet.SETTINGS }
+            back = com.example.core.analytics.AppAnalytics.trackAction("quran_translation", "back", ::leave),
+            pickSurah = { com.example.core.analytics.AppAnalytics.interaction("quran_translation", "open_surah_picker"); sheet = Sheet.SURAH },
+            pickText = { com.example.core.analytics.AppAnalytics.interaction("quran_translation", "open_translation_picker"); sheet = Sheet.TEXT },
+            pickAudio = { com.example.core.analytics.AppAnalytics.interaction("quran_translation", "open_audio_picker"); sheet = Sheet.AUDIO },
+            openBookmarks = { com.example.core.analytics.AppAnalytics.interaction("quran_translation", "open_bookmarks"); sheet = Sheet.BOOKMARKS },
+            openSettings = { com.example.core.analytics.AppAnalytics.interaction("quran_translation", "open_settings"); sheet = Sheet.SETTINGS }
         )
         Box(Modifier.weight(1f)) {
             when {
@@ -203,14 +216,14 @@ internal fun QuranTranslationScreen(modifier: Modifier = Modifier, close: () -> 
                 failed -> Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     LocalizedText("Surah could not be loaded. Check your internet connection and try again.", textAlign = TextAlign.Center, color = MushafInk)
                     Spacer(Modifier.height(8.dp))
-                    Button({ retry++ }, colors = ButtonDefaults.buttonColors(containerColor = QuranGreen)) { LocalizedText("Retry") }
+                    Button({ com.example.core.analytics.AppAnalytics.interaction("quran_translation", "retry_load"); retry++ }, colors = ButtonDefaults.buttonColors(containerColor = QuranGreen)) { LocalizedText("Retry") }
                 }
                 else -> LazyColumn(
                     Modifier.fillMaxSize().testTag("quran_translation_list"), state = listState,
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     item(key = "note") {
-                        LocalizedText("Only the Arabic is the Quran; translations convey its meaning.", fontSize = 11.sp, color = QuranMuted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                        LocalizedText("Only the Arabic is the Quran; translations convey its meaning.", fontSize = 11.sp, color = QuranMuted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().tourTarget("quran_tr_note"))
                     }
                     if (hasBismillah) item(key = "bismillah") {
                         Text(
@@ -227,17 +240,34 @@ internal fun QuranTranslationScreen(modifier: Modifier = Modifier, close: () -> 
                             play = { if (active) TranslationAudioPlayer.toggle() else play(index) },
                             bookmark = {
                                 val added = QuranTranslationRepository.toggleBookmark(context, ayah.surah, ayah.number)
+                                com.example.core.analytics.AppAnalytics.interaction("quran_translation", "bookmark", if (added) "add" else "remove")
                                 bookmarks = QuranTranslationRepository.bookmarks(context).toSet()
                                 Toast.makeText(context, localizeUiText(if (added) "Bookmark added" else "Bookmark removed", language), Toast.LENGTH_SHORT).show()
                             },
                             copy = {
+                                com.example.core.analytics.AppAnalytics.interaction("quran_translation", "copy_ayah");
                                 clipboard.setText(AnnotatedString(ayahShareText(ayah, surah.englishName, translation.translator, language)))
                                 Toast.makeText(context, localizeUiText("Copied", language), Toast.LENGTH_SHORT).show()
                             },
                             share = {
+                                com.example.core.analytics.AppAnalytics.interaction("quran_translation", "share_ayah");
                                 val send = Intent(Intent.ACTION_SEND).setType("text/plain")
-                                    .putExtra(Intent.EXTRA_TEXT, ayahShareText(ayah, surah.englishName, translation.translator, language))
+                                    .putExtra(Intent.EXTRA_TEXT, com.example.core.share.AppShareLink.withLink(context, ayahShareText(ayah, surah.englishName, translation.translator, language)))
                                 context.startActivity(Intent.createChooser(send, null))
+                            },
+                            statusCard = {
+                                com.example.core.analytics.AppAnalytics.interaction("quran_translation", "status_card")
+                                val card = StatusCard.of(
+                                    arabic = ayah.arabic,
+                                    translation = ayah.translation,
+                                    reference = localizeUiTemplate("Quran {surah}:{ayah}", language, mapOf("surah" to "${ayah.surah}", "ayah" to "${ayah.number}")) + " · ${surah.englishName}",
+                                    footer = context.getString(com.example.R.string.app_name)
+                                )
+                                val caption = com.example.core.share.AppShareLink.withLink(context, localizeUiTemplate("Read the Quran with {app}", language, mapOf("app" to context.getString(com.example.R.string.app_name))))
+                                val failed = localizeUiText("Could not create the status card. Please try again.", language)
+                                cardScope.launch {
+                                    if (!StatusCardShare.share(context, card, caption)) Toast.makeText(context, failed, Toast.LENGTH_SHORT).show()
+                                }
                             }
                         )
                     }
@@ -245,8 +275,8 @@ internal fun QuranTranslationScreen(modifier: Modifier = Modifier, close: () -> 
                         SurahNavigation(
                             previous = FullQuranCatalog.surahs.getOrNull(surahNumber - 2)?.englishName,
                             next = FullQuranCatalog.surahs.getOrNull(surahNumber)?.englishName,
-                            goPrevious = { openSurah(surahNumber - 1) },
-                            goNext = { openSurah(surahNumber + 1) }
+                            goPrevious = { com.example.core.analytics.AppAnalytics.interaction("quran_translation", "previous_surah"); openSurah(surahNumber - 1) },
+                            goNext = { com.example.core.analytics.AppAnalytics.interaction("quran_translation", "next_surah"); openSurah(surahNumber + 1) }
                         )
                     }
                 }
@@ -282,13 +312,14 @@ internal fun QuranTranslationScreen(modifier: Modifier = Modifier, close: () -> 
     }
 
     when (sheet) {
-        Sheet.SURAH -> SurahPickerSheet(surahNumber, { sheet = null }) { openSurah(it) }
+        Sheet.SURAH -> SurahPickerSheet(surahNumber, { sheet = null }) { com.example.core.analytics.AppAnalytics.content("quran_translation", "surah_$it"); openSurah(it) }
         Sheet.TEXT -> ReaderSheet("Choose translation", { sheet = null }) {
             QuranTranslationCatalog.languages.forEach { lang ->
                 item(key = "lang_$lang") { SectionLabel(lang) }
                 items(QuranTranslationCatalog.text.filter { it.language == lang }, key = { it.id }) { t ->
                     PickerRow(t.translator, null, null, t.id == translationId) {
                         TranslationAudioPlayer.stop()
+                        com.example.core.analytics.AppAnalytics.setting("translation_text", t.id)
                         translationId = t.id; QuranTranslationRepository.saveSelectedId(context, t.id); sheet = null
                     }
                 }
@@ -301,6 +332,7 @@ internal fun QuranTranslationScreen(modifier: Modifier = Modifier, close: () -> 
             items(QuranTranslationCatalog.audio, key = { it.id }) { a ->
                 PickerRow(a.voice, null, localizedUiText(a.language), a.id == audioId) {
                     TranslationAudioPlayer.stop()
+                    com.example.core.analytics.AppAnalytics.setting("translation_audio_voice", a.id)
                     audioId = a.id; QuranTranslationRepository.saveSelectedAudioId(context, a.id); sheet = null
                 }
             }
@@ -311,10 +343,11 @@ internal fun QuranTranslationScreen(modifier: Modifier = Modifier, close: () -> 
             }
             items(bookmarks.sortedWith(compareBy({ it.first }, { it.second })), key = { "${it.first}:${it.second}" }) { (s, a) ->
                 val info = FullQuranCatalog.surahs[s - 1]
-                PickerRow("${info.englishName} $s:$a", info.arabicName, null, s == surahNumber) { openSurah(s, a) }
+                PickerRow("${info.englishName} $s:$a", info.arabicName, null, s == surahNumber) { com.example.core.analytics.AppAnalytics.interaction("quran_translation", "open_bookmark"); openSurah(s, a) }
             }
         }
         Sheet.SETTINGS -> ReaderSettingsSheet(settings, { sheet = null }) { s ->
+            if (s.playMode != settings.playMode) com.example.core.analytics.AppAnalytics.setting("translation_play_mode", s.playMode.name)
             if (s.playMode != settings.playMode) TranslationAudioPlayer.stop()
             updateSettings(s)
         }
@@ -348,19 +381,19 @@ private fun TranslationHeader(
                 .padding(horizontal = 4.dp, vertical = 6.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, localizedUiText("Back"), tint = Color.White) }
+                IconButton(back, Modifier.tourTarget("quran_tr_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, localizedUiText("Back"), tint = Color.White) }
                 LocalizedText("Quran with translation", color = QuranGoldLight, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                IconButton(openBookmarks, Modifier.testTag("quran_translation_bookmarks")) {
+                IconButton(openBookmarks, Modifier.testTag("quran_translation_bookmarks").tourTarget("quran_tr_bookmarks")) {
                     Icon(Icons.Default.Bookmarks, localizedUiText("Bookmarks"), tint = Color.White)
                 }
-                IconButton(openSettings, Modifier.testTag("quran_translation_settings")) {
+                IconButton(openSettings, Modifier.testTag("quran_translation_settings").tourTarget("quran_tr_settings")) {
                     Icon(Icons.Default.TextFields, localizedUiText("Reading settings"), tint = Color.White)
                 }
             }
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp).clip(RoundedCornerShape(14.dp))
                     .background(Color.White.copy(alpha = .08f)).clickable(onClick = pickSurah).padding(12.dp)
-                    .testTag("quran_translation_pick_surah"),
+                    .testTag("quran_translation_pick_surah").tourTarget("quran_tr_pick_surah"),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(Modifier.size(40.dp).clip(CircleShape).background(QuranGoldLight), contentAlignment = Alignment.Center) {
@@ -381,8 +414,8 @@ private fun TranslationHeader(
                 Text(surah.arabicName, color = QuranGoldLight, fontFamily = IndoPakFont, fontSize = 24.sp)
             }
             Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                HeaderChip(Icons.AutoMirrored.Filled.MenuBook, translationLabel, pickText, Modifier.weight(1f).testTag("quran_translation_pick_text"))
-                HeaderChip(Icons.Default.Headphones, audioLabel, pickAudio, Modifier.weight(1f).testTag("quran_translation_pick_audio"))
+                HeaderChip(Icons.AutoMirrored.Filled.MenuBook, translationLabel, pickText, Modifier.weight(1f).testTag("quran_translation_pick_text").tourTarget("quran_tr_pick_text"))
+                HeaderChip(Icons.Default.Headphones, audioLabel, pickAudio, Modifier.weight(1f).testTag("quran_translation_pick_audio").tourTarget("quran_tr_pick_audio"))
             }
         }
     }
@@ -412,13 +445,14 @@ private fun TranslatedAyahCard(
     play: () -> Unit,
     bookmark: () -> Unit,
     copy: () -> Unit,
-    share: () -> Unit
+    share: () -> Unit,
+    statusCard: () -> Unit
 ) {
     Surface(
         color = if (active) QuranGoldLight.copy(alpha = .28f) else QuranCard,
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(if (active) 1.5.dp else 1.dp, if (active) MushafGold else MushafBorder.copy(alpha = .35f)),
-        modifier = Modifier.testTag("quran_translation_ayah_${ayah.number}")
+        modifier = Modifier.testTag("quran_translation_ayah_${ayah.number}").tourTarget("quran_tr_ayah_card")
     ) {
         Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 6.dp, top = 8.dp, bottom = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -429,16 +463,19 @@ private fun TranslatedAyahCard(
                     Text("${ayah.number}", color = if (active) Color.White else QuranGreen, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
                 Text("  ${ayah.surah}:${ayah.number}", color = QuranMuted, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                IconButton(bookmark, Modifier.size(36.dp)) {
+                IconButton(bookmark, Modifier.size(36.dp).tourTarget("quran_tr_ayah_bookmark")) {
                     Icon(
                         if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                         localizedUiText(if (bookmarked) "Remove bookmark" else "Add bookmark"),
                         tint = if (bookmarked) MushafGold else QuranMuted, modifier = Modifier.size(20.dp)
                     )
                 }
-                IconButton(copy, Modifier.size(36.dp)) { Icon(Icons.Default.ContentCopy, localizedUiText("Copy"), tint = QuranMuted, modifier = Modifier.size(18.dp)) }
-                IconButton(share, Modifier.size(36.dp)) { Icon(Icons.Default.Share, localizedUiText("Share"), tint = QuranMuted, modifier = Modifier.size(18.dp)) }
-                IconButton(play, Modifier.size(36.dp)) {
+                IconButton(copy, Modifier.size(36.dp).tourTarget("quran_tr_ayah_copy")) { Icon(Icons.Default.ContentCopy, localizedUiText("Copy"), tint = QuranMuted, modifier = Modifier.size(18.dp)) }
+                IconButton(share, Modifier.size(36.dp).tourTarget("quran_tr_ayah_share")) { Icon(Icons.Default.Share, localizedUiText("Share"), tint = QuranMuted, modifier = Modifier.size(18.dp)) }
+                IconButton(statusCard, Modifier.size(36.dp).testTag("quran_status_card_${ayah.number}").tourTarget("quran_tr_ayah_status")) {
+                    Icon(Icons.Default.Image, localizedUiText("Share as status card"), tint = QuranMuted, modifier = Modifier.size(18.dp))
+                }
+                IconButton(play, Modifier.size(36.dp).tourTarget("quran_tr_ayah_play")) {
                     Icon(
                         if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                         localizedUiText(if (playing) "Pause" else "Play translation audio"), tint = QuranGreen
@@ -469,14 +506,14 @@ private fun TranslatedAyahCard(
 
 @Composable
 private fun SurahNavigation(previous: String?, next: String?, goPrevious: () -> Unit, goNext: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).tourTarget("quran_tr_surah_nav"), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         if (previous != null) OutlinedButton(goPrevious, Modifier.weight(1f), border = BorderStroke(1.dp, MushafBorder)) {
-            Icon(Icons.Default.ChevronLeft, null, tint = QuranGreen)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, tint = QuranGreen)
             Text(previous, color = QuranGreen, maxLines = 1, overflow = TextOverflow.Ellipsis)
         } else Spacer(Modifier.weight(1f))
         if (next != null) Button(goNext, Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = QuranGreen)) {
             Text(next, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Icon(Icons.Default.ChevronRight, null)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
         } else Spacer(Modifier.weight(1f))
     }
 }
@@ -497,7 +534,7 @@ private fun TranslationPlayerBar(
     toggleRepeat: () -> Unit,
     cycleSpeed: () -> Unit
 ) {
-    Surface(color = QuranGreen, shadowElevation = 8.dp) {
+    Surface(color = QuranGreen, shadowElevation = 8.dp, modifier = Modifier.tourTarget("quran_tr_player")) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
             if (ayah != null) LinearProgressIndicator(
                 progress = { ayah / total.toFloat() }, modifier = Modifier.fillMaxWidth().height(3.dp),
@@ -519,22 +556,22 @@ private fun TranslationPlayerBar(
                         color = QuranGoldLight, fontSize = 11.sp
                     )
                 }
-                TextButton(cycleSpeed, contentPadding = PaddingValues(horizontal = 6.dp)) {
+                TextButton(cycleSpeed, Modifier.tourTarget("quran_tr_speed"), contentPadding = PaddingValues(horizontal = 6.dp)) {
                     Text(speedLabel(settings.speed), color = QuranGoldLight, fontSize = 12.sp)
                 }
-                IconButton(toggleRepeat, Modifier.testTag("quran_translation_repeat")) {
+                IconButton(toggleRepeat, Modifier.testTag("quran_translation_repeat").tourTarget("quran_tr_repeat")) {
                     Icon(Icons.Default.Repeat, localizedUiText("Repeat ayah"), tint = if (settings.repeatAyah) QuranGoldLight else Color.White.copy(alpha = .45f))
                 }
-                IconButton(previous, enabled = surahActive) { Icon(Icons.Default.SkipPrevious, localizedUiText("Previous ayah"), tint = Color.White) }
+                IconButton(previous, Modifier.tourTarget("quran_tr_prev_ayah"), enabled = surahActive) { Icon(Icons.Default.SkipPrevious, localizedUiText("Previous ayah"), tint = Color.White) }
                 Box(contentAlignment = Alignment.Center) {
                     FilledIconButton(
-                        play, enabled = enabled, modifier = Modifier.size(46.dp).testTag("quran_translation_play"),
+                        play, enabled = enabled, modifier = Modifier.size(46.dp).testTag("quran_translation_play").tourTarget("quran_tr_play"),
                         colors = IconButtonDefaults.filledIconButtonColors(containerColor = QuranGoldLight, contentColor = QuranGreen)
                     ) { Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow, localizedUiText(if (playing) "Pause" else "Play")) }
                     if (buffering) CircularProgressIndicator(Modifier.size(50.dp), color = Color.White, strokeWidth = 2.dp)
                 }
-                IconButton(next, enabled = surahActive) { Icon(Icons.Default.SkipNext, localizedUiText("Next ayah"), tint = Color.White) }
-                if (surahActive) IconButton(stop) { Icon(Icons.Default.Stop, localizedUiText("Stop"), tint = QuranGoldLight) }
+                IconButton(next, Modifier.tourTarget("quran_tr_next_ayah"), enabled = surahActive) { Icon(Icons.Default.SkipNext, localizedUiText("Next ayah"), tint = Color.White) }
+                if (surahActive) IconButton(stop, Modifier.tourTarget("quran_tr_stop")) { Icon(Icons.Default.Stop, localizedUiText("Stop"), tint = QuranGoldLight) }
             }
         }
     }
@@ -543,7 +580,8 @@ private fun TranslationPlayerBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ReaderSheet(title: String, dismiss: () -> Unit, content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
-    ModalBottomSheet(onDismissRequest = dismiss, containerColor = MushafPaper, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(onDismissRequest = { com.example.core.analytics.AppAnalytics.interaction("quran_translation", "dismiss_sheet", "dismiss"); dismiss() },
+        containerColor = MushafPaper, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LocalizedText(title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = QuranGreen, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 560.dp), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 24.dp), content = content)
     }
@@ -552,11 +590,9 @@ private fun ReaderSheet(title: String, dismiss: () -> Unit, content: androidx.co
 @Composable
 private fun SurahPickerSheet(current: Int, dismiss: () -> Unit, choose: (Int) -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
-    val q = query.trim()
-    val matches = FullQuranCatalog.surahs.filter {
-        q.isEmpty() || it.number.toString() == q || it.englishName.contains(q, true) ||
-            it.englishMeaning.contains(q, true) || it.arabicName.contains(q)
-    }
+    com.example.core.analytics.AnalyticsSearch("quran_translation", query)
+    val language = LocalAppLanguage.current
+    val matches = remember(query, language) { com.example.quran.QuranSearch.surahs(query, language) }
     ReaderSheet("Choose surah", dismiss) {
         item(key = "search") {
             OutlinedTextField(
@@ -609,7 +645,8 @@ private fun ReaderSettingsSheet(settings: TranslationReaderSettings, dismiss: ()
 private fun SettingSwitch(label: String, checked: Boolean, change: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         LocalizedText(label, color = MushafInk, modifier = Modifier.weight(1f))
-        Switch(checked, change, colors = SwitchDefaults.colors(checkedTrackColor = QuranGreen))
+        Switch(checked, { com.example.core.analytics.AppAnalytics.setting("translation_reader_display", it.toString()); change(it) },
+            colors = SwitchDefaults.colors(checkedTrackColor = QuranGreen))
     }
 }
 
@@ -621,7 +658,8 @@ private fun SizeSlider(label: String, value: Int, range: IntRange, change: (Int)
             Text("$value", color = MushafGold, fontWeight = FontWeight.Bold)
         }
         Slider(
-            value.toFloat(), { change(it.toInt()) }, valueRange = range.first.toFloat()..range.last.toFloat(),
+            value.toFloat(), { change(it.toInt()) },
+            onValueChangeFinished = { com.example.core.analytics.AppAnalytics.setting("translation_reader_display") }, valueRange = range.first.toFloat()..range.last.toFloat(),
             steps = range.last - range.first - 1,
             colors = SliderDefaults.colors(thumbColor = QuranGreen, activeTrackColor = QuranGreen)
         )

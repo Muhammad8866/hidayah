@@ -57,7 +57,7 @@ internal object IndicKnDraft1 {
         "Witr" to "ವಿಟರ್",
         "Today" to "ಇಂದು",
         "All five prayers prayed. Alhamdulillah!" to "ಎಲ್ಲಾ ಐದು ಪ್ರಾರ್ಥನೆಗಳು ಪ್ರಾರ್ಥನೆ. ಅಲ್ಹಮದುಲಿಲ್ಲಾಹ್!",
-        "Tap ✓ or ✗ to log each prayer." to "ಪ್ರತಿ ಪ್ರಾರ್ಥನೆಯನ್ನು ದಾಖಲಿಸಲು Â ಅಥವಾ Â ಅನ್ನು ಒತ್ತಿ.",
+        "Tap ✓ or ✗ to log each prayer." to "ಪ್ರತಿ ಪ್ರಾರ್ಥನೆಯನ್ನು ದಾಖಲಿಸಲು ✓ ಅಥವಾ ✗ ಅನ್ನು ಒತ್ತಿ.",
         "Muslimah mode: today is marked as excused from salah." to "ಮುಸಲ್ಮಾನಾ ವಿಧಾನಃ ಇಂದು ಸಲಾದಿಂದ ಕ್ಷಮಿಸಲಾಗಿದೆ ಎಂದು ಗುರುತಿಸಲಾಗಿದೆ.",
         "Today's salah" to "ಇಂದಿನ ಸಲಾಹ್",
         "This week" to "ಈ ವಾರ",

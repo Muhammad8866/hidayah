@@ -57,7 +57,7 @@ internal object IndicAsDraft1 {
         "Witr" to "উইটাৰ",
         "Today" to "আজি",
         "All five prayers prayed. Alhamdulillah!" to "পাঁচটা প্ৰাৰ্থনাৰে প্ৰাৰ্থনা কৰা হৈছিল। আলহামদুলিল্লাহ!",
-        "Tap ✓ or ✗ to log each prayer." to "প্ৰতিটো প্ৰাৰ্থনা লগ কৰিবলৈ Â বা Â টিপি দিয়ক।",
+        "Tap ✓ or ✗ to log each prayer." to "প্ৰতিটো প্ৰাৰ্থনা লগ কৰিবলৈ ✓ বা ✗ টিপি দিয়ক।",
         "Muslimah mode: today is marked as excused from salah." to "মুছলমান মোডঃ আজি ছালাহৰ পৰা ক্ষমা কৰা বুলি চিহ্নিত কৰা হয়।",
         "Today's salah" to "আজিৰ ছালাহ",
         "This week" to "এই সপ্তাহত",

@@ -74,6 +74,49 @@ class BabyNamesTest {
         assertTrue(BabyNames.search("no-such-name").isEmpty())
     }
 
+    @Test fun searchFindsTheIntendedNameInAnySpellingOrScriptAndNothingElse() {
+        assertEquals(listOf("Aisha"), BabyNames.search("ayesha").map { it.name })
+        assertEquals(listOf("Aisha"), BabyNames.search("ayisha").map { it.name })
+        assertEquals(listOf("Fatima"), BabyNames.search("fatma").map { it.name })
+        assertEquals(listOf("Fatima"), BabyNames.search("fatimah").map { it.name })
+        assertEquals(listOf("Zaynab"), BabyNames.search("zainab").map { it.name })
+        assertEquals(listOf("Abdur Rahman"), BabyNames.search("abdurrahman").map { it.name })
+        assertEquals(listOf("Abdur Rahman"), BabyNames.search("abdul rehman").map { it.name })
+        assertEquals(listOf("Abdur Rahman"), BabyNames.search("عبد الرحمن").map { it.name })
+        assertEquals(listOf("Abdur Rahman"), BabyNames.search("عبدالرحمن").map { it.name })
+        assertEquals(listOf("Aisha"), BabyNames.search("आयशा").map { it.name })
+        assertEquals(listOf("Fatima"), BabyNames.search("फातिमा").map { it.name })
+        assertEquals(listOf("Inaya", "Inayat"), BabyNames.search("inaaya").map { it.name })
+    }
+
+    @Test fun anExactNameComesFirst() {
+        assertEquals("Ali", BabyNames.search("ali").first().name)
+        assertEquals("Ali", BabyNames.search("علي").first().name)
+        assertEquals("Abdullah", BabyNames.search("Allah servant").first().name)
+    }
+
+    @Test fun aTypoStillFindsTheNameWhenNothingIsSpeltThatWay() {
+        assertTrue(BabyNames.search("zenab").any { it.name == "Zaynab" })
+    }
+
+    @Test fun badInputKeepsOrEmptiesTheListWithoutBreaking() {
+        assertEquals(BabyNames.names, BabyNames.search(""))
+        assertEquals(BabyNames.names, BabyNames.search("💥"))
+        assertEquals(BabyNames.names, BabyNames.search("-- , ."))
+        assertEquals(497, BabyNames.search("💥", BabyGender.BOY).size)
+        assertTrue(BabyNames.search("x".repeat(5_000)).isEmpty())
+        assertTrue(BabyNames.search("\u0000ayesha\u0000").any { it.name == "Aisha" })
+    }
+
+    @Test fun theReadersLanguageMeaningIsSearchableToo() {
+        listOf("en", "ur", "hi", "hinglish", "ar", "fr").forEach { language ->
+            assertEquals(language, "Aisha", BabyNames.search("ayesha", language = language).first().name)
+        }
+        val aisha = BabyNames.names.first { it.name == "Aisha" }
+        val french = aisha.meaning("fr")
+        assertTrue(BabyNames.search(french, BabyGender.GIRL, language = "fr").contains(aisha))
+    }
+
     @Test fun sameNameInBothGendersHasDistinctStableIds() {
         val names = BabyNames.names.filter { it.name == "Sariyah" }
         assertEquals(BabyGender.entries.toSet(), names.map { it.gender }.toSet())

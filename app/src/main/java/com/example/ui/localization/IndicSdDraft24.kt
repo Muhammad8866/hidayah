@@ -11,7 +11,7 @@ internal object IndicSdDraft24 {
         "Allah is the Greatest." to "اللہ سڀنی کان وڏو آھی۔",
         "Thana (opening praise)" to "ٿانا (شروعاتی ساراھ)",
         "Glory be to You, O Allah, and praise be to You. Blessed is Your name, exalted is Your majesty, and there is no god but You." to "پاڪ ڪر، ای اللہ، ۽ ساراھ ڪر تون۔ تنھنجو نالو پاڪ آھی، تنھنجی عظمت بلند آھی، ۽ توسان سواء ٻیو ڪو دیوتا ڪونھی۔",
-        "Ta‘awwuz" to "توااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااااا",
+        "Ta‘awwuz" to "تعوذ",
         "I seek refuge with Allah from Satan, the rejected." to "مان شیطان کان اللہ جی پناہ گھران ٿو، جن کی رد ڪیو ویو آھی۔",
         "Tasmiyah (Bismillah)" to "تسمیہ (بسمیلا)",
         "In the name of Allah, the Most Gracious, the Most Merciful." to "اللہ جی نالی تی، جیڪو سڀ کان وڌیڪ رحم ڪندڙ ۽ سڀ کان وڌیڪ رحم ڪندڙ آھی۔",

@@ -4,7 +4,13 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = json.loads((ROOT / 'tools/indic_translation_sources.json').read_text(encoding='utf-8'))
+
+def read_json(path, default):
+    """Some data files are committed empty (0 bytes); treat them like missing files."""
+    text = path.read_text(encoding='utf-8') if path.exists() else ''
+    return json.loads(text) if text.strip() else default
+
+SOURCE = read_json(ROOT / 'tools/indic_translation_sources.json', {})
 CACHE = ROOT / 'tmp/indic_translation_cache'
 MODEL = ROOT / 'app/src/main/java/com/example/domain/model/i18n'
 UI = ROOT / 'app/src/main/java/com/example/ui/localization'
@@ -14,8 +20,7 @@ CODES = ('as', 'bn', 'brx', 'doi', 'gu', 'kn', 'ks', 'kok', 'mai', 'ml', 'mni', 
 def read_translations(path):
     values=json.loads(path.read_text(encoding='utf-8'))
     corrections=ROOT/'localization/quality-review-draft-corrections.json'
-    if corrections.exists():
-        values.update(json.loads(corrections.read_text(encoding='utf-8')).get(path.stem,{}))
+    values.update(read_json(corrections, {}).get(path.stem,{}))
     return values
 
 def quoted(value):
@@ -35,6 +40,9 @@ def write_existing(path, value):
     path.write_bytes(value.replace('\n', newline).encode('utf-8'))
 
 def main():
+    # Without the source rows this would regenerate Android files from nothing.
+    if not SOURCE.get('duas') or not SOURCE.get('features'):
+        raise SystemExit('tools/indic_translation_sources.json has no duas/features (the committed file is empty); nothing to integrate.')
     definitions = []
     name_definitions = []
     # Validate every cache before creating any source files.

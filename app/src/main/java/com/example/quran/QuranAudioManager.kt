@@ -71,6 +71,7 @@ object QuranAudioManager {
     private lateinit var audioDir: File
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var player: ExoPlayer? = null
+    private var audioLoad: com.example.core.analytics.AppAnalytics.AudioLoad? = null
     private var queue: List<Int> = emptyList()
     private var queueIndex = 0
     private var ticker: Job? = null
@@ -172,8 +173,8 @@ object QuranAudioManager {
         else _state.value.playingSurah?.takeIf { it > 1 }?.let { playQueue(listOf(it - 1)) }
     }
 
+    /** Called for every drag frame of the seek bar; the bar reports one "seek" event when the drag ends. */
     fun seekTo(positionMs: Int) {
-        com.example.core.analytics.AppAnalytics.media("quran_audio", "seek")
         player?.seekTo(positionMs.toLong())
         _state.value = _state.value.copy(positionMs = positionMs)
         rememberPosition(positionMs)
@@ -186,6 +187,7 @@ object QuranAudioManager {
         player?.release()
         stopTicker()
         contextOrNull?.let(QuranAudioService::start)
+        audioLoad = com.example.core.analytics.AppAnalytics.audioLoad("quran_audio")
         val candidate = StreamPlayer.build(appContext)
         player = candidate
         // Audio focus is requested by hand above, so the player must not take it too.
@@ -202,6 +204,7 @@ object QuranAudioManager {
                 if (playbackState == Player.STATE_BUFFERING) {
                     _state.value = _state.value.copy(isBuffering = true)
                 } else if (playbackState == Player.STATE_READY) {
+                    audioLoad?.ready()
                     _state.value = _state.value.copy(
                         playingSurah = surah, isPlaying = candidate.playWhenReady, error = null, isBuffering = false,
                         positionMs = candidate.currentPosition.playerMillis(),
@@ -225,6 +228,7 @@ object QuranAudioManager {
             override fun onPlayerError(error: PlaybackException) {
                 if (player !== candidate) return
                 com.example.core.analytics.AppAnalytics.mediaState("quran_audio", "failed", "playback_error")
+                audioLoad?.failed()
                 stopTicker()
                 _state.value = _state.value.copy(
                     isPlaying = false, isBuffering = false,
@@ -253,6 +257,7 @@ object QuranAudioManager {
         stopTicker()
         registerNoisy()
         ticker = scope.launch {
+            var ticks = 0
             while (true) {
                 val current = player ?: break
                 val position = current.currentPosition.playerMillis()
@@ -260,8 +265,9 @@ object QuranAudioManager {
                     positionMs = position,
                     durationMs = current.duration.playerMillis()
                 )
-                rememberPosition(position)
-                delay(1000)
+                // The slider moves smoothly; the resume point is saved about every five seconds.
+                if (++ticks % 20 == 0) rememberPosition(position)
+                delay(250)
             }
         }
     }
@@ -336,10 +342,16 @@ object QuranAudioManager {
     }
 
     fun download(surah: Int) {
-        if (audioFile(surah).exists() || downloadJobs.containsKey(surah)) return
+        if (audioFile(surah).exists()) return
+        // A cancelled job stays mapped until it has cleaned up its shared `.part` file.
+        val previous = downloadJobs[surah]
+        if (previous != null && !previous.isCancelled) return
         downloadJobs[surah] = scope.launch {
+            val job = coroutineContext[Job]
+            previous?.join()
             _state.value = _state.value.copy(downloading = _state.value.downloading + surah, error = null)
-            val result = downloadSlots.withPermit { withContext(Dispatchers.IO) {
+            // On cancel the IO hop rethrows, so the mapping is released in finally.
+            val result = try { downloadSlots.withPermit { withContext(Dispatchers.IO) {
                 runCatching {
                     val temp = File(audioDir, "%03d.part".format(surah))
                     var shown = -1
@@ -352,8 +364,9 @@ object QuranAudioManager {
                     }
                     if (!temp.renameTo(audioFile(surah))) error("Could not save audio")
                 }
-            } }
-            downloadJobs.remove(surah)
+            } } } finally {
+                if (downloadJobs[surah] === job) downloadJobs.remove(surah)
+            }
             _state.value = if (result.isSuccess) _state.value.copy(
                 downloading = _state.value.downloading - surah,
                 downloaded = _state.value.downloaded + surah,
@@ -370,7 +383,7 @@ object QuranAudioManager {
 
     /** Stops a running download; the partial file is discarded and the row goes back to "Download". */
     fun cancelDownload(surah: Int) {
-        val job = downloadJobs.remove(surah) ?: return
+        val job = downloadJobs[surah]?.takeUnless { it.isCancelled } ?: return
         job.cancel()
         _state.update { it.copy(downloading = it.downloading - surah, progress = it.progress - surah) }
     }

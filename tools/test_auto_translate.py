@@ -43,6 +43,7 @@ class AutoTranslationTests(unittest.TestCase):
             with patch.object(pipeline, 'ROOT', root), patch.object(pipeline, 'scan', return_value={}), \
                  patch.object(pipeline, 'languages', return_value=supported), \
                  patch.object(pipeline, 'translate', side_effect=fake) as translator, \
+                 patch.object(pipeline, 'has_translation_key', return_value=True), \
                  patch('sys.argv', ['auto_translate', '--output', str(root / 'generated')]), \
                  contextlib.redirect_stdout(io.StringIO()):
                 pipeline.main()
@@ -53,7 +54,18 @@ class AutoTranslationTests(unittest.TestCase):
             for code in supported.keys() - {'en'}:
                 self.assertEqual(f'{code}: New {{n}} tool',
                     json.loads((root / f'localization/translations/{code}.json').read_text())['New {n} tool'])
-            self.assertTrue((root / 'generated/AutoTranslationPhrases.kt').exists())
+            packs = root / 'generated/auto_translations'
+            self.assertEqual('New {n} tool\thi: New {n} tool\n', (packs / 'hi.tsv').read_text(encoding='utf-8'))
+            self.assertEqual([], list((root / 'generated').glob('*.kt')))
+
+    def test_generated_packs_escape_separators_and_drop_stale_kotlin(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            (output / 'AutoTranslation_hi_0.kt').write_text('stale', encoding='utf-8')
+            pipeline.generate({'hi': {'a\tb\nc\\d': 'x\ty'}}, output)
+            self.assertFalse((output / 'AutoTranslation_hi_0.kt').exists())
+            self.assertEqual('a\\tb\\nc\\\\d\tx\\ty\n',
+                (output / 'auto_translations/hi.tsv').read_text(encoding='utf-8'))
 
     def test_new_raw_copy_fails_before_any_api_request(self):
         with tempfile.TemporaryDirectory() as directory:

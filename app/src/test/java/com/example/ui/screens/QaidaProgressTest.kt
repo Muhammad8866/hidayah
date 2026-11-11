@@ -60,6 +60,24 @@ class QaidaProgressTest {
     }
 
     @Test
+    fun everyMadaniQaidahLessonIsCoveredWithAudio() {
+        val ids = qaidaLessons.map { it.id }.toSet()
+        assertEquals((1..22).toList(), qaidaMadaniSabaq.keys.sorted())
+        qaidaMadaniSabaq.values.flatten().forEach { assertTrue(it, it in ids) }
+        listOf("harakat_practice", "hijjay", "madd_letters", "khari", "leen", "review_madd", "sukoon_practice", "salah",
+            "muqattaat", "zaid_alif", "misc_rules", "qa_review").forEach { id ->
+            assertTrue(id, id in ids)
+            assertTrue("No audio: $id", qaidaLessonAudio(id).isNotEmpty())
+        }
+        assertEquals(17, qaidaMadaniNumber("madd_types"))
+        assertTrue(qaidaSearch("madani 18", roman = false).any { it.id == "muqattaat" })
+        val urls = qaidaAllAudioUrls()
+        assertEquals(urls.size, urls.toSet().size)
+        assertTrue(urls.all { it.startsWith("https://") })
+        assertTrue(qaidaLessonAudio("muqattaat").all { it.url in urls })
+    }
+
+    @Test
     fun everyLessonHasValidQuizzesAndBothLanguages() {
         qaidaLessons.forEach { lesson ->
             assertTrue(lesson.id, lesson.quizzes.size >= 3)

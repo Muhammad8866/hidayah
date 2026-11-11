@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -31,25 +30,57 @@ object Connectivity {
             ?: return
         manager = cm
         online.value = currentlyOnline(cm)
-        val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) { refresh() }
-            override fun onLost(network: Network) { refresh() }
-            override fun onUnavailable() { refresh() }
-            override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) { refresh() }
-        }
-        runCatching {
-            cm.registerNetworkCallback(
-                NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build(),
-                callback
-            )
-        }
+        trackDefaultNetwork(cm) { online.value = it }
     }
 
-    /** Re-reads the system state; cheap, and the callback path already funnels through here. */
-    fun refresh() {
-        val cm = manager ?: return
-        online.value = currentlyOnline(cm)
+    /**
+     * Registers a default-network callback that reports online/offline through [publish]. Kept apart
+     * from [init] so tests can drive it with their own ConnectivityManager.
+     */
+    internal fun trackDefaultNetwork(
+        cm: ConnectivityManager,
+        publish: (Boolean) -> Unit
+    ): ConnectivityManager.NetworkCallback {
+        val state = DefaultNetworkState<Network>()
+        val lock = Any()
+        fun update(change: DefaultNetworkState<Network>.() -> Unit) = synchronized(lock) {
+            state.change()
+            publish(state.isOnline)
+        }
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            // Each event carries its own network and capabilities; re-reading activeNetwork here races
+            // the callback and is null while the app is blocked, which left "offline" on screen.
+            // A new or lost network can change which server address answers, so remembered choices go.
+            override fun onAvailable(network: Network) {
+                ReachableFirstDns.forgetAll()
+                val seed = runCatching { cm.getNetworkCapabilities(network) }.getOrNull()
+                val seedValidated = seed != null &&
+                    seed.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                    seed.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                update { onAvailable(network, seedValidated) }
+            }
+
+            override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+                update {
+                    onCapabilitiesChanged(
+                        network,
+                        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET),
+                        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                    )
+                }
+            }
+
+            override fun onLost(network: Network) {
+                ReachableFirstDns.forgetAll()
+                update { onLost(network) }
+            }
+        }
+        runCatching { cm.registerDefaultNetworkCallback(callback) }
+        return callback
     }
+
+    /** True on mobile data or another metered network; unknown counts as metered, so data is spared. */
+    fun isMetered(): Boolean = runCatching { manager?.isActiveNetworkMetered ?: true }.getOrDefault(true)
 
     /** Suspends until a validated connection exists. Returns immediately when already online. */
     suspend fun awaitOnline() {

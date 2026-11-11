@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizedUiText
 import com.example.ui.localization.formatHijriDate
@@ -57,6 +58,8 @@ import com.example.domain.model.PredefinedLocations
 import com.example.viewmodel.MainUiState
 import com.example.viewmodel.MainViewModel
 import com.example.viewmodel.AppLanguage
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +71,7 @@ fun SettingsScreen(
     onOpenAzan: () -> Unit = {}
 ) {
     com.example.core.analytics.AnalyticsScreen("settings_screen")
+    TourScreen("more_settings")
 
     var showCalculationMethodDialog by rememberSaveable { mutableStateOf(false) }
     var showAsrMethodDialog by rememberSaveable { mutableStateOf(false) }
@@ -79,6 +83,7 @@ fun SettingsScreen(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         com.example.core.analytics.AppAnalytics.permission("notifications", granted)
+        com.example.core.analytics.AppAnalytics.onboarding("notifications_answered")
         if (!granted && notificationPermissionPermanentlyDenied(context)) openAppNotificationSettings(context)
         viewModel.setNotificationsEnabled(true)
     }
@@ -95,12 +100,14 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(Spacing.section)
     ) {
         item {
-            ScreenHeader(
-                title = "Settings & Privacy",
-                subtitle = "No ads. Usage analytics helps improve Hidayah.",
-                onBack = onBack,
-                backTestTag = "settings_back_btn"
-            )
+            androidx.compose.foundation.layout.Box(Modifier.tourTarget("more_settings_header")) {
+                ScreenHeader(
+                    title = "Settings & Privacy",
+                    subtitle = "No ads. Usage analytics helps improve Hidayah.",
+                    onBack = onBack,
+                    backTestTag = "settings_back_btn"
+                )
+            }
         }
 
         item {
@@ -110,7 +117,8 @@ fun SettingsScreen(
                     subtitle = AppLanguage.supported.firstOrNull { it.code == uiState.languageCode }?.nativeName
                         ?: AppLanguage.supported.first().nativeName,
                     onClick = { com.example.core.analytics.AppAnalytics.interaction("settings_screen", "open_language_dialog", "tap"); showLanguageDialog = true },
-                    icon = Icons.Default.Language
+                    icon = Icons.Default.Language,
+                    modifier = Modifier.tourTarget("more_settings_language")
                 )
             }
         }
@@ -132,6 +140,7 @@ fun SettingsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .tourTarget("more_settings_prayer_alerts")
                         .heightIn(min = 56.dp)
                         .toggleable(
                             value = uiState.isNotificationEnabled,
@@ -164,6 +173,27 @@ fun SettingsScreen(
                 }
 
                 if (uiState.isNotificationEnabled) {
+                    var alertExtras by remember { mutableStateOf(PrayerSettingsStore.alertExtrasEnabled(salahPrefs)) }
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .heightIn(min = 56.dp)
+                            .toggleable(value = alertExtras, role = Role.Switch, onValueChange = { enabled ->
+                                com.example.core.analytics.AppAnalytics.setting("prayer_alert_extras", enabled.toString())
+                                alertExtras = enabled
+                                PrayerSettingsStore.saveAlertExtrasEnabled(salahPrefs, enabled)
+                            })
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SettingsIconBadge(Icons.Default.Notifications)
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            LocalizedText(text = "Daily dua in prayer alerts", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            LocalizedText(text = "Adds a dua, Quran goal or streak reminder to each alert", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Switch(checked = alertExtras, onCheckedChange = null, modifier = Modifier.testTag("alert_extras_switch"))
+                    }
                     ExactAlarmPermissionRow()
                     BatteryOptimizationHintRow()
                 }
@@ -174,7 +204,7 @@ fun SettingsScreen(
                     title = "Choose Azan for prayer alerts",
                     icon = Icons.Default.Campaign,
                     onClick = com.example.core.analytics.AppAnalytics.trackAction("settings_screen", "open_azan_tones", onOpenAzan),
-                    modifier = Modifier.testTag("azan_tone_btn")
+                    modifier = Modifier.testTag("azan_tone_btn").tourTarget("more_settings_azan_tone")
                 )
 
                 SettingsDivider()
@@ -183,7 +213,7 @@ fun SettingsScreen(
                     title = "Send Test Prayer Alert Now",
                     icon = Icons.Default.NotificationsActive,
                     onClick = { com.example.core.analytics.AppAnalytics.interaction("settings_screen", "send_test_prayer_alert", "tap"); viewModel.triggerTestNotification() },
-                    modifier = Modifier.testTag("test_notification_btn"),
+                    modifier = Modifier.testTag("test_notification_btn").tourTarget("more_settings_test_alert"),
                     showChevron = false
                 )
 
@@ -207,7 +237,8 @@ fun SettingsScreen(
                     title = "Calculation Authority",
                     subtitle = uiState.prayerConfig.method.title,
                     onClick = { com.example.core.analytics.AppAnalytics.interaction("settings_screen", "open_calculation_method_dialog", "tap"); showCalculationMethodDialog = true },
-                    icon = Icons.Default.Calculate
+                    icon = Icons.Default.Calculate,
+                    modifier = Modifier.tourTarget("more_settings_calc_method")
                 )
 
                 SettingsDivider()
@@ -217,7 +248,8 @@ fun SettingsScreen(
                     title = "Asr Juristic Calculation",
                     subtitle = uiState.prayerConfig.asrMethod.title,
                     onClick = { com.example.core.analytics.AppAnalytics.interaction("settings_screen", "open_asr_method_dialog", "tap"); showAsrMethodDialog = true },
-                    icon = Icons.Default.Schedule
+                    icon = Icons.Default.Schedule,
+                    modifier = Modifier.tourTarget("more_settings_asr_method")
                 )
 
                 SettingsDivider()
@@ -226,7 +258,8 @@ fun SettingsScreen(
                     title = "High-latitude adjustment",
                     subtitle = uiState.prayerConfig.highLatitudeRule.title,
                     onClick = { com.example.core.analytics.AppAnalytics.interaction("settings_screen", "open_high_latitude_dialog", "tap"); showHighLatitudeDialog = true },
-                    icon = Icons.Default.Public
+                    icon = Icons.Default.Public,
+                    modifier = Modifier.tourTarget("more_settings_high_latitude")
                 )
 
                 SettingsDivider()
@@ -235,16 +268,17 @@ fun SettingsScreen(
                 SettingsClickableRow(
                     title = "Hijri calendar",
                     subtitle = HijriRegion.byId(uiState.hijriCalendarId)?.label
-                        ?: "Automatic: ${automaticHijriRegion.label}",
+                        ?: localizedUiTemplate("Automatic: {region}", "region" to localizedUiText(automaticHijriRegion.label)),
                     onClick = { com.example.core.analytics.AppAnalytics.interaction("settings_screen", "open_hijri_calendar_dialog", "tap"); showHijriCalendarDialog = true },
-                    icon = Icons.Default.CalendarMonth
+                    icon = Icons.Default.CalendarMonth,
+                    modifier = Modifier.tourTarget("more_settings_hijri_calendar")
                 )
 
                 SettingsDivider()
 
                 // Hijri Date Manual Adjustment
                 Row(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth().tourTarget("more_settings_hijri_adjust").heightIn(min = 56.dp).padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     SettingsIconBadge(Icons.Default.NightsStay)
@@ -287,33 +321,27 @@ fun SettingsScreen(
             SettingsSection("Salah guide") {
                 SettingsClickableRow(
                     title = "Madhhab",
-                    subtitle = "${selectedMadhhab.label} · affects guide notes, not prayer-time calculations",
+                    subtitle = localizedUiTemplate("{madhhab} · affects guide notes, not prayer-time calculations", "madhhab" to localizedUiText(selectedMadhhab.label)),
                     onClick = { com.example.core.analytics.AppAnalytics.interaction("settings_screen", "open_madhhab_dialog", "tap"); showMadhhabDialog = true },
-                    icon = Icons.Default.Mosque
+                    icon = Icons.Default.Mosque,
+                    modifier = Modifier.tourTarget("more_settings_madhhab")
                 )
             }
         }
 
-        // Content Governance & Sources Verification
         item {
-            SettingsSection("Content Governance & Sources") {
-                Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
-                    SettingsIconBadge(Icons.Default.Verified)
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
-                        LocalizedText(
-                            text = "Every ayah, hadith, dua, and lesson in Hidayah links to canonical sources with authenticated revision histories.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LocalizedText(
-                            text = "Offline Mushaf integrity: SHA-256 verified before display.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+            val shareMessage = localizedUiText("Read the Quran, duas and prayer times in one app:")
+            SettingsSection("Share") {
+                SettingsClickableRow(
+                    title = "Share app",
+                    subtitle = "Invite family and friends to Hidayah",
+                    onClick = {
+                        com.example.core.analytics.AppAnalytics.interaction("settings_screen", "share_app", "tap")
+                        com.example.core.share.AppShareLink.shareApp(context, shareMessage)
+                    },
+                    icon = Icons.Default.Share,
+                    modifier = Modifier.tourTarget("more_settings_share")
+                )
             }
         }
     }
@@ -337,7 +365,7 @@ fun SettingsScreen(
                         ) {
                             RadioButton(selected = selectedMadhhab == school, onClick = null)
                             Spacer(Modifier.width(8.dp))
-                            Text(school.label)
+                            LocalizedText(school.label)
                         }
                     }
                 }
@@ -556,7 +584,7 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             LocalizedText(
-                                text = region?.label ?: "Automatic (${automatic.label})",
+                                text = region?.label ?: localizedUiTemplate("Automatic ({region})", "region" to localizedUiText(automatic.label)),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 modifier = Modifier.weight(1f)
@@ -656,10 +684,11 @@ fun SettingsClickableRow(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
-    icon: ImageVector = Icons.Default.Tune
+    icon: ImageVector = Icons.Default.Tune,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
             .clickable(role = Role.Button) { onClick() }
@@ -716,7 +745,7 @@ private fun ExactAlarmPermissionRow() {
                 )
             }
         },
-        modifier = Modifier.fillMaxWidth().testTag("exact_alarm_btn")
+        modifier = Modifier.fillMaxWidth().testTag("exact_alarm_btn").tourTarget("more_settings_exact_alarm")
     ) {
         LocalizedText("Allow exact prayer alerts")
     }
@@ -758,7 +787,7 @@ private fun BatteryOptimizationHintRow() {
                     }
                 }
             },
-            modifier = Modifier.weight(1f).testTag("battery_hint_btn")
+            modifier = Modifier.weight(1f).testTag("battery_hint_btn").tourTarget("more_settings_battery")
         ) {
             LocalizedText("Battery settings")
         }

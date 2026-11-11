@@ -1,5 +1,10 @@
 package com.example.ui.screens
 
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
+
+import com.example.ui.localization.LocalAppLanguage
+import com.example.ui.localization.localizePhrase
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.expandVertically
@@ -10,7 +15,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -70,6 +74,7 @@ internal fun KalimaReader(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val english = user.meaning == KalimaMeaning.ENGLISH
+    val language = LocalAppLanguage.current
     val pager = rememberPagerState(initialPage = entries.indexOfFirst { it.id == startId }.coerceAtLeast(0)) { entries.size }
     val entry = entries[pager.settledPage.coerceIn(0, entries.lastIndex)]
     val favourite = entry.id in user.favorites
@@ -90,40 +95,43 @@ internal fun KalimaReader(
         if (index >= 0 && index != pager.currentPage) pager.animateScrollToPage(index)
     }
 
+    com.example.core.analytics.AnalyticsScreen("kalimas_reader")
+    TourScreen("kalima_reader")
+    com.example.core.analytics.AnalyticsReaderSession("kalimas_reader", pager.settledPage)
     Column(Modifier.fillMaxSize().testTag("kalimas_reader")) {
         // Top bar: back, position, and the per-Kalima actions.
         Row(
             Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onClose, modifier = Modifier.testTag("kalimas_reader_back")) {
+            IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("kalimas_reader", "back", onClose), modifier = Modifier.testTag("kalimas_reader_back").tourTarget("kalima_reader_back")) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiText("Back"))
             }
-            Column(Modifier.weight(1f)) {
-                Text(entry.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+            Column(Modifier.weight(1f).tourTarget("kalima_reader_position")) {
+                Text(localizePhrase(entry.title, language), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
                 Text((pager.settledPage + 1).toString() + " / " + entries.size, style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            IconToggleButton(favourite, { store.toggleFavorite(entry.id) }, Modifier.testTag("kalimas_reader_fav")) {
+            IconToggleButton(favourite, { com.example.core.analytics.AppAnalytics.interaction("kalimas_reader", "favourite", "toggle", item = entry.id); store.toggleFavorite(entry.id) }, Modifier.testTag("kalimas_reader_fav").tourTarget("kalima_reader_favourite")) {
                 Icon(if (favourite) Icons.Default.Star else Icons.Default.StarBorder,
                     contentDescription = localizedUiText(if (favourite) "Remove from Favourites" else "Add to Favourites"),
                     tint = if (favourite) GoldAccent else MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            IconButton(onClick = { shareKalima(context, entry, english) }, modifier = Modifier.testTag("kalima_share_${entry.id}")) {
+            IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("kalimas_reader", "share", item = entry.id); shareKalima(context, entry, english) }, modifier = Modifier.testTag("kalima_share_${entry.id}").tourTarget("kalima_reader_share")) {
                 Icon(Icons.Default.Share, contentDescription = localizedUiText("Share"))
             }
-            IconButton(onClick = onOpenSettings, modifier = Modifier.testTag("kalimas_reader_settings")) {
+            IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("kalimas_reader", "open_settings", onOpenSettings), modifier = Modifier.testTag("kalimas_reader_settings").tourTarget("kalima_reader_settings")) {
                 Icon(Icons.Default.Tune, contentDescription = localizedUiText("Reading settings"))
             }
         }
 
         // Reading mode: whole text, phrase by phrase (tap to hear), or memorise (hidden until revealed).
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = Spacing.screen)) {
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = Spacing.screen).tourTarget("kalima_reader_modes")) {
             KalimaReadMode.entries.forEachIndexed { index, option ->
                 SegmentedButton(
                     selected = mode == option,
-                    onClick = { onModeChange(option) },
+                    onClick = { com.example.core.analytics.AppAnalytics.interaction("kalimas_reader", "read_mode", "select", item = option.tag); onModeChange(option) },
                     shape = SegmentedButtonDefaults.itemShape(index, KalimaReadMode.entries.size),
                     modifier = Modifier.testTag("kalimas_mode_${option.tag}"),
                     label = { LocalizedText(option.label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -133,7 +141,7 @@ internal fun KalimaReader(
 
         HorizontalPager(
             state = pager,
-            modifier = Modifier.weight(1f).fillMaxWidth(),
+            modifier = Modifier.weight(1f).fillMaxWidth().tourTarget("kalima_reader_swipe"),
             key = { entries[it].id },
             beyondViewportPageCount = 0
         ) { page ->
@@ -152,17 +160,21 @@ internal fun KalimaReader(
                 KalimaAudioControls(entry, audio)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
-                        onClick = { scope.launch { pager.animateScrollToPage(pager.settledPage - 1) } },
+                        onClick = { com.example.core.analytics.AppAnalytics.interaction("kalimas_reader", "previous"); scope.launch { pager.animateScrollToPage(pager.settledPage - 1) } },
                         enabled = pager.settledPage > 0,
-                        modifier = Modifier.testTag("kalimas_reader_prev")
+                        modifier = Modifier.testTag("kalimas_reader_prev").tourTarget("kalima_reader_prev")
                     ) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = localizedUiText("Previous")) }
                     val container by animateColorAsState(
                         if (memorised) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                         label = "kalima_memorised"
                     )
                     OutlinedButton(
-                        onClick = { store.setMemorized(entry.id, !memorised) },
-                        modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("kalimas_reader_memorised"),
+                        onClick = {
+                            com.example.core.analytics.AppAnalytics.interaction("kalimas_reader", "memorised", "toggle", item = entry.id)
+                            if (!memorised) com.example.core.analytics.AppAnalytics.milestone("kalimas", "memorised", entry.id)
+                            store.setMemorized(entry.id, !memorised)
+                        },
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("kalimas_reader_memorised").tourTarget("kalima_reader_memorised"),
                         colors = ButtonDefaults.outlinedButtonColors(containerColor = container)
                     ) {
                         Icon(if (memorised) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
@@ -172,9 +184,9 @@ internal fun KalimaReader(
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     IconButton(
-                        onClick = { scope.launch { pager.animateScrollToPage(pager.settledPage + 1) } },
+                        onClick = { com.example.core.analytics.AppAnalytics.interaction("kalimas_reader", "next"); scope.launch { pager.animateScrollToPage(pager.settledPage + 1) } },
                         enabled = pager.settledPage < entries.lastIndex,
-                        modifier = Modifier.testTag("kalimas_reader_next")
+                        modifier = Modifier.testTag("kalimas_reader_next").tourTarget("kalima_reader_next")
                     ) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = localizedUiText("Next")) }
                 }
             }
@@ -190,20 +202,20 @@ private fun KalimaReaderPage(
     val scale = user.arabicScale.coerceIn(KalimaStore.MIN_SCALE, KalimaStore.MAX_SCALE)
     val memorised = entry.id in user.memorized
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+        Modifier.fillMaxSize().verticalScroll(com.example.core.analytics.rememberAnalyticsScrollState("kalimas_reader"))
             .padding(horizontal = Spacing.screen, vertical = Spacing.lg)
             .testTag("kalimas_reader_page_${entry.id}"),
         verticalArrangement = Arrangement.spacedBy(Spacing.lg)
     ) {
         // Name of the Kalima: medallion, Arabic title and what the name means.
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.tourTarget("kalima_reader_name"), verticalAlignment = Alignment.CenterVertically) {
             KalimaMedallion(entry, memorised, size = 52.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 if (entry.titleArabic.isNotBlank()) {
                     Text(entry.titleArabic, style = kalimaArabicStyle(1f, base = 24), color = MaterialTheme.colorScheme.primary)
                 }
-                val nameMeaning = if (english) entry.nameMeaningEnglish else entry.nameMeaning
+                val nameMeaning = if (english) localizePhrase(entry.nameMeaningEnglish, LocalAppLanguage.current) else entry.nameMeaning
                 if (nameMeaning.isNotBlank()) Text(nameMeaning, style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -215,9 +227,9 @@ private fun KalimaReaderPage(
                 audio, audioState, onMemorised = { store.setMemorized(entry.id, true) })
         }
 
-        val note = if (english) entry.noteEnglish else entry.note
+        val note = if (english) localizePhrase(entry.noteEnglish, LocalAppLanguage.current) else entry.note
         if (note.isNotBlank() || entry.reference.isNotBlank()) {
-            AppCard(Modifier.fillMaxWidth(), containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+            AppCard(Modifier.fillMaxWidth().tourTarget("kalima_reader_note"), containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
                 outlined = false, contentPadding = PaddingValues(14.dp)) {
                 Row(verticalAlignment = Alignment.Top) {
                     Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
@@ -245,7 +257,7 @@ private fun KalimaFullText(entry: KalimaEntry, user: KalimaUserState, english: B
             Surface(
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().tourTarget("kalima_reader_full_text")
             ) {
                 Text(entry.arabic,
                     Modifier.fillMaxWidth().islamicPattern(MaterialTheme.colorScheme.primary.copy(alpha = 0.04f))
@@ -253,11 +265,12 @@ private fun KalimaFullText(entry: KalimaEntry, user: KalimaUserState, english: B
                     style = kalimaArabicStyle(scale, base = 30), color = MaterialTheme.colorScheme.onSurface)
             }
             if (user.showRoman) {
-                Text(entry.roman, style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr),
+                Text(entry.roman, Modifier.tourTarget("kalima_reader_roman"), style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr),
                     fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.primary)
             }
             if (user.showMeaning) {
-                Text(if (english) entry.english else entry.urdu,
+                Text(if (english) localizePhrase(entry.english, LocalAppLanguage.current) else entry.urdu,
+                    Modifier.tourTarget("kalima_reader_meaning"),
                     style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr),
                     color = MaterialTheme.colorScheme.onSurface)
             }
@@ -277,7 +290,8 @@ private fun KalimaPhraseList(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 LocalizedText("Recite from memory, then tap to check.", Modifier.weight(1f),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = {
+                TextButton(modifier = Modifier.tourTarget("kalima_reader_reveal_all"), onClick = {
+                    com.example.core.analytics.AppAnalytics.interaction("kalimas_reader", if (allRevealed) "hide_all" else "reveal_all")
                     if (allRevealed) revealed.clear()
                     else { revealed.clear(); revealed.addAll(entry.phrases.indices) }
                 }) { Text(localizedUiText(if (allRevealed) "Hide all" else "Reveal all")) }
@@ -294,10 +308,11 @@ private fun KalimaPhraseList(
             Surface(
                 Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium)
                     .clickable(role = Role.Button, onClickLabel = label) {
+                        if (memorise) com.example.core.analytics.AppAnalytics.interaction("kalimas_reader", if (hidden) "reveal_phrase" else "hide_phrase")
                         if (memorise) { if (hidden) revealed.add(index) else revealed.remove(index) }
                         else if (audioState.ready) audio.playPhrase(entry, index)
                     }
-                    .testTag("kalima_${entry.id}_phrase_$index"),
+                    .testTag("kalima_${entry.id}_phrase_$index").tourTarget("kalima_reader_phrase"),
                 shape = MaterialTheme.shapes.medium,
                 color = container,
                 contentColor = if (active) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
@@ -320,7 +335,7 @@ private fun KalimaPhraseList(
                         }
                     }
                     // In memorise mode the meaning stays visible as the cue.
-                    val meaning = if (english) phrase.english else phrase.urdu
+                    val meaning = if (english) localizePhrase(phrase.english, LocalAppLanguage.current) else phrase.urdu
                     if ((user.showMeaning || hidden) && meaning.isNotBlank()) {
                         Text(meaning, style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr))
                     }
@@ -330,8 +345,8 @@ private fun KalimaPhraseList(
         // Having checked every phrase from memory, offer to record it.
         AnimatedVisibility(memorise && allRevealed && !memorised, enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut()) {
-            Button(onClick = onMemorised, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                .testTag("kalima_${entry.id}_memorise_done")) {
+            Button(onClick = com.example.core.analytics.AppAnalytics.trackAction("kalimas_reader", "memorise_done", onMemorised), modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                .testTag("kalima_${entry.id}_memorise_done").tourTarget("kalima_reader_memorise_done")) {
                 Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(localizedUiText(if (memorised) "Memorised" else "Mark as memorised"))
@@ -348,8 +363,12 @@ private fun KalimaPageActions(entry: KalimaEntry, english: Boolean, count: Int, 
     val counterLabel = localizedUiText("Tasbih counter")
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         FilledTonalButton(
-            onClick = { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); onCount() },
-            modifier = Modifier.heightIn(min = 48.dp).testTag("kalima_count_${entry.id}")
+            onClick = {
+                // Open-ended counter: report when counting starts, not every tap.
+                if (count == 0) com.example.core.analytics.AppAnalytics.milestone("kalima", "counter_started", entry.id)
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); onCount()
+            },
+            modifier = Modifier.heightIn(min = 48.dp).testTag("kalima_count_${entry.id}").tourTarget("kalima_reader_count")
                 .semantics { contentDescription = "$counterLabel: $count" }
         ) {
             Text("$count", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
@@ -357,12 +376,12 @@ private fun KalimaPageActions(entry: KalimaEntry, english: Boolean, count: Int, 
             LocalizedText("Count", maxLines = 1)
         }
         if (count > 0) {
-            IconButton(onClick = onResetCount) {
+            IconButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("kalimas_reader", "tasbih_reset", onResetCount), modifier = Modifier.tourTarget("kalima_reader_count_reset")) {
                 Icon(Icons.Default.Refresh, contentDescription = localizedUiText("Reset counter"))
             }
         }
         Spacer(Modifier.weight(1f))
-        IconButton(onClick = { copyKalima(context, entry, english) }, modifier = Modifier.testTag("kalima_copy_${entry.id}")) {
+        IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("kalimas_reader", "copy", item = entry.id); copyKalima(context, entry, english) }, modifier = Modifier.testTag("kalima_copy_${entry.id}").tourTarget("kalima_reader_copy")) {
             Icon(Icons.Default.ContentCopy, contentDescription = localizedUiText("Copy"))
         }
     }

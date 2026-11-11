@@ -1,4 +1,4 @@
-import java.util.Properties
+﻿import java.util.Properties
 
 plugins {
   alias(libs.plugins.android.application)
@@ -8,12 +8,8 @@ plugins {
   alias(libs.plugins.secrets)
 }
 
-// `-Pfoss` (used by F-Droid) builds only the foss flavor, with no Google/Firebase plugin applied.
-val fossOnly = providers.gradleProperty("foss").isPresent
-if (!fossOnly) {
-  apply(plugin = "com.google.gms.google-services")
-  apply(plugin = "com.google.firebase.crashlytics")
-}
+apply(plugin = "com.google.gms.google-services")
+apply(plugin = "com.google.firebase.crashlytics")
 
 // New UI copy is translated once at build time and bundled for offline lookup.
 // The API credential is read only by Python from TRANSLATION_API_KEY.
@@ -24,40 +20,50 @@ val generateAutoTranslations = tasks.register<Exec>("generateAutoTranslations") 
   workingDir(rootDir)
   commandLine(providers.gradleProperty("translationPython").getOrElse("python"),
     "tools/auto_translate.py", "--output", autoTranslationDir.get().asFile.absolutePath)
+  // Declared inputs/outputs let Gradle skip this task when nothing it reads has changed.
+  inputs.file(rootProject.file("tools/auto_translate.py"))
+  inputs.dir(rootProject.file("localization"))
+  inputs.files(fileTree("src/main/java") { include("**/*.kt") }, fileTree("src/play/java") { include("**/*.kt") })
+  // Only whether a key exists is recorded, never the key itself.
+  inputs.property("hasTranslationKey",
+    providers.environmentVariable("TRANSLATION_API_KEY").map { it.isNotBlank() }.orElse(false))
+  inputs.property("translationModel", providers.environmentVariable("TRANSLATION_MODEL").orElse(""))
+  outputs.dir(autoTranslationDir)
 }
 tasks.configureEach {
-  if (name == "preBuild" || name.startsWith("ksp") || name.startsWith("compile")) {
+  if (name == "preBuild" || name.startsWith("ksp") || name.startsWith("compile") ||
+    (name.startsWith("process") && name.endsWith("JavaRes"))) {
     dependsOn(generateAutoTranslations)
   }
 }
 
 android {
   namespace = "com.example"
-  sourceSets.getByName("main").kotlin.srcDir(autoTranslationDir.get().asFile)
-  if (!fossOnly) assetPacks += listOf(":hindi_quran_pdf")
-  sourceSets.getByName("debug").assets.srcDir("${rootDir}/hindi_quran_pdf/src/main/assets")
+  // Phrase packs ship as Java resources (auto_translations/*.tsv), not compiled Kotlin.
+  sourceSets.getByName("main").resources.srcDir(autoTranslationDir.get().asFile)
+  assetPacks += listOf(":hindi_quran_pdf")
+  // The 43MB Hindi Quran PDF goes into debug APKs only with -PincludeHindiQuranPdf=true:
+  // bundling it on every debug build slowed packaging and install.
+  if (providers.gradleProperty("includeHindiQuranPdf").map(String::toBoolean).getOrElse(false)) {
+    sourceSets.getByName("debug").assets.srcDir("${rootDir}/hindi_quran_pdf/src/main/assets")
+  }
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
     applicationId = "com.aistudio.deencompanion.quranj"
     minSdk = 24
     targetSdk = 36
-    versionCode = 6
-    versionName = "1.4.1"
+    versionCode = 9
+    versionName = "1.4.4"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
   // play: Google Play build with Firebase, Play services and Play delivery.
-  // foss: F-Droid build with only free dependencies; Firebase-backed features are hidden.
   flavorDimensions += "store"
   productFlavors {
-    create("play") { dimension = "store" }
-    create("foss") { dimension = "store" }
+    create("play") { dimension = "store"; isDefault = true }
   }
-  sourceSets.getByName("foss").assets.srcDir("${rootDir}/hindi_quran_pdf/src/main/assets")
-  // The foss build copies the bundled Hindi PDF out of the APK through a file descriptor.
-  androidResources { noCompress += "pdf" }
 
   signingConfigs {
     create("release") {
@@ -78,9 +84,11 @@ android {
       isMinifyEnabled = true
       isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      // F-Droid signs with its own key, so an unsigned release is built when no keystore is present.
+      // An unsigned release is built when no keystore is present.
       if (signingConfigs.getByName("release").storeFile?.exists() == true) {
         signingConfig = signingConfigs.getByName("release")
+      } else {
+        logger.warn("Release keystore not found; building an unsigned release APK.")
       }
     }
     // Keep the default Android debug signing configuration. It creates and uses
@@ -102,17 +110,6 @@ android {
   }
 }
 
-// F-Droid builds never configure the play variants, so no Google artifact is resolved.
-androidComponents {
-  beforeVariants { variant ->
-    if (fossOnly && variant.productFlavors.any { it.second == "play" }) variant.enable = false
-  }
-}
-// The Google plugins see every variant; the foss variants have no Firebase to report to.
-tasks.configureEach {
-  if (name.contains("Foss") && (name.contains("Crashlytics") || name.contains("GoogleServices"))) enabled = false
-}
-
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
 // to match the convention used in Web projects.
 secrets {
@@ -125,18 +122,11 @@ secrets {
 // AGP creates flavor+build-type configurations lazily; App Check's debug provider needs this one now.
 configurations.maybeCreate("playDebugImplementation")
 
-// Some unused dependencies are commented out below instead of being removed.
-// This makes it easy to add them back in the future if needed.
 dependencies {
   "playImplementation"("com.google.android.libraries.places:places:5.1.1")
   implementation(platform(libs.androidx.compose.bom))
   "playImplementation"(platform(libs.firebase.bom))
-  // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
-  // implementation(libs.androidx.camera.camera2)
-  // implementation(libs.androidx.camera.core)
-  // implementation(libs.androidx.camera.lifecycle)
-  // implementation(libs.androidx.camera.view)
   implementation(libs.androidx.compose.material.icons.core)
   implementation(libs.androidx.compose.material.icons.extended)
   implementation(libs.androidx.compose.material3)
@@ -144,16 +134,12 @@ dependencies {
   implementation(libs.androidx.compose.ui.graphics)
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.core.ktx)
-  // implementation(libs.androidx.datastore.preferences)
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.lifecycle.viewmodel.compose)
-  // implementation(libs.androidx.navigation.compose)
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
-  // implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
-  // implementation(libs.firebase.ai) // unused: the assistant is an offline, source-constrained lookup
   // Firestore + Anonymous Auth are used only by the Community Masjid feature.
   "playImplementation"(libs.firebase.firestore)
   "playImplementation"(libs.firebase.auth)
@@ -165,9 +151,6 @@ dependencies {
   // Uncomment ALL FOUR of the following dependencies together to use Firebase Auth and Google
   // Sign-In via Credential Manager:
   // (firebase-auth is enabled above for anonymous sign-in)
-  // implementation(libs.androidx.credentials)
-  // implementation(libs.androidx.credentials.play.services)
-  // implementation(libs.googleid)
   // App Check: Play Integrity in release, the debug provider only in debug builds.
   "playImplementation"(libs.firebase.appcheck.playintegrity)
   "playDebugImplementation"(libs.firebase.appcheck.debug)
@@ -202,4 +185,8 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.tooling)
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
+}
+
+ksp {
+  arg("room.schemaLocation", "$projectDir/schemas")
 }

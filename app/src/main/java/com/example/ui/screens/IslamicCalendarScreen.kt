@@ -5,6 +5,7 @@ import com.example.ui.components.AppCard
 import com.example.ui.components.HeroSurface
 import com.example.ui.components.IconBadge
 import com.example.ui.components.Spacing
+import com.example.ui.tour.tourTarget
 import com.example.ui.theme.GoldAccent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material.icons.filled.Event
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.prayer.HijriCalendarHelper
 import com.example.prayer.HijriRegion
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalAppLanguage
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.formatHijriDate
@@ -100,18 +102,18 @@ fun IslamicCalendarScreen(uiState: MainUiState, onBack: () -> Unit) {
         }
         item {
             // Deep emerald hero in both themes, so white and gold always read.
-            HeroSurface(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 22.dp, vertical = 20.dp)) {
+            HeroSurface(modifier = Modifier.fillMaxWidth().tourTarget("hadithcal_calendar_today"), contentPadding = PaddingValues(horizontal = 22.dp, vertical = 20.dp)) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    LocalizedText("Today • ${uiState.selectedCity.name}", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = GoldAccent)
+                    LocalizedText(localizedUiTemplate("Today • {city}", "city" to uiState.selectedCity.name), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = GoldAccent)
                     Text(formatHijriDate(todayHijri, language), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White)
                     Text(dateFormatter.format(Date(now)), style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.85f))
                     if (uiState.hijriDateTonight != null) {
-                        LocalizedText("After Maghrib: ${formatHijriDate(uiState.hijriDateTonight, language)}", color = GoldAccent, style = MaterialTheme.typography.bodySmall)
+                        LocalizedText(localizedUiTemplate("After Maghrib: {date}", "date" to formatHijriDate(uiState.hijriDateTonight, language)), color = GoldAccent, style = MaterialTheme.typography.bodySmall)
                     }
-                    LocalizedText("Live local time ${timeFormatter.format(Date(now))}  •  ${region.label}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
+                    LocalizedText(localizedUiTemplate("Live local time {time}  •  {region}", "time" to timeFormatter.format(Date(now)), "region" to localizedUiText(region.label)), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
                 }
             }
         }
@@ -119,19 +121,19 @@ fun IslamicCalendarScreen(uiState: MainUiState, onBack: () -> Unit) {
             AppCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(12.dp)) {
                 Column {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("islamic_calendar_screen", "previous_month", "tap"); monthOffset--; selectedDay = 1 }) {
+                        IconButton(modifier = Modifier.tourTarget("hadithcal_calendar_prev"), onClick = { com.example.core.analytics.AppAnalytics.interaction("islamic_calendar_screen", "previous_month", "tap"); monthOffset--; selectedDay = 1 }) {
                             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = localizedUiText("Previous month"))
                         }
-                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(modifier = Modifier.weight(1f).tourTarget("hadithcal_calendar_month"), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("${if (isRtlAppLanguage(language)) monthHijri.monthNameArabic else monthHijri.monthNameEnglish} $hijriYear ${if (isRtlAppLanguage(language)) "هـ" else "AH"}", textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             val lastDay = (month.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, daysInMonth - 1) }
                             Text("${monthFormatter.format(month.time)} – ${monthFormatter.format(lastDay.time)}", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
                         }
-                        IconButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("islamic_calendar_screen", "next_month", "tap"); monthOffset++; selectedDay = 1 }) {
+                        IconButton(modifier = Modifier.tourTarget("hadithcal_calendar_next"), onClick = { com.example.core.analytics.AppAnalytics.interaction("islamic_calendar_screen", "next_month", "tap"); monthOffset++; selectedDay = 1 }) {
                             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = localizedUiText("Next month"))
                         }
                     }
-                    Row(Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth().tourTarget("hadithcal_calendar_weekdays")) {
                         weekdayLabels.forEachIndexed { index, label ->
                             Text(label, Modifier.weight(1f), textAlign = TextAlign.Center, maxLines = 1, style = MaterialTheme.typography.labelSmall,
                                 fontWeight = if (index == fridayColumn) FontWeight.Bold else FontWeight.Medium,
@@ -151,7 +153,7 @@ fun IslamicCalendarScreen(uiState: MainUiState, onBack: () -> Unit) {
                                     Surface(
                                         selected = isSelected,
                                         onClick = { com.example.core.analytics.AppAnalytics.interaction("islamic_calendar_screen", "select_day", "tap"); selectedDay = day },
-                                        modifier = Modifier.weight(1f).heightIn(min = 54.dp).padding(2.dp),
+                                        modifier = Modifier.weight(1f).heightIn(min = 54.dp).padding(2.dp).tourTarget("hadithcal_calendar_day"),
                                         shape = RoundedCornerShape(14.dp),
                                         color = when {
                                             isSelected -> primary
@@ -177,7 +179,7 @@ fun IslamicCalendarScreen(uiState: MainUiState, onBack: () -> Unit) {
             // Only offered once the user has moved away from today.
             AnimatedVisibility(visible = monthOffset != 0 || (selectedDay != 0 && selectedDay != todayHijri.day)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("islamic_calendar_screen", "go_to_today", "tap"); monthOffset = 0; selectedDay = 0 }, modifier = Modifier.heightIn(min = 48.dp)) {
+                TextButton(onClick = { com.example.core.analytics.AppAnalytics.interaction("islamic_calendar_screen", "go_to_today", "tap"); monthOffset = 0; selectedDay = 0 }, modifier = Modifier.heightIn(min = 48.dp).tourTarget("hadithcal_calendar_go_today")) {
                     Icon(Icons.Default.Today, null)
                     Spacer(Modifier.width(6.dp))
                     LocalizedText("Go to today")
@@ -187,7 +189,7 @@ fun IslamicCalendarScreen(uiState: MainUiState, onBack: () -> Unit) {
         }
         item {
             AppCard(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().tourTarget("hadithcal_calendar_selected"),
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 outlined = false,
@@ -202,7 +204,7 @@ fun IslamicCalendarScreen(uiState: MainUiState, onBack: () -> Unit) {
                     }
                 }
                 Column(Modifier.fillMaxWidth().padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    LocalizedText("Hijri month starts follow ${region.label}. Local moon sighting may change the date; corrections in Settings are reflected here.", style = MaterialTheme.typography.bodySmall)
+                    LocalizedText(localizedUiTemplate("Hijri month starts follow {region}. Local moon sighting may change the date; corrections in Settings are reflected here.", "region" to localizedUiText(region.label)), style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

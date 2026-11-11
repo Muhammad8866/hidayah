@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.core.search.AppSearch
 import com.example.names.AllahName
 import com.example.names.AsmaUlHusna
 import com.example.ui.components.AppCard
@@ -44,9 +45,25 @@ import com.example.ui.components.HeroSurface
 import com.example.ui.components.ScreenHeader
 import com.example.ui.components.Spacing
 import com.example.ui.localization.LocalAppLanguage
+import com.example.ui.tour.tourTarget
 import com.example.ui.localization.LocalizedText
 import com.example.ui.theme.ArabicFontFamily
 import com.example.ui.theme.GoldAccent
+
+/**
+ * What search reads of one sacred name: the transliteration counts most, then the Arabic, then
+ * every meaning (English, Urdu, Hindi, Roman Urdu and the reader's language); its number is found
+ * exactly by a typed number.
+ */
+internal fun sacredNameFields(
+    number: Int, transliteration: String, arabic: String, meanings: List<String>
+) = AppSearch.Fields(title = transliteration, nativeTitle = arabic, other = meanings.distinct(), number = number)
+
+/** The ninety-nine names of Allah made searchable once for [language] (see [AppSearch]). */
+internal fun allahNamesSearch(language: String): AppSearch.Ranker<AllahName> = AppSearch.Ranker(AsmaUlHusna.names) { name ->
+    sacredNameFields(name.number, name.transliteration, name.arabic,
+        listOf(name.english, name.urdu, name.hindi, name.hinglish, name.meaning(language)))
+}
 
 /** Al-Asma ul-Husna: the ninety-nine names of Allah with their meanings, fully offline. */
 @Composable
@@ -55,13 +72,8 @@ fun AllahNamesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val language = LocalAppLanguage.current
     var query by rememberSaveable { mutableStateOf("") }
     com.example.core.analytics.AnalyticsSearch("allah_names_screen", query)
-    val shown = remember(query, language) {
-        val words = query.lowercase().split(' ').filter(String::isNotBlank)
-        AsmaUlHusna.names.filter { name ->
-            val text = "${name.number} ${name.transliteration} ${name.english} ${name.meaning(language)} ${name.arabic}".lowercase()
-            words.all(text::contains)
-        }
-    }
+    val search = remember(language) { allahNamesSearch(language) }
+    val shown = remember(search, query) { search.search(query) }
 
     LazyColumn(
         modifier = modifier.fillMaxSize().testTag("allah_names_screen"),
@@ -76,17 +88,17 @@ fun AllahNamesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 onBack = onBack
             )
         }
-        item { NamesHadithHero(AsmaUlHusna.HADITH, AsmaUlHusna.HADITH_SOURCE, "allah_names_hadith") }
+        item { Box(Modifier.tourTarget("names_allah_hadith")) { NamesHadithHero(AsmaUlHusna.HADITH, AsmaUlHusna.HADITH_SOURCE, "allah_names_hadith") } }
         item {
             AppSearchField(
                 query = query,
                 onQueryChange = { query = it },
                 placeholder = "Search name or meaning",
-                modifier = Modifier.padding(vertical = 4.dp).testTag("allah_names_search")
+                modifier = Modifier.padding(vertical = 4.dp).testTag("allah_names_search").tourTarget("names_allah_search")
             )
         }
         if (shown.isEmpty()) item {
-            EmptyState(title = "No name found.", icon = Icons.Default.SearchOff)
+            EmptyState(title = "No name found.", icon = Icons.Default.SearchOff, modifier = Modifier.tourTarget("names_allah_empty"))
         }
         items(shown, key = AllahName::number) { name ->
             SacredNameRow(
@@ -94,12 +106,12 @@ fun AllahNamesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 transliteration = name.transliteration,
                 meaning = name.meaning(language),
                 arabic = name.arabic,
-                modifier = Modifier.testTag("allah_name_${name.number}")
+                modifier = Modifier.testTag("allah_name_${name.number}").tourTarget("names_allah_row")
             )
         }
         item {
             LocalizedText(AsmaUlHusna.LIST_SOURCE,
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = 8.dp).tourTarget("names_allah_source"),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

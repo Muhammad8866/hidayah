@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import com.example.ui.tour.TourScreen
+import com.example.ui.tour.tourTarget
 import androidx.compose.material.icons.filled.LocationOff
 import com.example.ui.components.StateMessage
 import com.example.ui.components.ScreenHeader
@@ -45,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.prayer.QiblaGuidance
+import com.example.ui.localization.localizedUiTemplate
 import com.example.ui.localization.LocalizedText
 import com.example.ui.localization.localizedUiText
 import com.example.ui.theme.GoldAccent
@@ -61,6 +64,7 @@ fun QiblaScreen(
     modifier: Modifier = Modifier
 ) {
     com.example.core.analytics.AnalyticsScreen("qibla_screen")
+    TourScreen("guides_qibla")
 
     if (!uiState.hasConfirmedLocation) {
         Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -70,7 +74,8 @@ fun QiblaScreen(
                     icon = Icons.Default.LocationOff,
                     title = "Choose a city on Home or use device location for Qibla direction.",
                     actionText = "Use device location".takeIf { onUseCurrentLocation != null },
-                    onAction = onUseCurrentLocation
+                    onAction = onUseCurrentLocation,
+                    modifier = Modifier.tourTarget("guides_qibla_no_location")
                 )
             }
         }
@@ -89,8 +94,8 @@ fun QiblaScreen(
     val direction = when {
         aligned -> "Facing the Kaaba"
         sensorUnreliable || sensorLow -> "Calibrate compass for accuracy"
-        turn != null && turn > 0 -> "Turn right ${abs(turn).roundToInt()}°"
-        turn != null -> "Turn left ${abs(turn).roundToInt()}°"
+        turn != null && turn > 0 -> localizedUiTemplate("Turn right {degrees}°", "degrees" to abs(turn).roundToInt())
+        turn != null -> localizedUiTemplate("Turn left {degrees}°", "degrees" to abs(turn).roundToInt())
         uiState.deviceHeading == null -> "Bearing from true north"
         else -> "Waiting for compass"
     }
@@ -106,8 +111,8 @@ fun QiblaScreen(
     ) {
         ScreenHeader(
             title = "Qibla Direction",
-            subtitle = if (uiState.isLiveLocation) "Current location · ${uiState.selectedCity.name}"
-            else "City location · ${uiState.selectedCity.name}",
+            subtitle = if (uiState.isLiveLocation) localizedUiTemplate("Current location · {city}", "city" to uiState.selectedCity.name)
+            else localizedUiTemplate("City location · {city}", "city" to uiState.selectedCity.name),
             onBack = onBack,
             backTestTag = "qibla_back_btn"
         )
@@ -128,7 +133,7 @@ fun QiblaScreen(
             needsCalibration -> MaterialTheme.colorScheme.onTertiaryContainer
             else -> MaterialTheme.colorScheme.onSurface
         }
-        Surface(shape = CircleShape, color = pillColor) {
+        Surface(shape = CircleShape, color = pillColor, modifier = Modifier.tourTarget("guides_qibla_status")) {
             Row(
                 Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -158,13 +163,15 @@ fun QiblaScreen(
         Spacer(Modifier.height(8.dp))
         LocalizedText(
             text = if (turn != null) "Point the top of your phone toward the Kaaba"
-            else "${bearing.roundToInt()}° clockwise from true north",
+            else localizedUiTemplate("{degrees}° clockwise from true north", "degrees" to bearing.roundToInt()),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.tourTarget("guides_qibla_hint")
         )
 
         Spacer(Modifier.height(22.dp))
+        Box(Modifier.tourTarget("guides_qibla_dial")) {
         QiblaDial(
             pointerDegrees = rememberSmoothAngle((turn ?: bearing).toFloat()),
             northDegrees = rememberSmoothAngle(-(trueHeading ?: 0.0).toFloat()),
@@ -172,13 +179,14 @@ fun QiblaScreen(
             aligned = aligned,
             description = localizedUiText(direction)
         )
+        }
         Spacer(Modifier.height(22.dp))
 
-        AppCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
+        AppCard(modifier = Modifier.fillMaxWidth().tourTarget("guides_qibla_metrics"), contentPadding = PaddingValues(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Metric("Qibla bearing", "${bearing.roundToInt()}°", "true north", Modifier.weight(1f).padding(horizontal = 4.dp).testTag("qibla_bearing"))
+                Metric("Qibla bearing", "${bearing.roundToInt()}°", "true north", Modifier.weight(1f).padding(horizontal = 4.dp).testTag("qibla_bearing").tourTarget("guides_qibla_bearing"))
                 VerticalDivider(modifier = Modifier.height(42.dp))
-                Metric("Kaaba distance", "${uiState.distanceToMakkahKm.roundToLong()} km", "great circle", Modifier.weight(1f).padding(horizontal = 4.dp))
+                Metric("Kaaba distance", localizedUiTemplate("{distance} km", "distance" to "${uiState.distanceToMakkahKm.roundToLong()}"), "great circle", Modifier.weight(1f).padding(horizontal = 4.dp).tourTarget("guides_qibla_distance"))
             }
         }
 
@@ -198,12 +206,13 @@ fun QiblaScreen(
                 "Hold your phone flat and away from metal or magnets for the best reading.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.tourTarget("guides_qibla_tip")
             )
         }
         if (!uiState.isLiveLocation && onUseCurrentLocation != null) {
             Spacer(Modifier.height(8.dp))
-            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("qibla_screen", "use_current_location", onUseCurrentLocation), modifier = Modifier.heightIn(min = 48.dp)) {
+            TextButton(onClick = com.example.core.analytics.AppAnalytics.trackAction("qibla_screen", "use_current_location", onUseCurrentLocation), modifier = Modifier.heightIn(min = 48.dp).tourTarget("guides_qibla_use_location")) {
                 Icon(Icons.Default.GpsFixed, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 LocalizedText("Use current location")
@@ -225,7 +234,7 @@ private fun Metric(label: String, value: String, detail: String, modifier: Modif
 @Composable
 private fun InfoCard(icon: @Composable () -> Unit, title: String, body: String) {
     AppCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().tourTarget("guides_qibla_calibrate"),
         containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.55f),
         outlined = false,
         contentPadding = PaddingValues(16.dp)

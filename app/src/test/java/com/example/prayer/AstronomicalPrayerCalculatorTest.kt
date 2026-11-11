@@ -311,4 +311,24 @@ class AstronomicalPrayerCalculatorTest {
         assertEquals("America/New_York", TimeZoneResolver.resolve(-74.0, null, newYork))
         assertEquals("Etc/GMT-5", TimeZoneResolver.resolve(74.3, null, newYork))
     }
+
+    @Test
+    fun polarDaysFallBackToNearestLatitudeInsteadOfFailing() {
+        val tromso = TimeZone.getTimeZone("Europe/Oslo")
+        for (month in listOf(Calendar.JUNE, Calendar.DECEMBER)) {
+            val cal = Calendar.getInstance(tromso).apply {
+                clear()
+                set(2026, month, 21, 12, 0, 0)
+            }
+            val times = AstronomicalPrayerCalculator.calculateTimes(
+                cal,
+                latitude = 69.6492,
+                longitude = 18.9553,
+                config = PrayerTimeConfig(method = CalculationMethod.MWL)
+            )
+            assertTrue(times.fajrHours < times.sunriseHours)
+            assertTrue(times.sunriseHours < times.dhuhrHours)
+            assertTrue(times.maghribHours < times.ishaHours)
+        }
+    }
 }
