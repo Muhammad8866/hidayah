@@ -45,6 +45,25 @@ class NaatCatalogParseTest {
         assertThrows(IllegalArgumentException::class.java) { NaatCatalog.parse(catalog("same", "same")) }
     }
 
+    /** Scale/abuse: a huge hostile catalog (half unsafe ids) is filtered in one pass without blowing up. */
+    @Test
+    fun hugeMixedCatalogKeepsOnlySafeIdsQuickly() {
+        val count = 50_000
+        val ids = (0 until count).map { if (it % 2 == 0) "naat_$it" else "../evil_$it" }
+        val text = catalog(*ids.toTypedArray())
+        val runtime = Runtime.getRuntime()
+        System.gc()
+        val usedBefore = runtime.totalMemory() - runtime.freeMemory()
+        val started = System.nanoTime()
+        val tracks = NaatCatalog.parse(text)
+        val elapsedMs = (System.nanoTime() - started) / 1_000_000
+        val usedMb = ((runtime.totalMemory() - runtime.freeMemory()) - usedBefore) / (1024 * 1024)
+        println("NaatCatalog scale: entries=$count kept=${tracks.size} jsonKb=${text.length / 1024} timeMs=$elapsedMs heapDeltaMb=$usedMb")
+        assertEquals(count / 2, tracks.size)
+        assertEquals(true, tracks.all { !it.id.contains('/') && !it.id.contains('.') })
+        assertEquals(true, elapsedMs < 20_000)
+    }
+
     private companion object {
         const val ID_SAFE = "file"
     }
